@@ -1,0 +1,19 @@
+{
+  "name": "@m0-foundation/m-portal-v2-sdk-evm",
+  "version": "0.0.1",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsup --clean",
+    "dev": "tsup --watch"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "tsup": "~8.5.0",
+    "typescript": "~5.9.2",
+    "viem": "~2.34.0",
+    "zod": "^3.22.0"
+  },
+  "packageManager": "pnpm@10.18.3"
+}

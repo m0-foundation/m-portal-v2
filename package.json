@@ -1,0 +1,13 @@
+{
+  "name": "@m0-foundation/m-portal-v2",
+  "version": "0.0.1",
+  "license": "GPL-3.0-only",
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev"
+  },
+  "packageManager": "pnpm@10.18.3",
+  "devDependencies": {
+    "turbo": "^2.5.8"
+  }
+}
