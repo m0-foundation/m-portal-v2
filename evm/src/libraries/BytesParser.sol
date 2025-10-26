@@ -2,13 +2,11 @@
 
 pragma solidity 0.8.30;
 
-/**
- * @title  BytesParser
- * @author Wormhole Labs
- * @notice Parses tightly packed data.
- * @dev    Modified from
- *         https://github.com/wormhole-foundation/wormhole-solidity-sdk/blob/main/src/libraries/BytesParsing.sol
- */
+/// @title  BytesParser
+/// @author Wormhole Labs
+/// @notice Parses tightly packed data.
+/// @dev    Modified from
+///         https://github.com/wormhole-foundation/wormhole-solidity-sdk/blob/main/src/libraries/BytesParsing.sol
 library BytesParser {
     error LengthMismatch(uint256 encodedLength, uint256 expectedLength);
     error InvalidBool(uint8 value);
@@ -53,6 +51,16 @@ library BytesParser {
         }
     }
 
+    function asUint64Unchecked(
+        bytes memory encoded,
+        uint256 offset
+    ) internal pure returns (uint64 value, uint256 nextOffset) {
+        assembly ("memory-safe") {
+            nextOffset := add(offset, 8)
+            value := mload(add(encoded, nextOffset))
+        }
+    }
+
     function asBytes32Unchecked(
         bytes memory encoded,
         uint256 offset
@@ -60,16 +68,6 @@ library BytesParser {
         uint256 uint256Value;
         (uint256Value, nextOffset) = asUint256Unchecked(encoded, offset);
         value = bytes32(uint256Value);
-    }
-
-    function asUint128Unchecked(
-        bytes memory encoded,
-        uint256 offset
-    ) internal pure returns (uint128 value, uint256 nextOffset) {
-        assembly ("memory-safe") {
-            nextOffset := add(offset, 16)
-            value := mload(add(encoded, nextOffset))
-        }
     }
 
     function asAddressUnchecked(
