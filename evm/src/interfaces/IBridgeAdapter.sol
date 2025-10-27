@@ -29,7 +29,7 @@ interface IBridgeAdapter {
     /// @param  payload            The message payload to send.
     /// @return fee                The fee for sending a message.
     function quote(
-        uint32 destinationChainId,
+        uint256 destinationChainId,
         uint256 gasLimit,
         bytes memory payload
     ) external view returns (uint256 fee);
@@ -45,7 +45,7 @@ interface IBridgeAdapter {
     /// @param  payload            The message payload to send.
     /// @return messageId          The unique identifier of the message sent.
     function sendMessage(
-        uint32 destinationChainId,
+        uint256 destinationChainId,
         uint256 gasLimit,
         address refundAddress,
         bytes memory payload
