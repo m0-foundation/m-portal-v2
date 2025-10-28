@@ -15,20 +15,14 @@ library BytesParser {
         if (encoded.length != expected) revert LengthMismatch(encoded.length, expected);
     }
 
-    function asUint8Unchecked(
-        bytes memory encoded,
-        uint256 offset
-    ) internal pure returns (uint8 value, uint256 nextOffset) {
+    function asUint8Unchecked(bytes memory encoded, uint256 offset) internal pure returns (uint8 value, uint256 nextOffset) {
         assembly ("memory-safe") {
             nextOffset := add(offset, 1)
             value := mload(add(encoded, nextOffset))
         }
     }
 
-    function asBoolUnchecked(
-        bytes memory encoded,
-        uint256 offset
-    ) internal pure returns (bool value, uint256 nextOffset) {
+    function asBoolUnchecked(bytes memory encoded, uint256 offset) internal pure returns (bool value, uint256 nextOffset) {
         uint8 uint8Value;
         (uint8Value, nextOffset) = asUint8Unchecked(encoded, offset);
 
@@ -41,39 +35,27 @@ library BytesParser {
         }
     }
 
-    function asUint256Unchecked(
-        bytes memory encoded,
-        uint256 offset
-    ) internal pure returns (uint256 value, uint256 nextOffset) {
+    function asUint256Unchecked(bytes memory encoded, uint256 offset) internal pure returns (uint256 value, uint256 nextOffset) {
         assembly ("memory-safe") {
             nextOffset := add(offset, 32)
             value := mload(add(encoded, nextOffset))
         }
     }
 
-    function asUint64Unchecked(
-        bytes memory encoded,
-        uint256 offset
-    ) internal pure returns (uint64 value, uint256 nextOffset) {
+    function asUint64Unchecked(bytes memory encoded, uint256 offset) internal pure returns (uint64 value, uint256 nextOffset) {
         assembly ("memory-safe") {
             nextOffset := add(offset, 8)
             value := mload(add(encoded, nextOffset))
         }
     }
 
-    function asBytes32Unchecked(
-        bytes memory encoded,
-        uint256 offset
-    ) internal pure returns (bytes32 value, uint256 nextOffset) {
+    function asBytes32Unchecked(bytes memory encoded, uint256 offset) internal pure returns (bytes32 value, uint256 nextOffset) {
         uint256 uint256Value;
         (uint256Value, nextOffset) = asUint256Unchecked(encoded, offset);
         value = bytes32(uint256Value);
     }
 
-    function asAddressUnchecked(
-        bytes memory encoded,
-        uint256 offset
-    ) internal pure returns (address value, uint256 nextOffset) {
+    function asAddressUnchecked(bytes memory encoded, uint256 offset) internal pure returns (address value, uint256 nextOffset) {
         assembly ("memory-safe") {
             nextOffset := add(offset, 20)
             value := mload(add(encoded, nextOffset))

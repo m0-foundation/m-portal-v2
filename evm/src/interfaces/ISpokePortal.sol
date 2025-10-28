@@ -11,18 +11,21 @@ interface ISpokePortal is IPortal {
     //                                 EVENTS                                //
     ///////////////////////////////////////////////////////////////////////////
 
-    /// @notice Emitted when M Token index is received from Mainnet.
-    /// @param  index M token index.
-    event MTokenIndexReceived(uint128 index);
+    /// @notice Emitted when $M Token index is received from the Hub.
+    /// @param  index     $M token index.
+    /// @param  messageId The unique ID of the message.
+    event MTokenIndexReceived(uint128 index, bytes32 messageId);
 
-    /// @notice Emitted when the Registrar key is received from Mainnet.
-    /// @param  key   The Registrar key of some value.
-    /// @param  value The value.
-    event RegistrarKeyReceived(bytes32 indexed key, bytes32 value);
+    /// @notice Emitted when the Registrar key is received from the Hub.
+    /// @param  key       The Registrar key of some value.
+    /// @param  value     The value.
+    /// @param  messageId The unique ID of the message.
+    event RegistrarKeyReceived(bytes32 indexed key, bytes32 value, bytes32 messageId);
 
     /// @notice Emitted when the Registrar list status is received from the Hub.
-    /// @param  listName The name of the list.
-    /// @param  account  The account.
-    /// @param  add      Indicates if the account is added or removed from the list.
-    event RegistrarListUpdateReceived(bytes32 indexed listName, address indexed account, bool add);
+    /// @param  listName  The name of the list.
+    /// @param  account   The account.
+    /// @param  add       Indicates if the account is added or removed from the list.
+    /// @param  messageId The unique ID of the message.
+    event RegistrarListUpdateReceived(bytes32 indexed listName, address indexed account, bool add, bytes32 messageId);
 }

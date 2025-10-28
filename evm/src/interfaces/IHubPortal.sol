@@ -21,25 +21,25 @@ interface IHubPortal is IPortal {
 
     /// @notice Emitted when the M token index is sent to a destination chain.
     /// @param  destinationChainId The chain Id of the destination chain.
-    /// @param  messageId          The unique identifier for the sent message.
     /// @param  index              The the M token index.
-    event MTokenIndexSent(uint256 destinationChainId, bytes32 messageId, uint128 index);
+    /// @param  messageId          The unique ID of the sent message.
+    event MTokenIndexSent(uint256 destinationChainId, uint128 index, bytes32 messageId);
 
     /// @notice Emitted when the Registrar key is sent to a destination chain.
     /// @param  destinationChainId The chain Id of the destination chain.
-    /// @param  messageId          The unique identifier for the sent message.
     /// @param  key                The key that was sent.
     /// @param  value              The value that was sent.
-    event RegistrarKeySent(uint256 destinationChainId, bytes32 messageId, bytes32 indexed key, bytes32 value);
+    /// @param  messageId          The unique ID of the sent message.
+    event RegistrarKeySent(uint256 destinationChainId, bytes32 indexed key, bytes32 value, bytes32 messageId);
 
     /// @notice Emitted when the Registrar list status for an account is sent to a destination chain.
     /// @param  destinationChainId The chain Id of the destination chain.
-    /// @param  messageId          The unique identifier for the sent message.
     /// @param  listName           The name of the list.
     /// @param  account            The account.
     /// @param  status             The status of the account in the list.
+    /// @param  messageId          The unique ID of the sent message.
     event RegistrarListStatusSent(
-        uint256 destinationChainId, bytes32 messageId, bytes32 indexed listName, address indexed account, bool status
+        uint256 destinationChainId, bytes32 indexed listName, address indexed account, bool status, bytes32 messageId
     );
 
     ///////////////////////////////////////////////////////////////////////////
@@ -73,24 +73,24 @@ interface IHubPortal is IPortal {
     ///////////////////////////////////////////////////////////////////////////
 
     /// @notice Sends the $M token index to the destination chain.
-    /// @param  destinationChainId The EVM chain Id of the destination chain.
+    /// @param  destinationChainId The chain Id of the destination chain.
     /// @param  refundAddress      The refund address to receive excess native gas.
     /// @return messageId          The ID uniquely identifying the message.
-    function sendMTokenIndex(uint256 destinationChainId, address refundAddress) external payable returns (bytes32 messageId);
+    function sendMTokenIndex(uint256 destinationChainId, bytes32 refundAddress) external payable returns (bytes32 messageId);
 
     /// @notice Sends the Registrar key to the destination chain.
-    /// @param  destinationChainId The EVM chain Id of the destination chain.
+    /// @param  destinationChainId The chain Id of the destination chain.
     /// @param  key                The key to send.
     /// @param  refundAddress      The refund address to receive excess native gas.
     /// @return messageId          The ID uniquely identifying the message.
     function sendRegistrarKey(
         uint256 destinationChainId,
         bytes32 key,
-        address refundAddress
+        bytes32 refundAddress
     ) external payable returns (bytes32 messageId);
 
     /// @notice Sends the Registrar list status for an account to the destination chain.
-    /// @param  destinationChainId The EVM chain Id of the destination chain.
+    /// @param  destinationChainId The chain Id of the destination chain.
     /// @param  listName           The name of the list.
     /// @param  account            The account.
     /// @param  refundAddress      The refund address to receive excess native gas.
@@ -99,7 +99,7 @@ interface IHubPortal is IPortal {
         uint256 destinationChainId,
         bytes32 listName,
         address account,
-        address refundAddress
+        bytes32 refundAddress
     ) external payable returns (bytes32 messageId);
 
     /// @notice Enables earning for the Hub Portal if allowed by TTG.

@@ -3,6 +3,7 @@
 pragma solidity 0.8.30;
 
 import { PayloadType } from "../libraries/PayloadEncoder.sol";
+import { IOrderBookLike } from "./IOrderBookLike.sol";
 
 /// @title  IPortal interface
 /// @author M0 Labs
@@ -12,17 +13,17 @@ interface IPortal {
     //                                 EVENTS                                //
     ///////////////////////////////////////////////////////////////////////////
 
-    /// @notice Emitted when M token is sent to a destination chain.
+    /// @notice Emitted when token is sent to a destination chain.
     /// @param  sourceToken        The address of the token on the source chain.
-    /// @param  destinationChainId The chain Id of the destination chain.
+    /// @param  destinationChainId The ID of the destination chain.
     /// @param  destinationToken   The address of the token on the destination chain.
     /// @param  sender             The account initiated bridging of the M tokens via the Portal.
     /// @param  recipient          The account receiving tokens on destination chain.
     /// @param  amount             The amount of tokens.
-    /// @param  index              The M token index.
+    /// @param  index              The $M token index.
     /// @param  bridgeAdapter      The address of the bridge adapter used to send the message.
-    /// @param  messageId          The unique identifier for the sent message.
-    event MTokenSent(
+    /// @param  messageId          The unique ID for the sent message.
+    event TokenSent(
         address indexed sourceToken,
         uint256 destinationChainId,
         bytes32 destinationToken,
@@ -34,23 +35,55 @@ interface IPortal {
         bytes32 messageId
     );
 
-    /// @notice Emitted when M token is received from a source chain.
-    /// @param  sourceChainId    The chain Id of the source chain.
+    /// @notice Emitted when token is received from a source chain.
+    /// @param  sourceChainId    The ID of the source chain.
     /// @param  destinationToken The address of the token on the destination chain.
     /// @param  sender           The account sending tokens.
     /// @param  recipient        The account receiving tokens.
     /// @param  amount           The amount of tokens.
-    /// @param  index            The M token index
-    /// @param  bridgeAdapter    The address of the bridge adapter used to deliver the message.
-    /// @param  messageId        The unique identifier for the message.
-    event MTokenReceived(
+    /// @param  index            The $M token index
+    /// @param  messageId        The unique ID of the message.
+    event TokenReceived(
         uint256 sourceChainId,
         address indexed destinationToken,
         bytes32 indexed sender,
         address indexed recipient,
         uint256 amount,
         uint128 index,
+        bytes32 messageId
+    );
+
+    /// @notice Emitted when a fill report is sent to a origin chain.
+    /// @param destinationChainId The ID of the origin chain.
+    /// @param orderId            The ID of the order being reported
+    /// @param amountInToRelease  The amount of input token to release to the filler on the origin chain
+    /// @param amountOutFilled    The amount of output token that was filled on the destination chain
+    /// @param originRecipient    The address on the origin chain that should receive released funds
+    /// @param bridgeAdapter      The address of the bridge adapter used to send the message.
+    /// @param messageId          The unique identifier for the sent message.
+    event FillReportSent(
+        uint256 indexed destinationChainId,
+        bytes32 indexed orderId,
+        uint128 amountInToRelease,
+        uint128 amountOutFilled,
+        bytes32 originRecipient,
         address bridgeAdapter,
+        bytes32 messageId
+    );
+
+    /// @notice Emitted when a fill report is received from a source chain.
+    /// @param sourceChainId      The ID of the source chain.
+    /// @param orderId            The ID of the order being reported
+    /// @param amountInToRelease  The amount of input token to release to the filler on the origin chain
+    /// @param amountOutFilled    The amount of output token that was filled on the destination chain
+    /// @param originRecipient    The address on the origin chain that should receive released funds
+    /// @param messageId          The unique identifier for the message.
+    event FillReportReceived(
+        uint256 indexed sourceChainId,
+        bytes32 indexed orderId,
+        uint128 amountInToRelease,
+        uint128 amountOutFilled,
+        bytes32 originRecipient,
         bytes32 messageId
     );
 
@@ -62,22 +95,23 @@ interface IPortal {
 
     /// @notice Emitted when a bridging path support status is updated.
     /// @param  sourceToken        The address of the token on the current chain.
-    /// @param  destinationChainId The chain Id of the destination chain.
+    /// @param  destinationChainId The ID of the destination chain.
     /// @param  destinationToken   The address of the token on the destination chain.
     /// @param  supported          `True` if the token is supported, `false` otherwise.
     event SupportedBridgingPathSet(
-        address indexed sourceToken,
-        uint256 indexed destinationChainId,
-        bytes32 indexed destinationToken,
-        bool supported
+        address indexed sourceToken, uint256 indexed destinationChainId, bytes32 indexed destinationToken, bool supported
     );
 
     /// @notice Emitted when the gas limit for a payload type is updated.
-    /// @param  destinationChainId The chain Id of the destination chain.
+    /// @param  destinationChainId The ID of the destination chain.
     /// @param  payloadType        The type of payload.
     /// @param  gasLimit           The gas limit.
     event PayloadGasLimitSet(uint256 indexed destinationChainId, PayloadType indexed payloadType, uint256 gasLimit);
 
+    /// @notice Emitted when the default bridge adapter for a destination chain is set.
+    /// @param  destinationChainId The ID of the destination chain.
+    /// @param  bridgeAdapter      The address of the bridge adapter.
+    event BridgeAdapterSet(uint256 indexed destinationChainId, address indexed bridgeAdapter);
     ///////////////////////////////////////////////////////////////////////////
     //                             CUSTOM ERRORS                             //
     ///////////////////////////////////////////////////////////////////////////
@@ -94,8 +128,14 @@ interface IPortal {
     /// @notice Thrown when the Swap Facility address is 0x0.
     error ZeroSwapFacility();
 
-    /// @notice Thrown when the Bridge address is 0x0.
-    error ZeroBridge();
+    /// @notice Thrown when the Order Book address is 0x0.
+    error ZeroOrderBook();
+
+    /// @notice Thrown when the admin address is 0x0.
+    error ZeroAdmin();
+
+    /// @notice Thrown when the pauser address is 0x0.
+    error ZeroPauser();
 
     /// @notice Thrown when the source token address is 0x0.
     error ZeroSourceToken();
@@ -113,7 +153,16 @@ interface IPortal {
     error ZeroRecipient();
 
     /// @notice Thrown when `receiveMessage` function caller is not the bridge.
-    error NotBridge();
+    error NotBridgeAdapter();
+
+    /// @notice Thrown when `sendFillReport` function caller is not the Order Book.
+    error NotOrderBook();
+
+    /// @notice Thrown when the destination chain id is equal to the source one.
+    error InvalidDestinationChain(uint256 destinationChainId);
+
+    /// @notice Thrown if bridging to the destination chain is not supported.
+    error UnsupportedDestinationChain(uint256 destinationChainId);
 
     /// @notice Thrown in `transferMLikeToken` function when bridging path is not supported
     error UnsupportedBridgingPath(address sourceToken, uint256 destinationChainId, bytes32 destinationToken);
@@ -122,14 +171,8 @@ interface IPortal {
     //                          VIEW/PURE FUNCTIONS                          //
     ///////////////////////////////////////////////////////////////////////////
 
-    /// @notice The current index of the Portal's earning mechanism.
-    function currentIndex() external view returns (uint128);
-
     /// @notice The address of the M token.
     function mToken() external view returns (address);
-
-    /// @notice The address of the Wrapped M token.
-    function wrappedMToken() external view returns (address);
 
     /// @notice The address of the Registrar contract.
     function registrar() external view returns (address);
@@ -137,29 +180,41 @@ interface IPortal {
     /// @notice The address of the Swap Facility contract.
     function swapFacility() external view returns (address);
 
-    /// @notice The address of the original caller of `transfer` and `transferMLikeToken` functions.
-    function msgSender() external view returns (address);
+    /// @notice The address of the Order Book contract.
+    function orderBook() external view returns (address);
+
+    /// @notice Returns the current nonce used for generating unique message IDs.
+    function getNonce() external view returns (uint256);
+
+    /// @notice Returns the default bridge adapter for the given destination chain.
+    /// @param  destinationChainId The ID of the destination chain.
+    function defaultBridgeAdapter(uint256 destinationChainId) external view returns (address);
 
     /// @notice Indicates whether the provided bridging path is supported.
     /// @param  sourceToken        The address of the token on the current chain.
-    /// @param  destinationChainId The EVM chain Id of the destination chain.
+    /// @param  destinationChainId The ID of the destination chain.
     /// @param  destinationToken   The address of the token on the destination chain.
-    /// @return supported          `True` if the token is supported, `false` otherwise.
     function supportedBridgingPath(
         address sourceToken,
         uint256 destinationChainId,
         bytes32 destinationToken
-    ) external view returns (bool supported);
+    ) external view returns (bool);
 
     /// @notice Returns the gas limit required to process a message
     ///         with the specified payload type on the destination chain.
-    /// @param  destinationChainId The EVM chain Id of the destination chain.
+    /// @param  destinationChainId The ID of the destination chain.
     /// @param  payloadType        The type of payload.
     function payloadGasLimit(uint256 destinationChainId, PayloadType payloadType) external view returns (uint256);
 
+    /// @notice The current index of the Portal's earning mechanism.
+    function currentIndex() external view returns (uint128);
+
+    /// @notice The address of the original caller of `transfer` function.
+    function msgSender() external view returns (address);
+
     /// @notice Returns the delivery fee for token transfer.
     /// @dev    The fee must be passed as msg.value when calling any function that sends a cross-chain message (e.g. `transfer`).
-    /// @param  destinationChainId The EVM chain Id of the destination chain.
+    /// @param  destinationChainId The ID of the destination chain.
     /// @param  payloadType        The payload type: TokenTransfer = 0, Index = 1, RegistrarKey = 2, RegistrarList = 3, FillReport = 4
     function quote(uint256 destinationChainId, PayloadType payloadType) external view returns (uint256);
 
@@ -174,33 +229,33 @@ interface IPortal {
 
     /// @notice Sets a bridging path support status.
     /// @param  sourceToken        The address of the token on the current chain.
-    /// @param  destinationChainId The chain Id of the destination chain.
+    /// @param  destinationChainId The ID of the destination chain.
     /// @param  destinationToken   The address of the token on the destination chain.
     /// @param  supported          `True` if the token is supported, `false` otherwise.
-    function setSupportedBridgingPath(
-        address sourceToken,
-        uint256 destinationChainId,
-        bytes32 destinationToken,
-        bool supported
-    ) external;
+    function setSupportedBridgingPath(address sourceToken, uint256 destinationChainId, bytes32 destinationToken, bool supported) external;
 
     /// @notice Sets the gas limit required to process a message
     ///         with the specified payload type on the destination chain.
-    /// @param  destinationChainId The chain Id of the destination chain.
+    /// @param  destinationChainId The ID of the destination chain.
     /// @param  payloadType        The payload type.
     /// @param  gasLimit           The gas limit required to process the message.
     function setPayloadGasLimit(uint256 destinationChainId, PayloadType payloadType, uint256 gasLimit) external;
 
+    /// @notice Sets the default bridge adapter for a destination chain.
+    /// @param  destinationChainId The ID of the destination chain.
+    /// @param  bridgeAdapter      The address of the bridge adapter.
+    function setDefaultBridgeAdapter(uint256 destinationChainId, address bridgeAdapter) external;
+
     /// @notice Transfers $M Token or $M Extension to the destination chain.
     /// @dev    If wrapping on the destination fails, the recipient will receive $M token.
     /// @param  amount             The amount of tokens to transfer.
-    /// @param  sourceToken        The address of the token (M or Wrapped M) on the source chain.
-    /// @param  destinationChainId The chain Id of the destination chain.
-    /// @param  destinationToken   The address of the token (M or Wrapped M) on the destination chain.
+    /// @param  sourceToken        The address of the token ($M or $M Extension) on the source chain.
+    /// @param  destinationChainId The ID of the destination chain.
+    /// @param  destinationToken   The address of the token ($M or $M Extension) on the destination chain.
     /// @param  recipient          The account to receive tokens.
     /// @param  refundAddress      The address to receive excess native gas on the source chain.
     /// @return messageId          The unique identifier of the message sent.
-    function transfer(
+    function sendToken(
         uint256 amount,
         address sourceToken,
         uint256 destinationChainId,
@@ -209,28 +264,25 @@ interface IPortal {
         bytes32 refundAddress
     ) external payable returns (bytes32 messageId);
 
-    /// @notice Transfers $M Token or $M Extension to the destination chain.
-    /// @dev    If wrapping on the destination fails, the recipient will receive $M token.
-    /// @param  amount             The amount of tokens to transfer.
-    /// @param  sourceToken        The address of the token (M or Wrapped M) on the source chain.
-    /// @param  destinationChainId The chain Id of the destination chain.
-    /// @param  destinationToken   The address of the token (M or Wrapped M) on the destination chain.
-    /// @param  recipient          The account to receive tokens.
+    /// @notice Sends the fill report to the destination chain.
+    /// @param  destinationChainId The ID of the destination chain.
+    /// @param  report             The OrderBook fill report to send.
     /// @param  refundAddress      The address to receive excess native gas on the source chain.
-    /// @param  bridgeAdapter      The address of the bridge adapter to use for sending cross-chain message.
-    /// @return messageId          The unique identifier of the message sent.
-    function transfer(
-        uint256 amount,
-        address sourceToken,
+    /// @return messageId          The ID uniquely identifying the message.
+    function sendFillReport(
         uint256 destinationChainId,
-        bytes32 destinationToken,
-        bytes32 recipient,
-        bytes32 refundAddress,
-        address bridgeAdapter
+        IOrderBookLike.FillReport calldata report,
+        bytes32 refundAddress
     ) external payable returns (bytes32 messageId);
 
     /// @notice Receives a message from the bridge.
     /// @param  sourceChainId The chain Id of the source chain.
     /// @param  payload       The message payload.
     function receiveMessage(uint256 sourceChainId, bytes calldata payload) external;
+
+    /// @notice Stop the contract.
+    function pause() external;
+
+    /// @notice Resume the contract.
+    function unpause() external;
 }

@@ -52,22 +52,19 @@ library PayloadEncoder {
     /// @param sender           The address of the sender.
     /// @param recipient        The address of the recipient.
     /// @param index            The M token index.
-    /// @return                 The encoded payload.
+    /// @param messageId        The message ID.
+    /// @return The encoded payload.
     function encodeTokenTransfer(
         uint256 amount,
         bytes32 destinationToken,
         address sender,
         bytes32 recipient,
-        uint128 index
+        uint128 index,
+        bytes32 messageId
     ) internal pure returns (bytes memory) {
         // Converting addresses to `bytes32` and numbers to `uint64` to support non-EVM chains.
         return abi.encodePacked(
-            PayloadType.TokenTransfer,
-            amount.toUint64(),
-            destinationToken,
-            sender.toBytes32(),
-            recipient,
-            index.toUint64()
+            PayloadType.TokenTransfer, amount.toUint64(), destinationToken, sender.toBytes32(), recipient, index.toUint64(), messageId
         );
     }
 
@@ -78,10 +75,11 @@ library PayloadEncoder {
     /// @return sender            The address of the sender.
     /// @return recipient         The address of the recipient.
     /// @return index             The M token index.
+    /// @return messageId         The message ID.
     function decodeTokenTransfer(bytes memory payload)
         internal
         pure
-        returns (uint256 amount, address destinationToken, bytes32 sender, address recipient, uint128 index)
+        returns (uint256 amount, address destinationToken, bytes32 sender, address recipient, uint128 index, bytes32 messageId)
     {
         uint256 offset = PAYLOAD_TYPE_LENGTH;
         bytes32 destinationTokenBytes32;
@@ -92,6 +90,7 @@ library PayloadEncoder {
         (sender, offset) = payload.asBytes32Unchecked(offset);
         (recipientBytes32, offset) = payload.asBytes32Unchecked(offset);
         (index, offset) = payload.asUint64Unchecked(offset);
+        (messageId, offset) = payload.asBytes32Unchecked(offset);
 
         destinationToken = destinationTokenBytes32.toAddress();
         recipient = recipientBytes32.toAddress();
@@ -100,70 +99,77 @@ library PayloadEncoder {
     }
 
     /// @notice Encodes M token index payload.
-    /// @param index The M token index.
-    /// @return      Encoded payload.
-    function encodeIndex(uint128 index) internal pure returns (bytes memory) {
-        return abi.encodePacked(PayloadType.Index, index.toUint64());
+    /// @param  index     The M token index.
+    /// @param  messageId The message ID.
+    /// @return The encoded payload.
+    function encodeIndex(uint128 index, bytes32 messageId) internal pure returns (bytes memory) {
+        return abi.encodePacked(PayloadType.Index, index.toUint64(), messageId);
     }
 
     /// @notice Decodes M token index payload.
-    /// @param payload The payload to decode.
-    /// @return        $M token index.
-    function decodeIndex(bytes memory payload) internal pure returns (uint128) {
+    /// @param payload    The payload to decode.
+    /// @return index     $M token index.
+    /// @return messageId The message ID.
+    function decodeIndex(bytes memory payload) internal pure returns (uint128 index, bytes32 messageId) {
         uint256 offset = PAYLOAD_TYPE_LENGTH;
-        uint128 index;
 
         (index, offset) = payload.asUint64Unchecked(offset);
+        (messageId, offset) = payload.asBytes32Unchecked(offset);
 
         payload.checkLength(offset);
-        return index;
     }
 
     /// @notice Encodes Registrar key-value pair payload.
-    /// @param key      The key.
-    /// @param value    The value.
-    /// @return encoded The encoded payload.
-    function encodeRegistrarKey(bytes32 key, bytes32 value) internal pure returns (bytes memory) {
-        return abi.encodePacked(PayloadType.RegistrarKey, key, value);
+    /// @param  key       The Registrar key.
+    /// @param  value     The Registrar value.
+    /// @param  messageId The message ID.
+    /// @return The encoded payload.
+    function encodeRegistrarKey(bytes32 key, bytes32 value, bytes32 messageId) internal pure returns (bytes memory) {
+        return abi.encodePacked(PayloadType.RegistrarKey, key, value, messageId);
     }
 
     /// @notice Decodes Registrar key-value pair payload.
-    /// @param payload The payload to decode.
-    /// @return key    The key.
-    /// @return value  The value.
-    function decodeRegistrarKey(bytes memory payload) internal pure returns (bytes32 key, bytes32 value) {
+    /// @param payload    The payload to decode.
+    /// @return key       The Registrar key.
+    /// @return value     The Registrar value.
+    /// @return messageId The message ID.
+    function decodeRegistrarKey(bytes memory payload) internal pure returns (bytes32 key, bytes32 value, bytes32 messageId) {
         uint256 offset = PAYLOAD_TYPE_LENGTH;
 
         (key, offset) = payload.asBytes32Unchecked(offset);
         (value, offset) = payload.asBytes32Unchecked(offset);
+        (messageId, offset) = payload.asBytes32Unchecked(offset);
 
         payload.checkLength(offset);
     }
 
     /// @notice Encodes Registrar list update payload.
-    /// @param listName The name of the list.
-    /// @param account  The address of the account.
-    /// @param add      Indicates whether to add or remove the account from the list.
-    /// @return         The encoded payload.
-    function encodeRegistrarList(bytes32 listName, address account, bool add) internal pure returns (bytes memory) {
-        return abi.encodePacked(PayloadType.RegistrarList, listName, account, add);
+    /// @param listName  The name of the list.
+    /// @param account   The address of the account.
+    /// @param add       Indicates whether to add or remove the account from the list.
+    /// @param messageId The message ID.
+    /// @return The encoded payload.
+    function encodeRegistrarList(bytes32 listName, address account, bool add, bytes32 messageId) internal pure returns (bytes memory) {
+        return abi.encodePacked(PayloadType.RegistrarList, listName, account, add, messageId);
     }
 
     /// @notice Decodes Registrar list update payload.
-    /// @param payload   The payload to decode.
-    /// @return listName The name of the list.
-    /// @return account  The address of the account.
-    /// @return add      Indicates whether the account was added or removed from the list.
+    /// @param payload    The payload to decode.
+    /// @return listName  The name of the list.
+    /// @return account   The address of the account.
+    /// @return add       Indicates whether the account was added or removed from the list.
+    /// @return messageId The message ID.
     function decodeRegistrarList(bytes memory payload)
         internal
         pure
-        returns (bytes32 listName, address account, bool add)
+        returns (bytes32 listName, address account, bool add, bytes32 messageId)
     {
         uint256 offset = PAYLOAD_TYPE_LENGTH;
 
         (listName, offset) = payload.asBytes32Unchecked(offset);
         (account, offset) = payload.asAddressUnchecked(offset);
         (add, offset) = payload.asBoolUnchecked(offset);
+        (messageId, offset) = payload.asBytes32Unchecked(offset);
 
         payload.checkLength(offset);
     }
@@ -173,15 +179,17 @@ library PayloadEncoder {
     /// @param amountInToRelease The amount of input token to release to the filler on the source chain.
     /// @param amountOutFilled   The amount of output tokens filled.
     /// @param originRecipient   The amount of output token that was filled on the destination chain.
-    /// @return                  The encoded payload.
+    /// @param messageId         The message ID.
+    /// @return The encoded payload.
     function encodeFillReport(
         bytes32 orderId,
         uint128 amountInToRelease,
         uint128 amountOutFilled,
-        bytes32 originRecipient
+        bytes32 originRecipient,
+        bytes32 messageId
     ) internal pure returns (bytes memory) {
         return abi.encodePacked(
-            PayloadType.FillReport, orderId, amountInToRelease.toUint64(), amountOutFilled.toUint64(), originRecipient
+            PayloadType.FillReport, orderId, amountInToRelease.toUint64(), amountOutFilled.toUint64(), originRecipient, messageId
         );
     }
 
@@ -191,10 +199,11 @@ library PayloadEncoder {
     /// @return amountInToRelease The amount of input token to release to the filler on the source chain.
     /// @return amountOutFilled   The amount of output tokens filled.
     /// @return originRecipient   The amount of output token that was filled on the destination chain.
+    /// @return messageId         The message ID.
     function decodeFillReport(bytes memory payload)
         internal
         pure
-        returns (bytes32 orderId, uint128 amountInToRelease, uint128 amountOutFilled, bytes32 originRecipient)
+        returns (bytes32 orderId, uint128 amountInToRelease, uint128 amountOutFilled, bytes32 originRecipient, bytes32 messageId)
     {
         uint256 offset = PAYLOAD_TYPE_LENGTH;
 
@@ -202,7 +211,26 @@ library PayloadEncoder {
         (amountInToRelease, offset) = payload.asUint64Unchecked(offset);
         (amountOutFilled, offset) = payload.asUint64Unchecked(offset);
         (originRecipient, offset) = payload.asBytes32Unchecked(offset);
+        (messageId, offset) = payload.asBytes32Unchecked(offset);
 
         payload.checkLength(offset);
+    }
+
+    /// @notice Generates a payload with empty data for the given payload type.
+    /// @dev    Used for estimating gas costs for different payload types.
+    function generateEmptyPayload(PayloadType payloadType) internal pure returns (bytes memory) {
+        if (payloadType == PayloadType.TokenTransfer) {
+            return encodeTokenTransfer(0, bytes32(0), address(0), bytes32(0), 0, bytes32(0));
+        } else if (payloadType == PayloadType.Index) {
+            return encodeIndex(0, bytes32(0));
+        } else if (payloadType == PayloadType.RegistrarKey) {
+            return encodeRegistrarKey(bytes32(0), bytes32(0), bytes32(0));
+        } else if (payloadType == PayloadType.RegistrarList) {
+            return encodeRegistrarList(bytes32(0), address(0), false, bytes32(0));
+        } else if (payloadType == PayloadType.FillReport) {
+            return encodeFillReport(bytes32(0), 0, 0, bytes32(0), bytes32(0));
+        }
+
+        revert InvalidPayloadType(uint8(payloadType));
     }
 }
