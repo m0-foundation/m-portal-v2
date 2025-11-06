@@ -54,7 +54,7 @@ interface IPortal {
     );
 
     /// @notice Emitted when a fill report is sent to a origin chain.
-    /// @param destinationChainId The ID of the origin chain.
+    /// @param destinationChainId The ID of the destination chain.
     /// @param orderId            The ID of the order being reported
     /// @param amountInToRelease  The amount of input token to release to the filler on the origin chain
     /// @param amountOutFilled    The amount of output token that was filled on the destination chain
