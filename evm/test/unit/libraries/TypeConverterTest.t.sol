@@ -7,45 +7,45 @@ import { TypeConverter } from "../../../src/libraries/TypeConverter.sol";
 
 contract TypeConverterTest is Test {
     ///////////////////////////////////////////////////////////////////////////
-    //                                toUint64                               //
+    //                               toUint128                               //
     ///////////////////////////////////////////////////////////////////////////
 
-    function test_toUint64_basic() external pure {
+    function test_toUint128_basic() external pure {
         uint256 value = 100;
-        uint64 result = TypeConverter.toUint64(value);
-        assertEq(result, uint64(100));
+        uint128 result = TypeConverter.toUint128(value);
+        assertEq(result, uint128(100));
     }
 
-    function test_toUint64_maxUint64() external pure {
-        uint256 value = type(uint64).max;
-        uint64 result = TypeConverter.toUint64(value);
-        assertEq(result, type(uint64).max);
+    function test_toUint128_maxUint128() external pure {
+        uint256 value = type(uint128).max;
+        uint128 result = TypeConverter.toUint128(value);
+        assertEq(result, type(uint128).max);
     }
 
-    function test_toUint64_zero() external pure {
+    function test_toUint128_zero() external pure {
         uint256 value = 0;
-        uint64 result = TypeConverter.toUint64(value);
+        uint128 result = TypeConverter.toUint128(value);
         assertEq(result, 0);
     }
 
-    function testFuzz_toUint64(uint64 value) external pure {
+    function testFuzz_toUint128(uint128 value) external pure {
         uint256 uint256Value = uint256(value);
-        uint64 result = TypeConverter.toUint64(uint256Value);
+        uint128 result = TypeConverter.toUint128(uint256Value);
         assertEq(result, value);
     }
 
     /// forge-config: default.allow_internal_expect_revert = true
-    function test_toUint64_overflow() external {
-        uint256 value = uint256(type(uint64).max) + 1;
-        vm.expectRevert(TypeConverter.Uint64Overflow.selector);
-        TypeConverter.toUint64(value);
+    function test_toUint128_overflow() external {
+        uint256 value = uint256(type(uint128).max) + 1;
+        vm.expectRevert(TypeConverter.Uint128Overflow.selector);
+        TypeConverter.toUint128(value);
     }
 
     /// forge-config: default.allow_internal_expect_revert = true
     function testFuzz_toUint64_overflow(uint256 value) external {
-        vm.assume(value > type(uint64).max);
-        vm.expectRevert(TypeConverter.Uint64Overflow.selector);
-        TypeConverter.toUint64(value);
+        vm.assume(value > type(uint128).max);
+        vm.expectRevert(TypeConverter.Uint128Overflow.selector);
+        TypeConverter.toUint128(value);
     }
 
     ///////////////////////////////////////////////////////////////////////////

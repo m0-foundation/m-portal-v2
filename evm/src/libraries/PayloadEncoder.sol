@@ -33,8 +33,8 @@ library PayloadEncoder {
     error InvalidPayloadType(uint8 value);
 
     /// @notice Decodes the payload type from the payload.
-    /// @param payload      The payload to decode.
-    /// @return payloadType The decoded payload type.
+    /// @param payload The payload to decode.
+    /// @return The decoded payload type.
     function getPayloadType(bytes memory payload) internal pure returns (PayloadType) {
         if (payload.length < PAYLOAD_TYPE_LENGTH) revert InvalidPayloadLength(payload.length);
 
@@ -62,20 +62,20 @@ library PayloadEncoder {
         uint128 index,
         bytes32 messageId
     ) internal pure returns (bytes memory) {
-        // Converting addresses to `bytes32` and numbers to `uint64` to support non-EVM chains.
+        // Converting addresses to `bytes32` and amount to `uint128` to support non-EVM chains.
         return abi.encodePacked(
-            PayloadType.TokenTransfer, amount.toUint64(), destinationToken, sender.toBytes32(), recipient, index.toUint64(), messageId
+            PayloadType.TokenTransfer, amount.toUint128(), destinationToken, sender.toBytes32(), recipient, index, messageId
         );
     }
 
     /// @notice Decodes a token transfer payload.
-    /// @param payload            The payload to decode.
-    /// @return amount            The amount of tokens to transfer.
-    /// @return destinationToken  The address of the destination token.
-    /// @return sender            The address of the sender.
-    /// @return recipient         The address of the recipient.
-    /// @return index             The M token index.
-    /// @return messageId         The message ID.
+    /// @param payload           The payload to decode.
+    /// @return amount           The amount of tokens to transfer.
+    /// @return destinationToken The address of the destination token.
+    /// @return sender           The address of the sender.
+    /// @return recipient        The address of the recipient.
+    /// @return index            The M token index.
+    /// @return messageId        The message ID.
     function decodeTokenTransfer(bytes memory payload)
         internal
         pure
@@ -85,11 +85,11 @@ library PayloadEncoder {
         bytes32 destinationTokenBytes32;
         bytes32 recipientBytes32;
 
-        (amount, offset) = payload.asUint64Unchecked(offset);
+        (amount, offset) = payload.asUint128Unchecked(offset);
         (destinationTokenBytes32, offset) = payload.asBytes32Unchecked(offset);
         (sender, offset) = payload.asBytes32Unchecked(offset);
         (recipientBytes32, offset) = payload.asBytes32Unchecked(offset);
-        (index, offset) = payload.asUint64Unchecked(offset);
+        (index, offset) = payload.asUint128Unchecked(offset);
         (messageId, offset) = payload.asBytes32Unchecked(offset);
 
         destinationToken = destinationTokenBytes32.toAddress();
@@ -103,7 +103,7 @@ library PayloadEncoder {
     /// @param  messageId The message ID.
     /// @return The encoded payload.
     function encodeIndex(uint128 index, bytes32 messageId) internal pure returns (bytes memory) {
-        return abi.encodePacked(PayloadType.Index, index.toUint64(), messageId);
+        return abi.encodePacked(PayloadType.Index, index, messageId);
     }
 
     /// @notice Decodes M token index payload.
@@ -113,7 +113,7 @@ library PayloadEncoder {
     function decodeIndex(bytes memory payload) internal pure returns (uint128 index, bytes32 messageId) {
         uint256 offset = PAYLOAD_TYPE_LENGTH;
 
-        (index, offset) = payload.asUint64Unchecked(offset);
+        (index, offset) = payload.asUint128Unchecked(offset);
         (messageId, offset) = payload.asBytes32Unchecked(offset);
 
         payload.checkLength(offset);
@@ -189,7 +189,7 @@ library PayloadEncoder {
         bytes32 messageId
     ) internal pure returns (bytes memory) {
         return abi.encodePacked(
-            PayloadType.FillReport, orderId, amountInToRelease.toUint64(), amountOutFilled.toUint64(), originRecipient, messageId
+            PayloadType.FillReport, orderId, amountInToRelease, amountOutFilled, originRecipient, messageId
         );
     }
 
@@ -208,8 +208,8 @@ library PayloadEncoder {
         uint256 offset = PAYLOAD_TYPE_LENGTH;
 
         (orderId, offset) = payload.asBytes32Unchecked(offset);
-        (amountInToRelease, offset) = payload.asUint64Unchecked(offset);
-        (amountOutFilled, offset) = payload.asUint64Unchecked(offset);
+        (amountInToRelease, offset) = payload.asUint128Unchecked(offset);
+        (amountOutFilled, offset) = payload.asUint128Unchecked(offset);
         (originRecipient, offset) = payload.asBytes32Unchecked(offset);
         (messageId, offset) = payload.asBytes32Unchecked(offset);
 

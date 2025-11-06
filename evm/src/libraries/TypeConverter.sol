@@ -6,18 +6,18 @@ pragma solidity 0.8.30;
 /// @author M0 Labs
 /// @notice Utilities for converting between different data types.
 library TypeConverter {
-    /// @notice Thrown when a uint256 value exceeds the max uint64 value.
-    error Uint64Overflow();
+    /// @notice Thrown when a uint256 value exceeds the max uint128 value.
+    error Uint128Overflow();
 
     /// @notice Thrown when a bytes32 value doesn't represent a valid Ethereum address.
     error InvalidAddress(bytes32 value);
 
-    /// @notice Converts a uint256 to uint64, reverting if the value overflows.
+    /// @notice Converts a uint256 to uint128, reverting if the value overflows.
     /// @param  value The uint256 value to convert.
-    /// @return The uint64 representation of the value.
-    function toUint64(uint256 value) internal pure returns (uint64) {
-        if (value > type(uint64).max) revert Uint64Overflow();
-        return uint64(value);
+    /// @return The uint128 representation of the value.
+    function toUint128(uint256 value) internal pure returns (uint128) {
+        if (value > type(uint128).max) revert Uint128Overflow();
+        return uint128(value);
     }
 
     /// @notice Convert an Ethereum address to bytes32.

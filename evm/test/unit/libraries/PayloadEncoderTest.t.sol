@@ -54,7 +54,7 @@ contract PayloadEncoderTest is Test {
         assertEq(
             payload,
             abi.encodePacked(
-                PayloadType.TokenTransfer, amount.toUint64(), token, sender.toBytes32(), recipient, index.toUint64(), messageId
+                PayloadType.TokenTransfer, amount.toUint128(), token, sender.toBytes32(), recipient, index, messageId
             )
         );
     }
@@ -67,13 +67,13 @@ contract PayloadEncoderTest is Test {
         uint128 index,
         bytes32 messageId
     ) external pure {
-        vm.assume(amount < type(uint64).max);
-        vm.assume(index < type(uint64).max);
+        vm.assume(amount < type(uint128).max);
+        vm.assume(index < type(uint128).max);
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, token, sender, recipient, index, messageId);
         assertEq(
             payload,
             abi.encodePacked(
-                PayloadType.TokenTransfer, amount.toUint64(), token, sender.toBytes32(), recipient, index.toUint64(), messageId
+                PayloadType.TokenTransfer, amount.toUint128(), token, sender.toBytes32(), recipient, index, messageId
             )
         );
     }
@@ -114,8 +114,8 @@ contract PayloadEncoderTest is Test {
         uint128 index,
         bytes32 messageId
     ) external pure {
-        vm.assume(amount < type(uint64).max);
-        vm.assume(index < type(uint64).max);
+        vm.assume(amount < type(uint128).max);
+        vm.assume(index < type(uint128).max);
 
         bytes memory payload =
             PayloadEncoder.encodeTokenTransfer(amount, token.toBytes32(), sender, recipient.toBytes32(), index, messageId);
@@ -142,14 +142,14 @@ contract PayloadEncoderTest is Test {
 
         bytes memory payload = PayloadEncoder.encodeIndex(index, messageId);
 
-        assertEq(payload, abi.encodePacked(PayloadType.Index, index.toUint64(), messageId));
+        assertEq(payload, abi.encodePacked(PayloadType.Index, index, messageId));
     }
 
     function testFuzz_encodeIndex(uint128 index, bytes32 messageId) external pure {
-        vm.assume(index < type(uint64).max);
+        vm.assume(index < type(uint128).max);
 
         bytes memory payload = PayloadEncoder.encodeIndex(index, messageId);
-        assertEq(payload, abi.encodePacked(PayloadType.Index, index.toUint64(), messageId));
+        assertEq(payload, abi.encodePacked(PayloadType.Index, index, messageId));
     }
 
     function test_decodeIndex() external pure {
@@ -163,7 +163,7 @@ contract PayloadEncoderTest is Test {
     }
 
     function testFuzz_decodeIndex(uint128 index, bytes32 messageId) external pure {
-        vm.assume(index < type(uint64).max);
+        vm.assume(index < type(uint128).max);
         bytes memory payload = PayloadEncoder.encodeIndex(index, messageId);
 
         (uint128 decodedIndex, bytes32 decodedMessageId) = PayloadEncoder.decodeIndex(payload);
@@ -255,7 +255,7 @@ contract PayloadEncoderTest is Test {
         bytes32 originRecipient = "recipient";
         bytes32 messageId = "messageId";
         bytes memory payload = abi.encodePacked(
-            PayloadType.FillReport, orderId, amountInToRelease.toUint64(), amountOutFilled.toUint64(), originRecipient, messageId
+            PayloadType.FillReport, orderId, amountInToRelease, amountOutFilled, originRecipient, messageId
         );
 
         assertEq(PayloadEncoder.encodeFillReport(orderId, amountInToRelease, amountOutFilled, originRecipient, messageId), payload);
@@ -268,7 +268,7 @@ contract PayloadEncoderTest is Test {
         bytes32 originRecipient = "recipient";
         bytes32 messageId = "messageId";
         bytes memory payload =
-            PayloadEncoder.encodeFillReport(orderId, amountInToRelease.toUint64(), amountOutFilled.toUint64(), originRecipient, messageId);
+            PayloadEncoder.encodeFillReport(orderId, amountInToRelease, amountOutFilled, originRecipient, messageId);
         (
             bytes32 decodedOrderId,
             uint128 decodedAmountInToRelease,
@@ -291,10 +291,10 @@ contract PayloadEncoderTest is Test {
         bytes32 originRecipient,
         bytes32 messageId
     ) external pure {
-        vm.assume(amountInToRelease < type(uint64).max);
-        vm.assume(amountOutFilled < type(uint64).max);
+        vm.assume(amountInToRelease < type(uint128).max);
+        vm.assume(amountOutFilled < type(uint128).max);
         bytes memory payload =
-            PayloadEncoder.encodeFillReport(orderId, amountInToRelease.toUint64(), amountOutFilled.toUint64(), originRecipient, messageId);
+            PayloadEncoder.encodeFillReport(orderId, amountInToRelease, amountOutFilled, originRecipient, messageId);
         (
             bytes32 decodedOrderId,
             uint128 decodedAmountInToRelease,
