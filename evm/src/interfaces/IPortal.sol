@@ -212,7 +212,7 @@ interface IPortal {
     /// @notice The address of the original caller of `transfer` function.
     function msgSender() external view returns (address);
 
-    /// @notice Returns the delivery fee for token transfer.
+    /// @notice Returns the delivery fee for cross-chain message.
     /// @dev    The fee must be passed as msg.value when calling any function that sends a cross-chain message (e.g. `transfer`).
     /// @param  destinationChainId The ID of the destination chain.
     /// @param  payloadType        The payload type: TokenTransfer = 0, Index = 1, RegistrarKey = 2, RegistrarList = 3, FillReport = 4
