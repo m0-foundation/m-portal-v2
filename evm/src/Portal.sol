@@ -278,11 +278,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     }
 
     /// @inheritdoc IPortal
-    function supportedBridgingPath(
-        address sourceToken,
-        uint32 destinationChainId,
-        bytes32 destinationToken
-    ) external view returns (bool) {
+    function supportedBridgingPath(address sourceToken, uint32 destinationChainId, bytes32 destinationToken) external view returns (bool) {
         PortalStorageStruct storage $ = _getPortalStorageLocation();
         return $.supportedBridgingPath[sourceToken][destinationChainId][destinationToken];
     }

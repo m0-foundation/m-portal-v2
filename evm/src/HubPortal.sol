@@ -84,15 +84,11 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
             PayloadEncoder.encodeIndex(index, messageId)
         );
 
-        emit MTokenIndexSent(destinationChainId, index, messageId);
+        emit MTokenIndexSent(destinationChainId, index, bridgeAdapter, messageId);
     }
 
     /// @inheritdoc IHubPortal
-    function sendRegistrarKey(
-        uint32 destinationChainId,
-        bytes32 key,
-        bytes32 refundAddress
-    ) external payable returns (bytes32 messageId) {
+    function sendRegistrarKey(uint32 destinationChainId, bytes32 key, bytes32 refundAddress) external payable returns (bytes32 messageId) {
         _revertIfZeroRefundAddress(refundAddress);
 
         PortalStorageStruct storage $ = _getPortalStorageLocation();
@@ -110,7 +106,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
             PayloadEncoder.encodeRegistrarKey(key, value, messageId)
         );
 
-        emit RegistrarKeySent(destinationChainId, key, value, messageId);
+        emit RegistrarKeySent(destinationChainId, key, value, bridgeAdapter, messageId);
     }
 
     /// @inheritdoc IHubPortal
@@ -137,7 +133,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
             PayloadEncoder.encodeRegistrarList(listName, account, status, messageId)
         );
 
-        emit RegistrarListStatusSent(destinationChainId, listName, account, status, messageId);
+        emit RegistrarListStatusSent(destinationChainId, listName, account, status, bridgeAdapter, messageId);
     }
 
     /// @inheritdoc IHubPortal

@@ -22,24 +22,27 @@ interface IHubPortal is IPortal {
     /// @notice Emitted when the M token index is sent to a destination chain.
     /// @param  destinationChainId The chain Id of the destination chain.
     /// @param  index              The the M token index.
+    /// @param  bridgeAdapter      The address of the bridge adapter used to send the message.
     /// @param  messageId          The unique ID of the sent message.
-    event MTokenIndexSent(uint32 destinationChainId, uint128 index, bytes32 messageId);
+    event MTokenIndexSent(uint32 indexed destinationChainId, uint128 index, address bridgeAdapter, bytes32 messageId);
 
     /// @notice Emitted when the Registrar key is sent to a destination chain.
     /// @param  destinationChainId The chain Id of the destination chain.
     /// @param  key                The key that was sent.
     /// @param  value              The value that was sent.
+    /// @param  bridgeAdapter      The address of the bridge adapter used to send the message.
     /// @param  messageId          The unique ID of the sent message.
-    event RegistrarKeySent(uint32 destinationChainId, bytes32 indexed key, bytes32 value, bytes32 messageId);
+    event RegistrarKeySent(uint32 indexed destinationChainId, bytes32 indexed key, bytes32 value, address bridgeAdapter, bytes32 messageId);
 
     /// @notice Emitted when the Registrar list status for an account is sent to a destination chain.
     /// @param  destinationChainId The chain Id of the destination chain.
     /// @param  listName           The name of the list.
     /// @param  account            The account.
     /// @param  status             The status of the account in the list.
+    /// @param  bridgeAdapter      The address of the bridge adapter used to send the message.
     /// @param  messageId          The unique ID of the sent message.
     event RegistrarListStatusSent(
-        uint32 destinationChainId, bytes32 indexed listName, address indexed account, bool status, bytes32 messageId
+        uint32 indexed destinationChainId, bytes32 indexed listName, address indexed account, bool status, address bridgeAdapter, bytes32 messageId
     );
 
     ///////////////////////////////////////////////////////////////////////////
@@ -83,11 +86,7 @@ interface IHubPortal is IPortal {
     /// @param  key                The key to send.
     /// @param  refundAddress      The refund address to receive excess native gas.
     /// @return messageId          The ID uniquely identifying the message.
-    function sendRegistrarKey(
-        uint32 destinationChainId,
-        bytes32 key,
-        bytes32 refundAddress
-    ) external payable returns (bytes32 messageId);
+    function sendRegistrarKey(uint32 destinationChainId, bytes32 key, bytes32 refundAddress) external payable returns (bytes32 messageId);
 
     /// @notice Sends the Registrar list status for an account to the destination chain.
     /// @param  destinationChainId The chain Id of the destination chain.
