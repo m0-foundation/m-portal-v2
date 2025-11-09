@@ -24,12 +24,12 @@ abstract contract PortalStorageLayout {
         /// @notice Ensures the uniqueness of each cross-chain message.
         uint256 nonce;
         /// @notice Default bridge adapter for each remote chain set by the admin.
-        mapping(uint256 remoteChainId => address bridgeAdapter) defaultBridgeAdapter;
+        mapping(uint32 remoteChainId => address bridgeAdapter) defaultBridgeAdapter;
         /// @notice Supported bridging paths for cross-chain transfers.
-        mapping(address sourceToken => mapping(uint256 destinationChainId => mapping(bytes32 destinationToken => bool supported)))
+        mapping(address sourceToken => mapping(uint32 destinationChainId => mapping(bytes32 destinationToken => bool supported)))
             supportedBridgingPath;
         /// @notice Gas limit required to process different types of payload on destination chains.
-        mapping(uint256 destinationChainId => mapping(PayloadType payloadType => uint256 gasLimit)) payloadGasLimit;
+        mapping(uint32 destinationChainId => mapping(PayloadType payloadType => uint256 gasLimit)) payloadGasLimit;
     }
 
     // keccak256(abi.encode(uint256(keccak256("M0.storage.Portal")) - 1)) & ~bytes32(uint256(0xff))
@@ -60,6 +60,9 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     /// @inheritdoc IPortal
     address public immutable orderBook;
 
+    /// @inheritdoc IPortal
+    uint32 public immutable currentChainId;
+
     /// @notice Constructs the Implementation contract
     /// @dev    Sets immutable storage.
     /// @param  mToken_         The address of M token.
@@ -73,6 +76,9 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         if ((registrar = registrar_) == address(0)) revert ZeroRegistrar();
         if ((swapFacility = swapFacility_) == address(0)) revert ZeroSwapFacility();
         if ((orderBook = orderBook_) == address(0)) revert ZeroOrderBook();
+
+        // NOTE: For most EVM chains, ID fits into uint32
+        currentChainId = block.chainid.toUint32();
     }
 
     /// @notice Initializes the Proxy's storage
@@ -94,7 +100,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     function sendToken(
         uint256 amount,
         address sourceToken,
-        uint256 destinationChainId,
+        uint32 destinationChainId,
         bytes32 destinationToken,
         bytes32 recipient,
         bytes32 refundAddress
@@ -132,7 +138,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         _burnOrLock(amount);
 
         uint128 index = _currentIndex();
-        messageId = _getMessageId(block.chainid, destinationChainId, $.nonce++);
+        messageId = _getMessageId(destinationChainId, $.nonce++);
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, destinationToken, msg.sender, recipient, index, messageId);
         IBridgeAdapter(bridgeAdapter).sendMessage{ value: msg.value }(
             destinationChainId, $.payloadGasLimit[destinationChainId][PayloadType.TokenTransfer], refundAddress, payload
@@ -148,7 +154,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
 
     /// @inheritdoc IPortal
     function sendFillReport(
-        uint256 destinationChainId,
+        uint32 destinationChainId,
         IOrderBookLike.FillReport calldata report,
         bytes32 refundAddress
     ) external payable whenNotPaused whenNotLocked returns (bytes32 messageId) {
@@ -165,7 +171,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         uint128 amountInToRelease = report.amountInToRelease;
         uint128 amountOutFilled = report.amountOutFilled;
         bytes32 originRecipient = report.originRecipient;
-        messageId = _getMessageId(block.chainid, destinationChainId, $.nonce++);
+        messageId = _getMessageId(destinationChainId, $.nonce++);
         bytes memory payload = PayloadEncoder.encodeFillReport(orderId, amountInToRelease, amountOutFilled, originRecipient, messageId);
 
         IBridgeAdapter(bridgeAdapter).sendMessage{ value: msg.value }(destinationChainId, gasLimit, refundAddress, payload);
@@ -174,7 +180,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     }
 
     /// @inheritdoc IPortal
-    function receiveMessage(uint256 sourceChainId, bytes calldata payload) external {
+    function receiveMessage(uint32 sourceChainId, bytes calldata payload) external {
         PortalStorageStruct storage $ = _getPortalStorageLocation();
         address bridgeAdapter = $.defaultBridgeAdapter[sourceChainId];
 
@@ -201,7 +207,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     ///////////////////////////////////////////////////////////////////////////
 
     /// @inheritdoc IPortal
-    function setDefaultBridgeAdapter(uint256 destinationChainId, address bridgeAdapter) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setDefaultBridgeAdapter(uint32 destinationChainId, address bridgeAdapter) external onlyRole(DEFAULT_ADMIN_ROLE) {
         PortalStorageStruct storage $ = _getPortalStorageLocation();
 
         if ($.defaultBridgeAdapter[destinationChainId] == bridgeAdapter) return;
@@ -213,12 +219,12 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     /// @inheritdoc IPortal
     function setSupportedBridgingPath(
         address sourceToken,
-        uint256 destinationChainId,
+        uint32 destinationChainId,
         bytes32 destinationToken,
         bool supported
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (sourceToken == address(0)) revert ZeroSourceToken();
-        if (destinationChainId == block.chainid) revert InvalidDestinationChain(destinationChainId);
+        if (destinationChainId == currentChainId) revert InvalidDestinationChain(destinationChainId);
         if (destinationToken == bytes32(0)) revert ZeroDestinationToken();
 
         PortalStorageStruct storage $ = _getPortalStorageLocation();
@@ -231,7 +237,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
 
     /// @inheritdoc IPortal
     function setPayloadGasLimit(
-        uint256 destinationChainId,
+        uint32 destinationChainId,
         PayloadType payloadType,
         uint256 gasLimit
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -266,7 +272,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     }
 
     /// @inheritdoc IPortal
-    function defaultBridgeAdapter(uint256 destinationChainId) external view returns (address) {
+    function defaultBridgeAdapter(uint32 destinationChainId) external view returns (address) {
         PortalStorageStruct storage $ = _getPortalStorageLocation();
         return $.defaultBridgeAdapter[destinationChainId];
     }
@@ -274,7 +280,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     /// @inheritdoc IPortal
     function supportedBridgingPath(
         address sourceToken,
-        uint256 destinationChainId,
+        uint32 destinationChainId,
         bytes32 destinationToken
     ) external view returns (bool) {
         PortalStorageStruct storage $ = _getPortalStorageLocation();
@@ -282,7 +288,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     }
 
     /// @inheritdoc IPortal
-    function payloadGasLimit(uint256 destinationChainId, PayloadType payloadType) external view returns (uint256) {
+    function payloadGasLimit(uint32 destinationChainId, PayloadType payloadType) external view returns (uint256) {
         PortalStorageStruct storage $ = _getPortalStorageLocation();
         return $.payloadGasLimit[destinationChainId][payloadType];
     }
@@ -298,7 +304,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     }
 
     /// @inheritdoc IPortal
-    function quote(uint256 destinationChainId, PayloadType payloadType) external view returns (uint256) {
+    function quote(uint32 destinationChainId, PayloadType payloadType) external view returns (uint256) {
         PortalStorageStruct storage $ = _getPortalStorageLocation();
 
         uint256 gasLimit = $.payloadGasLimit[destinationChainId][payloadType];
@@ -320,7 +326,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     /// @dev   Handles token transfer message on the destination.
     /// @param sourceChainId The ID of the source chain.
     /// @param payload       The message payload.
-    function _receiveToken(uint256 sourceChainId, bytes memory payload) private {
+    function _receiveToken(uint32 sourceChainId, bytes memory payload) private {
         (uint256 amount, address destinationToken, bytes32 sender, address recipient, uint128 index, bytes32 messageId) =
             payload.decodeTokenTransfer();
 
@@ -364,7 +370,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     /// @dev   Handles fill report message on the destination.
     /// @param sourceChainId The ID of the source chain.
     /// @param payload       The message payload.
-    function _receiveFillReport(uint256 sourceChainId, bytes memory payload) private {
+    function _receiveFillReport(uint32 sourceChainId, bytes memory payload) private {
         (bytes32 orderId, uint128 amountInToRelease, uint128 amountOutFilled, bytes32 originRecipient, bytes32 messageId) =
             payload.decodeFillReport();
 
@@ -381,11 +387,10 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     }
 
     /// @dev Generates a unique across all chains message ID.
-    /// @param sourceChainId      The ID of the source chain.
     /// @param destinationChainId The ID of the destination chain.
     /// @param nonce              A unique nonce for the message.
-    function _getMessageId(uint256 sourceChainId, uint256 destinationChainId, uint256 nonce) internal pure returns (bytes32) {
-        return keccak256(abi.encode(sourceChainId, destinationChainId, nonce));
+    function _getMessageId(uint32 destinationChainId, uint256 nonce) internal view returns (bytes32) {
+        return keccak256(abi.encode(currentChainId, destinationChainId, nonce));
     }
 
     /// @dev   Overridden in SpokePortal to handle custom payload messages.
@@ -447,7 +452,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     }
 
     /// @dev Reverts if `bridgeAdapter` is zero address.
-    function _revertIfZeroBridgeAdapter(uint256 destinationChainId, address bridgeAdapter) internal pure {
+    function _revertIfZeroBridgeAdapter(uint32 destinationChainId, address bridgeAdapter) internal pure {
         if (bridgeAdapter == address(0)) revert UnsupportedDestinationChain(destinationChainId);
     }
 

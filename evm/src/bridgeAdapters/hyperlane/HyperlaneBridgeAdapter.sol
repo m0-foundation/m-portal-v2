@@ -3,8 +3,6 @@
 pragma solidity 0.8.30;
 
 import { Ownable } from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/access/Ownable.sol";
-import { SafeCast } from
-    "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 
 import { IBridgeAdapter } from "../../interfaces/IBridgeAdapter.sol";
 import { IMailbox } from "./interfaces/IMailbox.sol";
@@ -18,7 +16,6 @@ import { TypeConverter } from "../../libraries/TypeConverter.sol";
 /// @notice Sends and receives messages to and from remote chains using Hyperlane protocol
 contract HyperlaneBridge is Ownable, IHyperlaneBridgeAdapter {
     using TypeConverter for *;
-    using SafeCast for uint256;
 
     /// @inheritdoc IHyperlaneBridgeAdapter
     address public immutable mailbox;
@@ -27,7 +24,7 @@ contract HyperlaneBridge is Ownable, IHyperlaneBridgeAdapter {
     address public immutable portal;
 
     /// @inheritdoc IHyperlaneBridgeAdapter
-    mapping(uint256 destinationChainId => bytes32 destinationPeer) public peer;
+    mapping(uint32 destinationChainId => bytes32 destinationPeer) public peer;
 
     /// @notice Constructs Hyperlane Bridge
     /// @param mailbox_ The address of the Hyperlane Mailbox.
@@ -38,12 +35,12 @@ contract HyperlaneBridge is Ownable, IHyperlaneBridgeAdapter {
     }
 
     /// @inheritdoc IBridgeAdapter
-    function quote(uint256 destinationChainId_, uint256 gasLimit_, bytes memory payload_) external view returns (uint256 fee_) {
-        bytes memory metadata_ = StandardHookMetadata.overrideGasLimit(gasLimit_);
-        bytes32 peer_ = _getPeer(destinationChainId_);
-        uint32 destinationDomain_ = _getHyperlaneDomain(destinationChainId_);
+    function quote(uint32 destinationChainId, uint256 gasLimit, bytes memory payload) external view returns (uint256 fee_) {
+        bytes memory metadata = StandardHookMetadata.overrideGasLimit(gasLimit);
+        bytes32 destinationPeer = _getPeer(destinationChainId);
+        uint32 destinationDomain = _getHyperlaneDomain(destinationChainId);
 
-        fee_ = IMailbox(mailbox).quoteDispatch(destinationDomain_, peer_, payload_, metadata_);
+        fee_ = IMailbox(mailbox).quoteDispatch(destinationDomain, destinationPeer, payload, metadata);
     }
 
     /// @dev Returns zero address, so Mailbox will use the default ISM
@@ -52,7 +49,7 @@ contract HyperlaneBridge is Ownable, IHyperlaneBridgeAdapter {
     }
 
     /// @inheritdoc IBridgeAdapter
-    function sendMessage(uint256 destinationChainId, uint256 gasLimit, bytes32 refundAddress, bytes memory payload) external payable {
+    function sendMessage(uint32 destinationChainId, uint256 gasLimit, bytes32 refundAddress, bytes memory payload) external payable {
         if (msg.sender != portal) revert NotPortal();
 
         IMailbox mailbox_ = IMailbox(mailbox);
@@ -73,7 +70,7 @@ contract HyperlaneBridge is Ownable, IHyperlaneBridgeAdapter {
     }
 
     /// @inheritdoc IHyperlaneBridgeAdapter
-    function setPeer(uint256 destinationChainId, bytes32 destinationPeer) external onlyOwner {
+    function setPeer(uint32 destinationChainId, bytes32 destinationPeer) external onlyOwner {
         if (destinationChainId == 0) revert ZeroDestinationChain();
         if (destinationPeer == bytes32(0)) revert ZeroPeer();
 
@@ -83,7 +80,7 @@ contract HyperlaneBridge is Ownable, IHyperlaneBridgeAdapter {
 
     /// @notice Returns the address of Hyperlane bridge on the destination chain.
     /// @param  destinationChainId The EVM chain id of the destination chain.
-    function _getPeer(uint256 destinationChainId) private view returns (bytes32) {
+    function _getPeer(uint32 destinationChainId) private view returns (bytes32) {
         bytes32 destinationPeer = peer[destinationChainId];
         if (destinationPeer == bytes32(0)) revert UnsupportedDestinationChain(destinationChainId);
         return destinationPeer;
@@ -93,8 +90,8 @@ contract HyperlaneBridge is Ownable, IHyperlaneBridgeAdapter {
     /// @dev    For EVM chains Hyperlane domain IDs match EVM chain IDs, but uses `uint32` type
     ///         https://docs.hyperlane.xyz/docs/reference/domains
     /// @param  chainId The EVM chain Id.
-    function _getHyperlaneDomain(uint256 chainId) private pure returns (uint32) {
+    function _getHyperlaneDomain(uint32 chainId) private pure returns (uint32) {
         // TODO: Add non-EVM chains conversion
-        return chainId.toUint32();
+        return chainId;
     }
 }

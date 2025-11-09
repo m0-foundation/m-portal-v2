@@ -18,7 +18,7 @@ The main contracts of the system are:
 
 - `HubPortal` – deployed on Ethereum. It uses a *lock-and-release* mechanism for token transfers and propagates the $M earning index and TTG registrar values to other chains.
 - `SpokePortal` – deployed on all non-Ethereum chains. It uses a *mint-and-burn* mechanism for bridging tokens and updates the $M earning index and TTG registrar values based on messages received from `HubPortal`.
-- `Portal` – a base contract inherited by both `HubPortal` and `SpokePortal` containing a shared functionality. It maintains a mapping of destination chain to bridge adapter – `mapping(uint256 destinationChainId => address bridgeAdapter)`, allowing different adapters to be specified for different chains.
+- `Portal` – a base contract inherited by both `HubPortal` and `SpokePortal` containing a shared functionality. It maintains a mapping of destination chain to bridge adapter – `mapping(uint32 destinationChainId => address bridgeAdapter)`, allowing different adapters to be specified for different chains.
 - `BridgeAdapter` – an abstract contract that defines the common functionality all bridging adapters must implement.
 - *Individual bridge adapters* (e.g., `HyperlaneBridgeAdapter`, `WormholeBridgeAdapter`) – inherit from `BridgeAdapter` contract and implement the specifics of each underlying cross-chain messaging provider.
 

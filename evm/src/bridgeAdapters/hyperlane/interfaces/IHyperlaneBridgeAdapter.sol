@@ -13,7 +13,7 @@ interface IHyperlaneBridgeAdapter is IBridgeAdapter, IMessageRecipient {
     /// @notice Emitted when the address of Hyperlane bridge on the remote chain is set.
     /// @param  destinationChainId The ID of the destination chain.
     /// @param  peer               The address of the bridge contract on the remote chain.
-    event PeerSet(uint256 destinationChainId, bytes32 peer);
+    event PeerSet(uint32 destinationChainId, bytes32 peer);
 
     ///////////////////////////////////////////////////////////////////////////
     //                             CUSTOM ERRORS                             //
@@ -32,7 +32,7 @@ interface IHyperlaneBridgeAdapter is IBridgeAdapter, IMessageRecipient {
     error NotMailbox();
 
     /// @notice Thrown when the destination chain isn't supported.
-    error UnsupportedDestinationChain(uint256 destinationChainId);
+    error UnsupportedDestinationChain(uint32 destinationChainId);
 
     /// @notice Thrown when the source chain isn't supported or configured peer doesn't match the sender.
     error UnsupportedSender(bytes32 sender);
@@ -45,7 +45,7 @@ interface IHyperlaneBridgeAdapter is IBridgeAdapter, IMessageRecipient {
     function mailbox() external view returns (address);
 
     /// @notice Returns the address of Hyperlane Bridge contract on the remote chain.
-    function peer(uint256 destinationChainId) external view returns (bytes32);
+    function peer(uint32 destinationChainId) external view returns (bytes32);
 
     ///////////////////////////////////////////////////////////////////////////
     //                         INTERACTIVE FUNCTIONS                         //
@@ -54,5 +54,5 @@ interface IHyperlaneBridgeAdapter is IBridgeAdapter, IMessageRecipient {
     /// @notice Sets an address of Hyperlane Bridge contract on the remote chain.
     /// @param  destinationChainId The EVM chain Id of the destination chain.
     /// @param  peer               The address of of the bridge contract on the remote chain.
-    function setPeer(uint256 destinationChainId, bytes32 peer) external;
+    function setPeer(uint32 destinationChainId, bytes32 peer) external;
 }

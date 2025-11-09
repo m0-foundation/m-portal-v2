@@ -28,7 +28,7 @@ interface IBridgeAdapter {
     /// @param  gasLimit           The gas limit to execute the message on the destination chain.
     /// @param  payload            The message payload to send.
     /// @return fee                The fee for sending a message.
-    function quote(uint256 destinationChainId, uint256 gasLimit, bytes memory payload) external view returns (uint256 fee);
+    function quote(uint32 destinationChainId, uint256 gasLimit, bytes memory payload) external view returns (uint256 fee);
 
     ///////////////////////////////////////////////////////////////////////////
     //                         INTERACTIVE FUNCTIONS                         //
@@ -39,5 +39,5 @@ interface IBridgeAdapter {
     /// @param  gasLimit           The gas limit to execute the message on the destination chain.
     /// @param  refundAddress      The address to refund the fee to.
     /// @param  payload            The message payload to send.
-    function sendMessage(uint256 destinationChainId, uint256 gasLimit, bytes32 refundAddress, bytes memory payload) external payable;
+    function sendMessage(uint32 destinationChainId, uint256 gasLimit, bytes32 refundAddress, bytes memory payload) external payable;
 }

@@ -13,6 +13,7 @@ import { IHubPortal } from "./interfaces/IHubPortal.sol";
 
 import { Portal } from "./Portal.sol";
 import { PayloadType, PayloadEncoder } from "./libraries/PayloadEncoder.sol";
+import { TypeConverter } from "./libraries/TypeConverter.sol";
 
 abstract contract HubPortalStorageLayout {
     /// @custom:storage-location erc7201:M0.storage.Portal
@@ -37,6 +38,8 @@ abstract contract HubPortalStorageLayout {
 ///         as well as propagating M token index, Registrar keys and list status to the Spoke chain.
 /// @dev    Tokens are bridged using lock-release mechanism.
 contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
+    using TypeConverter for uint256;
+
     /// @notice Constructs HubPortal Implementation contract
     /// @dev    Sets immutable storage.
     /// @param  mToken_         The address of M token.
@@ -63,7 +66,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     ///////////////////////////////////////////////////////////////////////////
 
     /// @inheritdoc IHubPortal
-    function sendMTokenIndex(uint256 destinationChainId, bytes32 refundAddress) external payable returns (bytes32 messageId) {
+    function sendMTokenIndex(uint32 destinationChainId, bytes32 refundAddress) external payable returns (bytes32 messageId) {
         _revertIfZeroRefundAddress(refundAddress);
 
         PortalStorageStruct storage $ = _getPortalStorageLocation();
@@ -72,7 +75,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
 
         uint128 index = _currentIndex();
-        messageId = _getMessageId(block.chainid, destinationChainId, $.nonce++);
+        messageId = _getMessageId(destinationChainId, $.nonce++);
 
         IBridgeAdapter(bridgeAdapter).sendMessage{ value: msg.value }(
             destinationChainId,
@@ -86,7 +89,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
 
     /// @inheritdoc IHubPortal
     function sendRegistrarKey(
-        uint256 destinationChainId,
+        uint32 destinationChainId,
         bytes32 key,
         bytes32 refundAddress
     ) external payable returns (bytes32 messageId) {
@@ -98,7 +101,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
 
         bytes32 value = IRegistrarLike(registrar).get(key);
-        messageId = _getMessageId(block.chainid, destinationChainId, $.nonce++);
+        messageId = _getMessageId(destinationChainId, $.nonce++);
 
         IBridgeAdapter(bridgeAdapter).sendMessage{ value: msg.value }(
             destinationChainId,
@@ -112,7 +115,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
 
     /// @inheritdoc IHubPortal
     function sendRegistrarListStatus(
-        uint256 destinationChainId,
+        uint32 destinationChainId,
         bytes32 listName,
         address account,
         bytes32 refundAddress
@@ -125,7 +128,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
 
         bool status = IRegistrarLike(registrar).listContains(listName, account);
-        messageId = _getMessageId(block.chainid, destinationChainId, $.nonce++);
+        messageId = _getMessageId(destinationChainId, $.nonce++);
 
         IBridgeAdapter(bridgeAdapter).sendMessage{ value: msg.value }(
             destinationChainId,
