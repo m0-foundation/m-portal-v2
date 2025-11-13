@@ -52,10 +52,7 @@ contract PayloadEncoderTest is Test {
 
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, token, sender, recipient, uint128(index), messageId);
         assertEq(
-            payload,
-            abi.encodePacked(
-                PayloadType.TokenTransfer, amount.toUint128(), token, sender.toBytes32(), recipient, index, messageId
-            )
+            payload, abi.encodePacked(PayloadType.TokenTransfer, amount.toUint128(), token, sender.toBytes32(), recipient, index, messageId)
         );
     }
 
@@ -71,10 +68,7 @@ contract PayloadEncoderTest is Test {
         vm.assume(index < type(uint128).max);
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, token, sender, recipient, index, messageId);
         assertEq(
-            payload,
-            abi.encodePacked(
-                PayloadType.TokenTransfer, amount.toUint128(), token, sender.toBytes32(), recipient, index, messageId
-            )
+            payload, abi.encodePacked(PayloadType.TokenTransfer, amount.toUint128(), token, sender.toBytes32(), recipient, index, messageId)
         );
     }
 
@@ -254,9 +248,8 @@ contract PayloadEncoderTest is Test {
         uint128 amountOutFilled = 100;
         bytes32 originRecipient = "recipient";
         bytes32 messageId = "messageId";
-        bytes memory payload = abi.encodePacked(
-            PayloadType.FillReport, orderId, amountInToRelease, amountOutFilled, originRecipient, messageId
-        );
+        bytes memory payload =
+            abi.encodePacked(PayloadType.FillReport, orderId, amountInToRelease, amountOutFilled, originRecipient, messageId);
 
         assertEq(PayloadEncoder.encodeFillReport(orderId, amountInToRelease, amountOutFilled, originRecipient, messageId), payload);
     }
@@ -267,8 +260,7 @@ contract PayloadEncoderTest is Test {
         uint128 amountOutFilled = 100;
         bytes32 originRecipient = "recipient";
         bytes32 messageId = "messageId";
-        bytes memory payload =
-            PayloadEncoder.encodeFillReport(orderId, amountInToRelease, amountOutFilled, originRecipient, messageId);
+        bytes memory payload = PayloadEncoder.encodeFillReport(orderId, amountInToRelease, amountOutFilled, originRecipient, messageId);
         (
             bytes32 decodedOrderId,
             uint128 decodedAmountInToRelease,
@@ -293,8 +285,7 @@ contract PayloadEncoderTest is Test {
     ) external pure {
         vm.assume(amountInToRelease < type(uint128).max);
         vm.assume(amountOutFilled < type(uint128).max);
-        bytes memory payload =
-            PayloadEncoder.encodeFillReport(orderId, amountInToRelease, amountOutFilled, originRecipient, messageId);
+        bytes memory payload = PayloadEncoder.encodeFillReport(orderId, amountInToRelease, amountOutFilled, originRecipient, messageId);
         (
             bytes32 decodedOrderId,
             uint128 decodedAmountInToRelease,

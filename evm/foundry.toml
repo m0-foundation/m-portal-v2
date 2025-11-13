@@ -6,13 +6,21 @@ solc_version = "0.8.30"
 optimizer = true
 optimizer-runs = 10_000
 verbosity = 3
-
+dynamic_test_linking = true
 ignored_warnings_from = ["lib", "test", "script"]
-
 no_match_coverage = "script|test"
+
+[lint]
+lint_on_build = false
 
 [fmt]
 bracket_spacing = true
+contract_new_lines = false
+int_types = "long"
 line_length = 140
 single_line_statement_block = "single"
 multiline_func_header = "params_first_multi"
+number_underscore = "thousands"
+quote_style = "double"
+tab_width = 4
+wrap_comments = true

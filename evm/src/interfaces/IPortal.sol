@@ -5,6 +5,15 @@ pragma solidity 0.8.30;
 import { PayloadType } from "../libraries/PayloadEncoder.sol";
 import { IOrderBookLike } from "./IOrderBookLike.sol";
 
+struct ChainConfig {
+    /// @notice Default bridge adapter for each remote chain used if no bridge adapter is specified.
+    address defaultBridgeAdapter;
+    /// @notice Supported bridge adapters for each remote chain.
+    mapping(address bridgeAdapter => bool supported) supportedBridgeAdapter;
+    /// @notice Gas limit required to process different types of payload on destination chains.
+    mapping(PayloadType payloadType => uint256 gasLimit) payloadGasLimit;
+}
+
 /// @title  IPortal interface
 /// @author M0 Labs
 /// @notice Subset of functions inherited by both IHubPortal and ISpokePortal.
@@ -111,7 +120,13 @@ interface IPortal {
     /// @notice Emitted when the default bridge adapter for a destination chain is set.
     /// @param  destinationChainId The ID of the destination chain.
     /// @param  bridgeAdapter      The address of the bridge adapter.
-    event BridgeAdapterSet(uint32 indexed destinationChainId, address indexed bridgeAdapter);
+    event DefaultBridgeAdapterSet(uint32 indexed destinationChainId, address indexed bridgeAdapter);
+
+    /// @notice Emitted when a supported bridge adapter for a destination chain is set.
+    /// @param  destinationChainId The ID of the destination chain.
+    /// @param  bridgeAdapter      The address of the bridge adapter.
+    /// @param  supported          `True` if the bridge adapter is supported, `false` otherwise.
+    event SupportedBridgeAdapterSet(uint32 indexed destinationChainId, address indexed bridgeAdapter, bool supported);
     ///////////////////////////////////////////////////////////////////////////
     //                             CUSTOM ERRORS                             //
     ///////////////////////////////////////////////////////////////////////////
@@ -152,6 +167,9 @@ interface IPortal {
     /// @notice Thrown when the recipient address is 0x0.
     error ZeroRecipient();
 
+    /// @notice Thrown when the bridge adapter address is 0x0.
+    error ZeroBridgeAdapter();
+
     /// @notice Thrown when `receiveMessage` function caller is not the bridge.
     error NotBridgeAdapter();
 
@@ -166,6 +184,9 @@ interface IPortal {
 
     /// @notice Thrown in `transferMLikeToken` function when bridging path is not supported
     error UnsupportedBridgingPath(address sourceToken, uint32 destinationChainId, bytes32 destinationToken);
+
+    /// @notice Thrown when the bridge adapter is not supported for the destination chain.
+    error UnsupportedBridgeAdapter(uint32 destinationChainId, address bridgeAdapter);
 
     ///////////////////////////////////////////////////////////////////////////
     //                          VIEW/PURE FUNCTIONS                          //
@@ -193,15 +214,16 @@ interface IPortal {
     /// @param  destinationChainId The ID of the destination chain.
     function defaultBridgeAdapter(uint32 destinationChainId) external view returns (address);
 
+    /// @notice Indicates whether the provided bridge adapter is supported for the destination chain.
+    /// @param  destinationChainId The ID of the destination chain.
+    /// @param  bridgingAdapter    The address of the bridge adapter.
+    function supportedBridgeAdapter(uint32 destinationChainId, address bridgingAdapter) external view returns (bool);
+
     /// @notice Indicates whether the provided bridging path is supported.
     /// @param  sourceToken        The address of the token on the current chain.
     /// @param  destinationChainId The ID of the destination chain.
     /// @param  destinationToken   The address of the token on the destination chain.
-    function supportedBridgingPath(
-        address sourceToken,
-        uint32 destinationChainId,
-        bytes32 destinationToken
-    ) external view returns (bool);
+    function supportedBridgingPath(address sourceToken, uint32 destinationChainId, bytes32 destinationToken) external view returns (bool);
 
     /// @notice Returns the gas limit required to process a message
     ///         with the specified payload type on the destination chain.
@@ -215,11 +237,18 @@ interface IPortal {
     /// @notice The address of the original caller of `transfer` function.
     function msgSender() external view returns (address);
 
-    /// @notice Returns the delivery fee for cross-chain message.
-    /// @dev    The fee must be passed as msg.value when calling any function that sends a cross-chain message (e.g. `transfer`).
+    /// @notice Returns the fee for delivering a cross-chain message using the default bridge adapter.
+    /// @dev    The fee must be passed as msg.value when calling any function that sends a cross-chain message (e.g. `sendToken`).
     /// @param  destinationChainId The ID of the destination chain.
     /// @param  payloadType        The payload type: TokenTransfer = 0, Index = 1, RegistrarKey = 2, RegistrarList = 3, FillReport = 4
     function quote(uint32 destinationChainId, PayloadType payloadType) external view returns (uint256);
+
+    /// @notice Returns the fee for delivering a cross-chain message using the specified bridge adapter.
+    /// @dev    The fee must be passed as msg.value when calling any function that sends a cross-chain message (e.g. `sendToken`).
+    /// @param  destinationChainId The ID of the destination chain.
+    /// @param  payloadType        The payload type: TokenTransfer = 0, Index = 1, RegistrarKey = 2, RegistrarList = 3, FillReport = 4
+    /// @param  bridgeAdapter      The address of the bridge adapter.
+    function quote(uint32 destinationChainId, PayloadType payloadType, address bridgeAdapter) external view returns (uint256);
 
     ///////////////////////////////////////////////////////////////////////////
     //                         INTERACTIVE FUNCTIONS                         //
@@ -249,7 +278,13 @@ interface IPortal {
     /// @param  bridgeAdapter      The address of the bridge adapter.
     function setDefaultBridgeAdapter(uint32 destinationChainId, address bridgeAdapter) external;
 
-    /// @notice Transfers $M Token or $M Extension to the destination chain.
+    /// @notice Sets a supported bridge adapter for a destination chain.
+    /// @param  destinationChainId The ID of the destination chain.
+    /// @param  bridgeAdapter      The address of the bridge adapter.
+    /// @param  supported          `True` if the bridge adapter is supported, `false` otherwise.
+    function setSupportedBridgeAdapter(uint32 destinationChainId, address bridgeAdapter, bool supported) external;
+
+    /// @notice Transfers $M Token or $M Extension to the destination chain using the default bridge adapter.
     /// @dev    If wrapping on the destination fails, the recipient will receive $M token.
     /// @param  amount             The amount of tokens to transfer.
     /// @param  sourceToken        The address of the token ($M or $M Extension) on the source chain.
@@ -267,7 +302,26 @@ interface IPortal {
         bytes32 refundAddress
     ) external payable returns (bytes32 messageId);
 
-    /// @notice Sends the fill report to the destination chain.
+    /// @notice Transfers $M Token or $M Extension to the destination chain using the specified bridge adapter.
+    /// @dev    If wrapping on the destination fails, the recipient will receive $M token.
+    /// @param  amount             The amount of tokens to transfer.
+    /// @param  sourceToken        The address of the token ($M or $M Extension) on the source chain.
+    /// @param  destinationChainId The ID of the destination chain.
+    /// @param  destinationToken   The address of the token ($M or $M Extension) on the destination chain.
+    /// @param  recipient          The account to receive tokens.
+    /// @param  refundAddress      The address to receive excess native gas on the source chain.
+    /// @return messageId          The unique identifier of the message sent.
+    function sendToken(
+        uint256 amount,
+        address sourceToken,
+        uint32 destinationChainId,
+        bytes32 destinationToken,
+        bytes32 recipient,
+        bytes32 refundAddress,
+        address bridgeAdapter
+    ) external payable returns (bytes32 messageId);
+
+    /// @notice Sends the fill report to the destination chain using the default bridge adapter.
     /// @param  destinationChainId The ID of the destination chain.
     /// @param  report             The OrderBook fill report to send.
     /// @param  refundAddress      The address to receive excess native gas on the source chain.
@@ -276,6 +330,19 @@ interface IPortal {
         uint32 destinationChainId,
         IOrderBookLike.FillReport calldata report,
         bytes32 refundAddress
+    ) external payable returns (bytes32 messageId);
+
+    /// @notice Sends the fill report to the destination chain using the specified bridge adapter.
+    /// @param  destinationChainId The ID of the destination chain.
+    /// @param  report             The OrderBook fill report to send.
+    /// @param  refundAddress      The address to receive excess native gas on the source chain.
+    /// @param  bridgeAdapter      The address of the bridge adapter to use.
+    /// @return messageId          The ID uniquely identifying the message.
+    function sendFillReport(
+        uint32 destinationChainId,
+        IOrderBookLike.FillReport calldata report,
+        bytes32 refundAddress,
+        address bridgeAdapter
     ) external payable returns (bytes32 messageId);
 
     /// @notice Receives a message from the bridge.

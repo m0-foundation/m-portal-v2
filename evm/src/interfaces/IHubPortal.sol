@@ -42,7 +42,12 @@ interface IHubPortal is IPortal {
     /// @param  bridgeAdapter      The address of the bridge adapter used to send the message.
     /// @param  messageId          The unique ID of the sent message.
     event RegistrarListStatusSent(
-        uint32 indexed destinationChainId, bytes32 indexed listName, address indexed account, bool status, address bridgeAdapter, bytes32 messageId
+        uint32 indexed destinationChainId,
+        bytes32 indexed listName,
+        address indexed account,
+        bool status,
+        address bridgeAdapter,
+        bytes32 messageId
     );
 
     ///////////////////////////////////////////////////////////////////////////
@@ -75,20 +80,44 @@ interface IHubPortal is IPortal {
     //                         INTERACTIVE FUNCTIONS                         //
     ///////////////////////////////////////////////////////////////////////////
 
-    /// @notice Sends the $M token index to the destination chain.
+    /// @notice Sends the $M token index to the destination chain using the default bridge adapter.
     /// @param  destinationChainId The chain Id of the destination chain.
     /// @param  refundAddress      The refund address to receive excess native gas.
     /// @return messageId          The ID uniquely identifying the message.
     function sendMTokenIndex(uint32 destinationChainId, bytes32 refundAddress) external payable returns (bytes32 messageId);
 
-    /// @notice Sends the Registrar key to the destination chain.
+    /// @notice Sends the $M token index to the destination chain using the specified bridge adapter.
+    /// @param  destinationChainId The chain Id of the destination chain.
+    /// @param  refundAddress      The refund address to receive excess native gas.
+    /// @param  bridgeAdapter      The address of the bridge adapter used to send the message.
+    /// @return messageId          The ID uniquely identifying the message.
+    function sendMTokenIndex(
+        uint32 destinationChainId,
+        bytes32 refundAddress,
+        address bridgeAdapter
+    ) external payable returns (bytes32 messageId);
+
+    /// @notice Sends the Registrar key to the destination chain using the default bridge adapter.
     /// @param  destinationChainId The chain Id of the destination chain.
     /// @param  key                The key to send.
     /// @param  refundAddress      The refund address to receive excess native gas.
     /// @return messageId          The ID uniquely identifying the message.
     function sendRegistrarKey(uint32 destinationChainId, bytes32 key, bytes32 refundAddress) external payable returns (bytes32 messageId);
 
-    /// @notice Sends the Registrar list status for an account to the destination chain.
+    /// @notice Sends the Registrar key to the destination chain the specified bridge adapter.
+    /// @param  destinationChainId The chain Id of the destination chain.
+    /// @param  key                The key to send.
+    /// @param  refundAddress      The refund address to receive excess native gas.
+    /// @param  bridgeAdapter      The address of the bridge adapter used to send the message.
+    /// @return messageId          The ID uniquely identifying the message.
+    function sendRegistrarKey(
+        uint32 destinationChainId,
+        bytes32 key,
+        bytes32 refundAddress,
+        address bridgeAdapter
+    ) external payable returns (bytes32 messageId);
+
+    /// @notice Sends the Registrar list status for an account to the destination chain using the default bridge adapter.
     /// @param  destinationChainId The chain Id of the destination chain.
     /// @param  listName           The name of the list.
     /// @param  account            The account.
@@ -99,6 +128,21 @@ interface IHubPortal is IPortal {
         bytes32 listName,
         address account,
         bytes32 refundAddress
+    ) external payable returns (bytes32 messageId);
+
+    /// @notice Sends the Registrar list status for an account to the destination chain using the default specified adapter.
+    /// @param  destinationChainId The chain Id of the destination chain.
+    /// @param  listName           The name of the list.
+    /// @param  account            The account.
+    /// @param  refundAddress      The refund address to receive excess native gas.
+    /// @param  bridgeAdapter      The address of the bridge adapter used to send the message.
+    /// @return messageId          The ID uniquely identifying the message.
+    function sendRegistrarListStatus(
+        uint32 destinationChainId,
+        bytes32 listName,
+        address account,
+        bytes32 refundAddress,
+        address bridgeAdapter
     ) external payable returns (bytes32 messageId);
 
     /// @notice Enables earning for the Hub Portal if allowed by TTG.

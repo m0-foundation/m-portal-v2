@@ -4,14 +4,15 @@ pragma solidity 0.8.30;
 
 import { IERC20 } from "../lib/common/src/interfaces/IERC20.sol";
 import { IndexingMath } from "../lib/common/src/libs/IndexingMath.sol";
-import { AccessControlUpgradeable } from
-    "../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
+import {
+    AccessControlUpgradeable
+} from "../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
 import { PausableUpgradeable } from "../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol";
 import { UUPSUpgradeable } from "../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import { IBridgeAdapter } from "./interfaces/IBridgeAdapter.sol";
 import { IMTokenLike } from "./interfaces/IMTokenLike.sol";
-import { IPortal } from "./interfaces/IPortal.sol";
+import { IPortal, ChainConfig } from "./interfaces/IPortal.sol";
 import { ISwapFacilityLike } from "./interfaces/ISwapFacilityLike.sol";
 import { IOrderBookLike } from "./interfaces/IOrderBookLike.sol";
 import { ReentrancyLock } from "./utils/ReentrancyLock.sol";
@@ -23,13 +24,11 @@ abstract contract PortalStorageLayout {
     struct PortalStorageStruct {
         /// @notice Ensures the uniqueness of each cross-chain message.
         uint256 nonce;
-        /// @notice Default bridge adapter for each remote chain set by the admin.
-        mapping(uint32 remoteChainId => address bridgeAdapter) defaultBridgeAdapter;
+        /// @notice Configuration required to sent cross-chain messages to the remote chain.
+        mapping(uint32 chainId => ChainConfig) remoteChainConfig;
         /// @notice Supported bridging paths for cross-chain transfers.
         mapping(address sourceToken => mapping(uint32 destinationChainId => mapping(bytes32 destinationToken => bool supported)))
             supportedBridgingPath;
-        /// @notice Gas limit required to process different types of payload on destination chains.
-        mapping(uint32 destinationChainId => mapping(PayloadType payloadType => uint256 gasLimit)) payloadGasLimit;
     }
 
     // keccak256(abi.encode(uint256(keccak256("M0.storage.Portal")) - 1)) & ~bytes32(uint256(0xff))
@@ -65,10 +64,10 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
 
     /// @notice Constructs the Implementation contract
     /// @dev    Sets immutable storage.
-    /// @param  mToken_         The address of M token.
-    /// @param  registrar_      The address of Registrar.
-    /// @param  swapFacility_   The address of Swap Facility.
-    /// @param  orderBook_      The address of Order Book.
+    /// @param  mToken_       The address of M token.
+    /// @param  registrar_    The address of Registrar.
+    /// @param  swapFacility_ The address of Swap Facility.
+    /// @param  orderBook_    The address of Order Book.
     constructor(address mToken_, address registrar_, address swapFacility_, address orderBook_) {
         _disableInitializers();
 
@@ -105,51 +104,24 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         bytes32 recipient,
         bytes32 refundAddress
     ) external payable whenNotPaused whenNotLocked returns (bytes32 messageId) {
-        _revertIfZeroAmount(amount);
-        _revertIfZeroRefundAddress(refundAddress);
-        if (destinationToken == bytes32(0)) revert ZeroDestinationToken();
-        if (recipient == bytes32(0)) revert ZeroRecipient();
-
-        PortalStorageStruct storage $ = _getPortalStorageLocation();
-
-        if (!$.supportedBridgingPath[sourceToken][destinationChainId][destinationToken]) {
-            revert UnsupportedBridgingPath(sourceToken, destinationChainId, destinationToken);
-        }
-
-        address bridgeAdapter = $.defaultBridgeAdapter[destinationChainId];
+        address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
         _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
 
-        uint256 startingBalance = _mBalanceOf(address(this));
+        return _sendToken(amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter);
+    }
 
-        // Transfer source token from the sender
-        IERC20(sourceToken).transferFrom(msg.sender, address(this), amount);
+    function sendToken(
+        uint256 amount,
+        address sourceToken,
+        uint32 destinationChainId,
+        bytes32 destinationToken,
+        bytes32 recipient,
+        bytes32 refundAddress,
+        address bridgeAdapter
+    ) external payable returns (bytes32 messageId) {
+        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
-        // If the source token isn't $M token, unwrap it
-        if (sourceToken != address(mToken)) {
-            IERC20(sourceToken).approve(swapFacility, amount);
-            ISwapFacilityLike(swapFacility).swapOutM(sourceToken, amount, address(this));
-        }
-
-        // Adjust amount based on actual received $M tokens for potential fee-on-transfer tokens
-        amount = _getTransferAmount(startingBalance, amount);
-
-        // Burn M tokens on Spoke.
-        // In case of Hub, only update the bridged principal amount as tokens already transferred.
-        _burnOrLock(amount);
-
-        uint128 index = _currentIndex();
-        messageId = _getMessageId(destinationChainId, $.nonce++);
-        bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, destinationToken, msg.sender, recipient, index, messageId);
-        IBridgeAdapter(bridgeAdapter).sendMessage{ value: msg.value }(
-            destinationChainId, $.payloadGasLimit[destinationChainId][PayloadType.TokenTransfer], refundAddress, payload
-        );
-
-        // Prevent stack too deep
-        uint256 transferAmount = amount;
-
-        emit TokenSent(
-            sourceToken, destinationChainId, destinationToken, msg.sender, recipient, transferAmount, index, bridgeAdapter, messageId
-        );
+        return _sendToken(amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter);
     }
 
     /// @inheritdoc IPortal
@@ -157,34 +129,28 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         uint32 destinationChainId,
         IOrderBookLike.FillReport calldata report,
         bytes32 refundAddress
-    ) external payable whenNotPaused whenNotLocked returns (bytes32 messageId) {
-        if (msg.sender != orderBook) revert NotOrderBook();
-        _revertIfZeroRefundAddress(refundAddress);
-
-        PortalStorageStruct storage $ = _getPortalStorageLocation();
-
-        address bridgeAdapter = $.defaultBridgeAdapter[destinationChainId];
+    ) external payable returns (bytes32 messageId) {
+        address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
         _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
 
-        uint256 gasLimit = $.payloadGasLimit[destinationChainId][PayloadType.FillReport];
-        bytes32 orderId = report.orderId;
-        uint128 amountInToRelease = report.amountInToRelease;
-        uint128 amountOutFilled = report.amountOutFilled;
-        bytes32 originRecipient = report.originRecipient;
-        messageId = _getMessageId(destinationChainId, $.nonce++);
-        bytes memory payload = PayloadEncoder.encodeFillReport(orderId, amountInToRelease, amountOutFilled, originRecipient, messageId);
+        return _sendFillReport(destinationChainId, report, refundAddress, bridgeAdapter);
+    }
 
-        IBridgeAdapter(bridgeAdapter).sendMessage{ value: msg.value }(destinationChainId, gasLimit, refundAddress, payload);
+    /// @inheritdoc IPortal
+    function sendFillReport(
+        uint32 destinationChainId,
+        IOrderBookLike.FillReport calldata report,
+        bytes32 refundAddress,
+        address bridgeAdapter
+    ) external payable returns (bytes32 messageId) {
+        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
-        emit FillReportSent(destinationChainId, orderId, amountInToRelease, amountOutFilled, originRecipient, bridgeAdapter, messageId);
+        return _sendFillReport(destinationChainId, report, refundAddress, bridgeAdapter);
     }
 
     /// @inheritdoc IPortal
     function receiveMessage(uint32 sourceChainId, bytes calldata payload) external {
-        PortalStorageStruct storage $ = _getPortalStorageLocation();
-        address bridgeAdapter = $.defaultBridgeAdapter[sourceChainId];
-
-        if (msg.sender != bridgeAdapter) revert NotBridgeAdapter();
+        _revertIfUnsupportedBridgeAdapter(sourceChainId, msg.sender);
 
         PayloadType payloadType = payload.getPayloadType();
 
@@ -208,12 +174,37 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
 
     /// @inheritdoc IPortal
     function setDefaultBridgeAdapter(uint32 destinationChainId, address bridgeAdapter) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        PortalStorageStruct storage $ = _getPortalStorageLocation();
+        _revertIfInvalidDestinationChain(destinationChainId);
 
-        if ($.defaultBridgeAdapter[destinationChainId] == bridgeAdapter) return;
+        ChainConfig storage remoteChainConfig = _getPortalStorageLocation().remoteChainConfig[destinationChainId];
 
-        $.defaultBridgeAdapter[destinationChainId] = bridgeAdapter;
-        emit BridgeAdapterSet(destinationChainId, bridgeAdapter);
+        // If the bridge adapter isn't already supported, add it to the supported adapters list
+        if (!remoteChainConfig.supportedBridgeAdapter[bridgeAdapter]) {
+            remoteChainConfig.supportedBridgeAdapter[bridgeAdapter] = true;
+            emit SupportedBridgeAdapterSet(destinationChainId, bridgeAdapter, true);
+        }
+
+        if (remoteChainConfig.defaultBridgeAdapter == bridgeAdapter) return;
+
+        remoteChainConfig.defaultBridgeAdapter = bridgeAdapter;
+        emit DefaultBridgeAdapterSet(destinationChainId, bridgeAdapter);
+    }
+
+    /// @inheritdoc IPortal
+    function setSupportedBridgeAdapter(
+        uint32 destinationChainId,
+        address bridgeAdapter,
+        bool supported
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _revertIfInvalidDestinationChain(destinationChainId);
+        if (bridgeAdapter == address(0)) revert ZeroBridgeAdapter();
+
+        ChainConfig storage remoteChainConfig = _getPortalStorageLocation().remoteChainConfig[destinationChainId];
+
+        if (remoteChainConfig.supportedBridgeAdapter[bridgeAdapter] == supported) return;
+
+        remoteChainConfig.supportedBridgeAdapter[bridgeAdapter] = supported;
+        emit SupportedBridgeAdapterSet(destinationChainId, bridgeAdapter, supported);
     }
 
     /// @inheritdoc IPortal
@@ -223,9 +214,9 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         bytes32 destinationToken,
         bool supported
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (sourceToken == address(0)) revert ZeroSourceToken();
-        if (destinationChainId == currentChainId) revert InvalidDestinationChain(destinationChainId);
-        if (destinationToken == bytes32(0)) revert ZeroDestinationToken();
+        _revertIfZeroSourceToken(sourceToken);
+        _revertIfInvalidDestinationChain(destinationChainId);
+        _revertIfZeroDestinationToken(destinationToken);
 
         PortalStorageStruct storage $ = _getPortalStorageLocation();
 
@@ -241,11 +232,12 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         PayloadType payloadType,
         uint256 gasLimit
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        PortalStorageStruct storage $ = _getPortalStorageLocation();
+        _revertIfInvalidDestinationChain(destinationChainId);
+        ChainConfig storage remoteChainConfig = _getPortalStorageLocation().remoteChainConfig[destinationChainId];
 
-        if ($.payloadGasLimit[destinationChainId][payloadType] == gasLimit) return;
+        if (remoteChainConfig.payloadGasLimit[payloadType] == gasLimit) return;
 
-        $.payloadGasLimit[destinationChainId][payloadType] = gasLimit;
+        remoteChainConfig.payloadGasLimit[payloadType] = gasLimit;
         emit PayloadGasLimitSet(destinationChainId, payloadType, gasLimit);
     }
 
@@ -272,9 +264,15 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     }
 
     /// @inheritdoc IPortal
-    function defaultBridgeAdapter(uint32 destinationChainId) external view returns (address) {
+    function defaultBridgeAdapter(uint32 destinationChainId) public view returns (address) {
         PortalStorageStruct storage $ = _getPortalStorageLocation();
-        return $.defaultBridgeAdapter[destinationChainId];
+        return $.remoteChainConfig[destinationChainId].defaultBridgeAdapter;
+    }
+
+    /// @inheritdoc IPortal
+    function supportedBridgeAdapter(uint32 destinationChainId, address bridgeAdapter) public view returns (bool) {
+        PortalStorageStruct storage $ = _getPortalStorageLocation();
+        return $.remoteChainConfig[destinationChainId].supportedBridgeAdapter[bridgeAdapter];
     }
 
     /// @inheritdoc IPortal
@@ -284,9 +282,9 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     }
 
     /// @inheritdoc IPortal
-    function payloadGasLimit(uint32 destinationChainId, PayloadType payloadType) external view returns (uint256) {
+    function payloadGasLimit(uint32 destinationChainId, PayloadType payloadType) public view returns (uint256) {
         PortalStorageStruct storage $ = _getPortalStorageLocation();
-        return $.payloadGasLimit[destinationChainId][payloadType];
+        return $.remoteChainConfig[destinationChainId].payloadGasLimit[payloadType];
     }
 
     /// @inheritdoc IPortal
@@ -301,23 +299,113 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
 
     /// @inheritdoc IPortal
     function quote(uint32 destinationChainId, PayloadType payloadType) external view returns (uint256) {
-        PortalStorageStruct storage $ = _getPortalStorageLocation();
-
-        uint256 gasLimit = $.payloadGasLimit[destinationChainId][payloadType];
-        address bridgeAdapter = $.defaultBridgeAdapter[destinationChainId];
+        address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
         _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
 
-        // NOTE: For quoting delivery fee, the content of the message doesn’t matter,
-        //       only the destination chain, gas limit required to process the message on the destination
-        //       and, for some protocols, payload size are relevant.
-        bytes memory payload = PayloadEncoder.generateEmptyPayload(payloadType);
+        return _quote(destinationChainId, payloadType, bridgeAdapter);
+    }
 
-        return IBridgeAdapter(bridgeAdapter).quote(destinationChainId, gasLimit, payload);
+    /// @inheritdoc IPortal
+    function quote(uint32 destinationChainId, PayloadType payloadType, address bridgeAdapter) external view returns (uint256) {
+        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
+
+        return _quote(destinationChainId, payloadType, bridgeAdapter);
     }
 
     ///////////////////////////////////////////////////////////////////////////
     //                     INTERNAL INTERACTIVE FUNCTIONS                    //
     ///////////////////////////////////////////////////////////////////////////
+
+    /// @dev Sends the specified payload to the destination chain.
+    function _sendMessage(
+        uint32 destinationChainId,
+        PayloadType payloadType,
+        bytes32 refundAddress,
+        bytes memory payload,
+        address bridgeAdapter
+    ) internal {
+        IBridgeAdapter(bridgeAdapter).sendMessage{ value: msg.value }(
+            destinationChainId, payloadGasLimit(destinationChainId, payloadType), refundAddress, payload
+        );
+    }
+
+    /// @dev Transfers $M Token or $M Extension to the destination chain.
+    function _sendToken(
+        uint256 amount,
+        address sourceToken,
+        uint32 destinationChainId,
+        bytes32 destinationToken,
+        bytes32 recipient,
+        bytes32 refundAddress,
+        address bridgeAdapter
+    ) internal returns (bytes32 messageId) {
+        _revertIfZeroAmount(amount);
+        _revertIfZeroRefundAddress(refundAddress);
+        _revertIfZeroSourceToken(sourceToken);
+        _revertIfZeroDestinationToken(destinationToken);
+        _revertIfZeroRecipient(recipient);
+        _revertIfInvalidDestinationChain(destinationChainId);
+        _revertIfUnsupportedBridgingPath(sourceToken, destinationChainId, destinationToken);
+
+        uint128 index = _currentIndex();
+
+        // Prevent stack too deep
+        {
+            uint256 startingBalance = _mBalanceOf(address(this));
+
+            // Transfer source token from the sender
+            IERC20(sourceToken).transferFrom(msg.sender, address(this), amount);
+
+            // If the source token isn't $M token, unwrap it
+            if (sourceToken != address(mToken)) {
+                IERC20(sourceToken).approve(swapFacility, amount);
+                ISwapFacilityLike(swapFacility).swapOutM(sourceToken, amount, address(this));
+            }
+
+            // Adjust amount based on actual received $M tokens for potential fee-on-transfer tokens
+            amount = _getTransferAmount(startingBalance, amount);
+
+            // Burn M tokens on Spoke.
+            // In case of Hub, only update the bridged principal amount as tokens already transferred.
+            _burnOrLock(amount);
+
+            messageId = _getMessageId(destinationChainId);
+            bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, destinationToken, msg.sender, recipient, index, messageId);
+
+            _sendMessage(destinationChainId, PayloadType.TokenTransfer, refundAddress, payload, bridgeAdapter);
+        }
+
+        emit TokenSent(sourceToken, destinationChainId, destinationToken, msg.sender, recipient, amount, index, bridgeAdapter, messageId);
+    }
+
+    /// @dev Sends the fill report to the destination chain.
+    function _sendFillReport(
+        uint32 destinationChainId,
+        IOrderBookLike.FillReport calldata report,
+        bytes32 refundAddress,
+        address bridgeAdapter
+    ) private whenNotPaused whenNotLocked returns (bytes32 messageId) {
+        if (msg.sender != orderBook) revert NotOrderBook();
+        _revertIfZeroRefundAddress(refundAddress);
+        _revertIfInvalidDestinationChain(destinationChainId);
+
+        messageId = _getMessageId(destinationChainId);
+        bytes memory payload = PayloadEncoder.encodeFillReport(
+            report.orderId, report.amountOutFilled, report.amountOutFilled, report.originRecipient, messageId
+        );
+
+        _sendMessage(destinationChainId, PayloadType.TokenTransfer, refundAddress, payload, bridgeAdapter);
+
+        emit FillReportSent(
+            destinationChainId,
+            report.orderId,
+            report.amountInToRelease,
+            report.amountOutFilled,
+            report.originRecipient,
+            bridgeAdapter,
+            messageId
+        );
+    }
 
     /// @dev   Handles token transfer message on the destination.
     /// @param sourceChainId The ID of the source chain.
@@ -370,23 +458,23 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         (bytes32 orderId, uint128 amountInToRelease, uint128 amountOutFilled, bytes32 originRecipient, bytes32 messageId) =
             payload.decodeFillReport();
 
-        IOrderBookLike(orderBook).reportFill(
-            IOrderBookLike.FillReport({
-                orderId: orderId,
-                amountInToRelease: amountInToRelease,
-                amountOutFilled: amountOutFilled,
-                originRecipient: originRecipient
-            })
-        );
+        IOrderBookLike(orderBook)
+            .reportFill(
+                IOrderBookLike.FillReport({
+                    orderId: orderId,
+                    amountInToRelease: amountInToRelease,
+                    amountOutFilled: amountOutFilled,
+                    originRecipient: originRecipient
+                })
+            );
 
         emit FillReportReceived(sourceChainId, orderId, amountInToRelease, amountOutFilled, originRecipient, messageId);
     }
 
     /// @dev Generates a unique across all chains message ID.
     /// @param destinationChainId The ID of the destination chain.
-    /// @param nonce              A unique nonce for the message.
-    function _getMessageId(uint32 destinationChainId, uint256 nonce) internal view returns (bytes32) {
-        return keccak256(abi.encode(currentChainId, destinationChainId, nonce));
+    function _getMessageId(uint32 destinationChainId) internal returns (bytes32) {
+        return keccak256(abi.encode(currentChainId, destinationChainId, _getPortalStorageLocation().nonce++));
     }
 
     /// @dev   Overridden in SpokePortal to handle custom payload messages.
@@ -409,6 +497,21 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     ///////////////////////////////////////////////////////////////////////////
     //                 INTERNAL/PRIVATE VIEW/PURE FUNCTIONS                  //
     ///////////////////////////////////////////////////////////////////////////
+
+    /// @dev Returns the fee for delivering a cross-chain message.
+    /// @param  destinationChainId The ID of the destination chain.
+    /// @param  payloadType        The payload type: TokenTransfer = 0, Index = 1, RegistrarKey = 2, RegistrarList = 3, FillReport = 4
+    /// @param  bridgeAdapter      The address of the bridge adapter.
+    function _quote(uint32 destinationChainId, PayloadType payloadType, address bridgeAdapter) private view returns (uint256) {
+        uint256 gasLimit = _getPortalStorageLocation().remoteChainConfig[destinationChainId].payloadGasLimit[payloadType];
+
+        // NOTE: For quoting delivery fee, the content of the message doesn’t matter,
+        //       only the destination chain, gas limit required to process the message on the destination
+        //       and, for some protocols, payload size are relevant.
+        bytes memory payload = PayloadEncoder.generateEmptyPayload(payloadType);
+
+        return IBridgeAdapter(bridgeAdapter).quote(destinationChainId, gasLimit, payload);
+    }
 
     /// @dev  Returns the adjusted transfer amount accounting for potential fee-on-transfer tokens.
     /// @param startingBalance The starting $M token balance of the Portal.
@@ -450,6 +553,33 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     /// @dev Reverts if `bridgeAdapter` is zero address.
     function _revertIfZeroBridgeAdapter(uint32 destinationChainId, address bridgeAdapter) internal pure {
         if (bridgeAdapter == address(0)) revert UnsupportedDestinationChain(destinationChainId);
+    }
+
+    function _revertIfInvalidDestinationChain(uint32 destinationChainId) internal view {
+        if (destinationChainId == currentChainId) revert InvalidDestinationChain(destinationChainId);
+    }
+
+    function _revertIfZeroSourceToken(address sourceToken) internal pure {
+        if (sourceToken == address(0)) revert ZeroSourceToken();
+    }
+
+    function _revertIfZeroDestinationToken(bytes32 destinationToken) internal pure {
+        if (destinationToken == bytes32(0)) revert ZeroDestinationToken();
+    }
+
+    function _revertIfZeroRecipient(bytes32 recipient) internal pure {
+        if (recipient == bytes32(0)) revert ZeroRecipient();
+    }
+
+    function _revertIfUnsupportedBridgeAdapter(uint32 chainId, address bridgeAdapter) internal view {
+        if (!supportedBridgeAdapter(chainId, bridgeAdapter)) revert UnsupportedBridgeAdapter(chainId, bridgeAdapter);
+    }
+
+    function _revertIfUnsupportedBridgingPath(address sourceToken, uint32 destinationChainId, bytes32 destinationToken) internal view {
+        PortalStorageStruct storage $ = _getPortalStorageLocation();
+        if (!$.supportedBridgingPath[sourceToken][destinationChainId][destinationToken]) {
+            revert UnsupportedBridgingPath(sourceToken, destinationChainId, destinationToken);
+        }
     }
 
     /// @dev Returns the current M token index used by the Portal.

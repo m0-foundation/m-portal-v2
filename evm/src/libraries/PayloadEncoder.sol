@@ -188,9 +188,7 @@ library PayloadEncoder {
         bytes32 originRecipient,
         bytes32 messageId
     ) internal pure returns (bytes memory) {
-        return abi.encodePacked(
-            PayloadType.FillReport, orderId, amountInToRelease, amountOutFilled, originRecipient, messageId
-        );
+        return abi.encodePacked(PayloadType.FillReport, orderId, amountInToRelease, amountOutFilled, originRecipient, messageId);
     }
 
     /// @notice Decodes a fill report payload.

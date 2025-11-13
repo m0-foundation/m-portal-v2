@@ -8,7 +8,7 @@ import { IndexingMath } from "../lib/common/src/libs/IndexingMath.sol";
 import { IBridgeAdapter } from "./interfaces/IBridgeAdapter.sol";
 import { IMTokenLike } from "./interfaces/IMTokenLike.sol";
 import { IRegistrarLike } from "./interfaces/IRegistrarLike.sol";
-import { IPortal } from "./interfaces/IPortal.sol";
+import { IPortal, ChainConfig } from "./interfaces/IPortal.sol";
 import { IHubPortal } from "./interfaces/IHubPortal.sol";
 
 import { Portal } from "./Portal.sol";
@@ -42,10 +42,10 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
 
     /// @notice Constructs HubPortal Implementation contract
     /// @dev    Sets immutable storage.
-    /// @param  mToken_         The address of M token.
-    /// @param  registrar_      The address of Registrar.
-    /// @param  swapFacility_   The address of Swap Facility.
-    /// @param  orderBook_      The address of Order Book.
+    /// @param  mToken_       The address of M token.
+    /// @param  registrar_    The address of Registrar.
+    /// @param  swapFacility_ The address of Swap Facility.
+    /// @param  orderBook_    The address of Order Book.
     constructor(
         address mToken_,
         address registrar_,
@@ -67,46 +67,41 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
 
     /// @inheritdoc IHubPortal
     function sendMTokenIndex(uint32 destinationChainId, bytes32 refundAddress) external payable returns (bytes32 messageId) {
-        _revertIfZeroRefundAddress(refundAddress);
-
-        PortalStorageStruct storage $ = _getPortalStorageLocation();
-
-        address bridgeAdapter = $.defaultBridgeAdapter[destinationChainId];
+        address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
         _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
 
-        uint128 index = _currentIndex();
-        messageId = _getMessageId(destinationChainId, $.nonce++);
+        return _sendMTokenIndex(destinationChainId, refundAddress, bridgeAdapter);
+    }
 
-        IBridgeAdapter(bridgeAdapter).sendMessage{ value: msg.value }(
-            destinationChainId,
-            $.payloadGasLimit[destinationChainId][PayloadType.Index],
-            refundAddress,
-            PayloadEncoder.encodeIndex(index, messageId)
-        );
+    /// @inheritdoc IHubPortal
+    function sendMTokenIndex(
+        uint32 destinationChainId,
+        bytes32 refundAddress,
+        address bridgeAdapter
+    ) external payable returns (bytes32 messageId) {
+        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
-        emit MTokenIndexSent(destinationChainId, index, bridgeAdapter, messageId);
+        return _sendMTokenIndex(destinationChainId, refundAddress, bridgeAdapter);
     }
 
     /// @inheritdoc IHubPortal
     function sendRegistrarKey(uint32 destinationChainId, bytes32 key, bytes32 refundAddress) external payable returns (bytes32 messageId) {
-        _revertIfZeroRefundAddress(refundAddress);
-
-        PortalStorageStruct storage $ = _getPortalStorageLocation();
-
-        address bridgeAdapter = $.defaultBridgeAdapter[destinationChainId];
+        address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
         _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
 
-        bytes32 value = IRegistrarLike(registrar).get(key);
-        messageId = _getMessageId(destinationChainId, $.nonce++);
+        return _sendRegistrarKey(destinationChainId, key, refundAddress, bridgeAdapter);
+    }
 
-        IBridgeAdapter(bridgeAdapter).sendMessage{ value: msg.value }(
-            destinationChainId,
-            $.payloadGasLimit[destinationChainId][PayloadType.RegistrarKey],
-            refundAddress,
-            PayloadEncoder.encodeRegistrarKey(key, value, messageId)
-        );
+    /// @inheritdoc IHubPortal
+    function sendRegistrarKey(
+        uint32 destinationChainId,
+        bytes32 key,
+        bytes32 refundAddress,
+        address bridgeAdapter
+    ) external payable returns (bytes32 messageId) {
+        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
-        emit RegistrarKeySent(destinationChainId, key, value, bridgeAdapter, messageId);
+        return _sendRegistrarKey(destinationChainId, key, refundAddress, bridgeAdapter);
     }
 
     /// @inheritdoc IHubPortal
@@ -116,24 +111,23 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         address account,
         bytes32 refundAddress
     ) external payable returns (bytes32 messageId) {
-        _revertIfZeroRefundAddress(refundAddress);
-
-        PortalStorageStruct storage $ = _getPortalStorageLocation();
-
-        address bridgeAdapter = $.defaultBridgeAdapter[destinationChainId];
+        address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
         _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
 
-        bool status = IRegistrarLike(registrar).listContains(listName, account);
-        messageId = _getMessageId(destinationChainId, $.nonce++);
+        return _sendRegistrarListStatus(destinationChainId, listName, account, refundAddress, bridgeAdapter);
+    }
 
-        IBridgeAdapter(bridgeAdapter).sendMessage{ value: msg.value }(
-            destinationChainId,
-            $.payloadGasLimit[destinationChainId][PayloadType.RegistrarList],
-            refundAddress,
-            PayloadEncoder.encodeRegistrarList(listName, account, status, messageId)
-        );
+    /// @inheritdoc IHubPortal
+    function sendRegistrarListStatus(
+        uint32 destinationChainId,
+        bytes32 listName,
+        address account,
+        bytes32 refundAddress,
+        address bridgeAdapter
+    ) external payable returns (bytes32 messageId) {
+        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
-        emit RegistrarListStatusSent(destinationChainId, listName, account, status, bridgeAdapter, messageId);
+        return _sendRegistrarListStatus(destinationChainId, listName, account, refundAddress, bridgeAdapter);
     }
 
     /// @inheritdoc IHubPortal
@@ -183,6 +177,56 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     ///////////////////////////////////////////////////////////////////////////
     //                INTERNAL/PRIVATE INTERACTIVE FUNCTIONS                 //
     ///////////////////////////////////////////////////////////////////////////
+
+    /// @dev Sends the M token index to the destination chain.
+    function _sendMTokenIndex(uint32 destinationChainId, bytes32 refundAddress, address bridgeAdapter) private returns (bytes32 messageId) {
+        _revertIfZeroRefundAddress(refundAddress);
+
+        uint128 index = _currentIndex();
+        messageId = _getMessageId(destinationChainId);
+        bytes memory payload = PayloadEncoder.encodeIndex(index, messageId);
+
+        _sendMessage(destinationChainId, PayloadType.Index, refundAddress, payload, bridgeAdapter);
+
+        emit MTokenIndexSent(destinationChainId, index, bridgeAdapter, messageId);
+    }
+
+    /// @dev Sends the Registrar key to the destination chain.
+    function _sendRegistrarKey(
+        uint32 destinationChainId,
+        bytes32 key,
+        bytes32 refundAddress,
+        address bridgeAdapter
+    ) private returns (bytes32 messageId) {
+        _revertIfZeroRefundAddress(refundAddress);
+
+        bytes32 value = IRegistrarLike(registrar).get(key);
+        messageId = _getMessageId(destinationChainId);
+        bytes memory payload = PayloadEncoder.encodeRegistrarKey(key, value, messageId);
+
+        _sendMessage(destinationChainId, PayloadType.RegistrarKey, refundAddress, payload, bridgeAdapter);
+
+        emit RegistrarKeySent(destinationChainId, key, value, bridgeAdapter, messageId);
+    }
+
+    /// @dev Sends the Registrar list status for an account to the destination chain.
+    function _sendRegistrarListStatus(
+        uint32 destinationChainId,
+        bytes32 listName,
+        address account,
+        bytes32 refundAddress,
+        address bridgeAdapter
+    ) private returns (bytes32 messageId) {
+        _revertIfZeroRefundAddress(refundAddress);
+
+        bool status = IRegistrarLike(registrar).listContains(listName, account);
+        messageId = _getMessageId(destinationChainId);
+        bytes memory payload = PayloadEncoder.encodeRegistrarList(listName, account, status, messageId);
+
+        _sendMessage(destinationChainId, PayloadType.RegistrarList, refundAddress, payload, bridgeAdapter);
+
+        emit RegistrarListStatusSent(destinationChainId, listName, account, status, bridgeAdapter, messageId);
+    }
 
     /// @dev Unlocks M tokens to `recipient_`.
     /// @param recipient The account to unlock/transfer M tokens to.

@@ -2,7 +2,9 @@
 
 pragma solidity 0.8.30;
 
-import { Ownable } from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import {
+    Ownable
+} from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
 import { IBridgeAdapter } from "../../interfaces/IBridgeAdapter.sol";
 import { IMailbox } from "./interfaces/IMailbox.sol";
