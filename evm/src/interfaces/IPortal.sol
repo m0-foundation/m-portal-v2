@@ -152,6 +152,9 @@ interface IPortal {
     /// @notice Thrown when the pauser address is 0x0.
     error ZeroPauser();
 
+    /// @notice Thrown when the operator address is 0x0.
+    error ZeroOperator();
+
     /// @notice Thrown when the source token address is 0x0.
     error ZeroSourceToken();
 
