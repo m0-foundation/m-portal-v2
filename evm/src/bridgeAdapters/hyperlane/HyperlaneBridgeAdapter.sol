@@ -2,10 +2,7 @@
 
 pragma solidity 0.8.30;
 
-import {
-    Ownable
-} from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/access/Ownable.sol";
-
+import { BridgeAdapter } from "../BridgeAdapter.sol";
 import { IBridgeAdapter } from "../../interfaces/IBridgeAdapter.sol";
 import { IMailbox } from "./interfaces/IMailbox.sol";
 import { IMessageRecipient } from "./interfaces/IMessageRecipient.sol";
@@ -14,35 +11,32 @@ import { StandardHookMetadata } from "./libs/StandardHookMetadata.sol";
 import { IPortal } from "../../interfaces/IPortal.sol";
 import { TypeConverter } from "../../libraries/TypeConverter.sol";
 
-/// @title  HyperLane Bridge
+/// @title  HyperLane Bridge Adapter
 /// @notice Sends and receives messages to and from remote chains using Hyperlane protocol
-contract HyperlaneBridge is Ownable, IHyperlaneBridgeAdapter {
+contract HyperlaneBridge is BridgeAdapter, IHyperlaneBridgeAdapter {
     using TypeConverter for *;
 
     /// @inheritdoc IHyperlaneBridgeAdapter
     address public immutable mailbox;
 
-    /// @inheritdoc IBridgeAdapter
-    address public immutable portal;
-
-    /// @inheritdoc IHyperlaneBridgeAdapter
-    mapping(uint32 destinationChainId => bytes32 destinationPeer) public peer;
-
-    /// @notice Constructs Hyperlane Bridge
+    /// @notice Constructs Hyperlane Bridge Adapter Implementation contract
     /// @param mailbox_ The address of the Hyperlane Mailbox.
     /// @param portal_  The address of the Portal on the current chain.
-    constructor(address mailbox_, address portal_, address initialOwner_) Ownable(initialOwner_) {
+    constructor(address mailbox_, address portal_) BridgeAdapter(portal_) {
         if ((mailbox = mailbox_) == address(0)) revert ZeroMailbox();
-        if ((portal = portal_) == address(0)) revert ZeroPortal();
+    }
+
+    function initialize(address owner, address operator) external initializer {
+        _initialize(owner, operator);
     }
 
     /// @inheritdoc IBridgeAdapter
-    function quote(uint32 destinationChainId, uint256 gasLimit, bytes memory payload) external view returns (uint256 fee_) {
+    function quote(uint32 destinationChainId, uint256 gasLimit, bytes memory payload) external view returns (uint256 fee) {
         bytes memory metadata = StandardHookMetadata.overrideGasLimit(gasLimit);
-        bytes32 destinationPeer = _getPeer(destinationChainId);
-        uint32 destinationDomain = _getHyperlaneDomain(destinationChainId);
+        bytes32 destinationPeer = _getPeerOrRevert(destinationChainId);
+        uint32 destinationDomain = _getHyperlaneDomainOrRevert(destinationChainId);
 
-        fee_ = IMailbox(mailbox).quoteDispatch(destinationDomain, destinationPeer, payload, metadata);
+        return IMailbox(mailbox).quoteDispatch(destinationDomain, destinationPeer, payload, metadata);
     }
 
     /// @dev Returns zero address, so Mailbox will use the default ISM
@@ -56,8 +50,8 @@ contract HyperlaneBridge is Ownable, IHyperlaneBridgeAdapter {
 
         IMailbox mailbox_ = IMailbox(mailbox);
         bytes memory metadata_ = StandardHookMetadata.formatMetadata(0, gasLimit, refundAddress.toAddress(), "");
-        bytes32 destinationPeer = _getPeer(destinationChainId);
-        uint32 destinationDomain = _getHyperlaneDomain(destinationChainId);
+        bytes32 destinationPeer = _getPeerOrRevert(destinationChainId);
+        uint32 destinationDomain = _getHyperlaneDomainOrRevert(destinationChainId);
 
         // NOTE: The transaction reverts if mgs.value isn't enough to cover the fee.
         //       If msg.value is greater than the required fee, the excess is sent to the refund address.
@@ -67,33 +61,13 @@ contract HyperlaneBridge is Ownable, IHyperlaneBridgeAdapter {
     /// @inheritdoc IMessageRecipient
     function handle(uint32 sourceChainId, bytes32 sender, bytes calldata payload) external payable {
         if (msg.sender != mailbox) revert NotMailbox();
-        if (sender != peer[sourceChainId]) revert UnsupportedSender(sender);
+        if (sender != _getPeer(sourceChainId)) revert UnsupportedSender(sender);
         IPortal(portal).receiveMessage(sourceChainId, payload);
     }
 
-    /// @inheritdoc IHyperlaneBridgeAdapter
-    function setPeer(uint32 destinationChainId, bytes32 destinationPeer) external onlyOwner {
-        if (destinationChainId == 0) revert ZeroDestinationChain();
-        if (destinationPeer == bytes32(0)) revert ZeroPeer();
-
-        peer[destinationChainId] = destinationPeer;
-        emit PeerSet(destinationChainId, destinationPeer);
-    }
-
-    /// @notice Returns the address of Hyperlane bridge on the destination chain.
-    /// @param  destinationChainId The EVM chain id of the destination chain.
-    function _getPeer(uint32 destinationChainId) private view returns (bytes32) {
-        bytes32 destinationPeer = peer[destinationChainId];
-        if (destinationPeer == bytes32(0)) revert UnsupportedDestinationChain(destinationChainId);
-        return destinationPeer;
-    }
-
     /// @notice Returns Hyperlane domain by chain Id
-    /// @dev    For EVM chains Hyperlane domain IDs match EVM chain IDs, but uses `uint32` type
-    ///         https://docs.hyperlane.xyz/docs/reference/domains
-    /// @param  chainId The EVM chain Id.
-    function _getHyperlaneDomain(uint32 chainId) private pure returns (uint32) {
-        // TODO: Add non-EVM chains conversion
-        return chainId;
+    /// @dev    https://docs.hyperlane.xyz/docs/reference/domains
+    function _getHyperlaneDomainOrRevert(uint32 chainId) private view returns (uint32) {
+        return _getBridgeChainIdOrRevert(chainId).toUint32();
     }
 }

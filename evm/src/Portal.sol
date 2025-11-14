@@ -82,8 +82,9 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     }
 
     /// @notice Initializes the Proxy's storage
-    /// @param  admin  The address of the admin.
-    /// @param  pauser The address of the pauser.
+    /// @param  admin    The address of the admin.
+    /// @param  pauser   The address of the pauser.
+    /// @param  operator The address of the operator.
     function _initialize(address admin, address pauser, address operator) internal onlyInitializing {
         if (admin == address(0)) revert ZeroAdmin();
         if (pauser == address(0)) revert ZeroPauser();
@@ -172,7 +173,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    //                        ACCESS CONTROL FUNCTIONS                       //
+    //                          PRIVILEGED FUNCTIONS                         //
     ///////////////////////////////////////////////////////////////////////////
 
     /// @inheritdoc IPortal
@@ -236,6 +237,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         emit PayloadGasLimitSet(destinationChainId, payloadType, gasLimit);
     }
 
+    /// @dev Reverts if `msg.sender` is not authorized to upgrade the contract
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) { }
 
     /// @inheritdoc IPortal
