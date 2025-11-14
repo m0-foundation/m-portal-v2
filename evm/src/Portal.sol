@@ -46,6 +46,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     using PayloadEncoder for bytes;
 
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
     /// @inheritdoc IPortal
     address public immutable mToken;
@@ -83,12 +84,14 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     /// @notice Initializes the Proxy's storage
     /// @param  admin  The address of the admin.
     /// @param  pauser The address of the pauser.
-    function _initialize(address admin, address pauser) internal onlyInitializing {
+    function _initialize(address admin, address pauser, address operator) internal onlyInitializing {
         if (admin == address(0)) revert ZeroAdmin();
         if (pauser == address(0)) revert ZeroPauser();
+        if (operator == address(0)) revert ZeroOperator();
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(PAUSER_ROLE, pauser);
+        _grantRole(OPERATOR_ROLE, operator);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -173,7 +176,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     ///////////////////////////////////////////////////////////////////////////
 
     /// @inheritdoc IPortal
-    function setDefaultBridgeAdapter(uint32 destinationChainId, address bridgeAdapter) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setDefaultBridgeAdapter(uint32 destinationChainId, address bridgeAdapter) external onlyRole(OPERATOR_ROLE) {
         _revertIfInvalidDestinationChain(destinationChainId);
 
         ChainConfig storage remoteChainConfig = _getPortalStorageLocation().remoteChainConfig[destinationChainId];
@@ -195,7 +198,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         uint32 destinationChainId,
         address bridgeAdapter,
         bool supported
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external onlyRole(OPERATOR_ROLE) {
         _revertIfInvalidDestinationChain(destinationChainId);
         if (bridgeAdapter == address(0)) revert ZeroBridgeAdapter();
 
@@ -213,7 +216,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         uint32 destinationChainId,
         bytes32 destinationToken,
         bool supported
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external onlyRole(OPERATOR_ROLE) {
         _revertIfZeroSourceToken(sourceToken);
         _revertIfInvalidDestinationChain(destinationChainId);
         _revertIfZeroDestinationToken(destinationToken);
@@ -231,7 +234,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         uint32 destinationChainId,
         PayloadType payloadType,
         uint256 gasLimit
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external onlyRole(OPERATOR_ROLE) {
         _revertIfInvalidDestinationChain(destinationChainId);
         ChainConfig storage remoteChainConfig = _getPortalStorageLocation().remoteChainConfig[destinationChainId];
 
