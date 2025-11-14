@@ -54,8 +54,8 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     ) Portal(mToken_, registrar_, swapFacility_, orderBook_) { }
 
     /// @inheritdoc IPortal
-    function initialize(address initialOwner_, address initialPauser_) external initializer {
-        _initialize(initialOwner_, initialPauser_);
+    function initialize(address initialOwner, address initialPauser, address initialOperator) external initializer {
+        _initialize(initialOwner, initialPauser, initialOperator);
 
         HubPortalStorageStruct storage $ = _getHubPortalStorageLocation();
         $.disableEarningIndex = IndexingMath.EXP_SCALED_ONE;

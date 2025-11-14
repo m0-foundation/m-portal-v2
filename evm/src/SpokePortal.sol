@@ -32,8 +32,8 @@ contract SpokePortal is Portal, ISpokePortal {
     ) Portal(mToken_, registrar_, swapFacility_, orderBook_) { }
 
     /// @inheritdoc IPortal
-    function initialize(address initialOwner, address initialPauser) external initializer {
-        _initialize(initialOwner, initialPauser);
+    function initialize(address initialOwner, address initialPauser, address initialOperator) external initializer {
+        _initialize(initialOwner, initialPauser, initialOperator);
     }
 
     ///////////////////////////////////////////////////////////////////////////

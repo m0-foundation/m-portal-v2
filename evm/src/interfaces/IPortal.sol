@@ -260,7 +260,8 @@ interface IPortal {
     /// @notice Initializes the Proxy's storage
     /// @param  initialOwner  The address of the owner.
     /// @param  initialPauser The address of the pauser.
-    function initialize(address initialOwner, address initialPauser) external;
+    /// @param  initialOperator The address of the operator.
+    function initialize(address initialOwner, address initialPauser, address initialOperator) external;
 
     /// @notice Sets a bridging path support status.
     /// @param  sourceToken        The address of the token on the current chain.
