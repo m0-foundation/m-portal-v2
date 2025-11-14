@@ -20,10 +20,10 @@ contract SpokePortal is Portal, ISpokePortal {
 
     /// @notice Constructs SpokePortal Implementation contract
     /// @dev    Sets immutable storage.
-    /// @param  mToken_         The address of M token.
-    /// @param  registrar_      The address of Registrar.
-    /// @param  swapFacility_   The address of Swap Facility.
-    /// @param  orderBook_      The address of Order Book.
+    /// @param  mToken_       The address of M token.
+    /// @param  registrar_    The address of Registrar.
+    /// @param  swapFacility_ The address of Swap Facility.
+    /// @param  orderBook_    The address of Order Book.
     constructor(
         address mToken_,
         address registrar_,
