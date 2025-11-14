@@ -121,7 +121,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         bytes32 recipient,
         bytes32 refundAddress,
         address bridgeAdapter
-    ) external payable returns (bytes32 messageId) {
+    ) external payable whenNotPaused whenNotLocked returns (bytes32 messageId) {
         _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
         return _sendToken(amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter);
@@ -132,7 +132,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         uint32 destinationChainId,
         IOrderBookLike.FillReport calldata report,
         bytes32 refundAddress
-    ) external payable returns (bytes32 messageId) {
+    ) external payable whenNotPaused whenNotLocked returns (bytes32 messageId) {
         address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
         _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
 
@@ -145,7 +145,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         IOrderBookLike.FillReport calldata report,
         bytes32 refundAddress,
         address bridgeAdapter
-    ) external payable returns (bytes32 messageId) {
+    ) external payable whenNotPaused whenNotLocked returns (bytes32 messageId) {
         _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
         return _sendFillReport(destinationChainId, report, refundAddress, bridgeAdapter);
@@ -194,11 +194,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     }
 
     /// @inheritdoc IPortal
-    function setSupportedBridgeAdapter(
-        uint32 destinationChainId,
-        address bridgeAdapter,
-        bool supported
-    ) external onlyRole(OPERATOR_ROLE) {
+    function setSupportedBridgeAdapter(uint32 destinationChainId, address bridgeAdapter, bool supported) external onlyRole(OPERATOR_ROLE) {
         _revertIfInvalidDestinationChain(destinationChainId);
         if (bridgeAdapter == address(0)) revert ZeroBridgeAdapter();
 
@@ -230,11 +226,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     }
 
     /// @inheritdoc IPortal
-    function setPayloadGasLimit(
-        uint32 destinationChainId,
-        PayloadType payloadType,
-        uint256 gasLimit
-    ) external onlyRole(OPERATOR_ROLE) {
+    function setPayloadGasLimit(uint32 destinationChainId, PayloadType payloadType, uint256 gasLimit) external onlyRole(OPERATOR_ROLE) {
         _revertIfInvalidDestinationChain(destinationChainId);
         ChainConfig storage remoteChainConfig = _getPortalStorageLocation().remoteChainConfig[destinationChainId];
 
@@ -387,7 +379,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         IOrderBookLike.FillReport calldata report,
         bytes32 refundAddress,
         address bridgeAdapter
-    ) private whenNotPaused whenNotLocked returns (bytes32 messageId) {
+    ) private returns (bytes32 messageId) {
         if (msg.sender != orderBook) revert NotOrderBook();
         _revertIfZeroRefundAddress(refundAddress);
         _revertIfInvalidDestinationChain(destinationChainId);
