@@ -23,11 +23,20 @@ interface IWormholeBridgeAdapter is IBridgeAdapter, IVaaV1Receiver {
     //                             CUSTOM ERRORS                             //
     ///////////////////////////////////////////////////////////////////////////
 
-    /// @notice Thrown when the Wormhole Core address is 0x0.
-    error ZeroWormholeCore();
+    /// @notice Thrown when the admin address is 0x0.
+    error ZeroAdmin();
+
+    /// @notice Thrown when the pauser address is 0x0.
+    error ZeroPauser();
+
+    /// @notice Thrown when the operator address is 0x0.
+    error ZeroOperator();
+
+    /// @notice Thrown when the Wormhole Core Bridge address is 0x0.
+    error ZeroCoreBridge();
 
     /// @notice Thrown when the Executor address is 0x0.
-    error ZeroExecutorCore();
+    error ZeroExecutor();
 
     /// @notice Thrown when the remote chain id is 0.
     error ZeroDestinationChain();
@@ -48,8 +57,8 @@ interface IWormholeBridgeAdapter is IBridgeAdapter, IVaaV1Receiver {
     //                          VIEW/PURE FUNCTIONS                          //
     ///////////////////////////////////////////////////////////////////////////
 
-    /// @notice Returns the address of Wormhole Core contract.
-    function wormholeCore() external view returns (address);
+    /// @notice Returns the address of Wormhole Core Bridge contract.
+    function coreBridge() external view returns (address);
 
     /// @notice Returns the address of Executor contract.
     function executor() external view returns (address);
@@ -69,9 +78,4 @@ interface IWormholeBridgeAdapter is IBridgeAdapter, IVaaV1Receiver {
     /// @param  destinationChainId The EVM chain Id of the destination chain.
     /// @param  peer               The address of of the bridge contract on the remote chain.
     function setPeer(uint32 destinationChainId, bytes32 peer) external;
-
-    /// @notice Set the Wormhole finality, which defines how long the Guardians should wait before signing a VAA.
-    /// @dev    See https://wormhole.com/docs/products/reference/consistency-levels/ for more details.
-    /// @param  finality The finality value.
-    function setFinality(uint8 finality) external;
 }
