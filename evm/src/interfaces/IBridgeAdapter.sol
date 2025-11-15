@@ -86,7 +86,8 @@ interface IBridgeAdapter {
     /// @param  gasLimit           The gas limit to execute the message on the destination chain.
     /// @param  refundAddress      The address to refund the fee to.
     /// @param  payload            The message payload to send.
-    function sendMessage(uint32 destinationChainId, uint256 gasLimit, bytes32 refundAddress, bytes memory payload) external payable;
+    /// @param  extraArguments     The provider-specific extra arguments required for sending the message.
+    function sendMessage(uint32 destinationChainId, uint256 gasLimit, bytes32 refundAddress, bytes memory payload, bytes calldata extraArguments) external payable;
 
     /// @notice Sets an address of Bridge Adapter contract on the remote chain.
     /// @param  destinationChainId The ID of the destination chain.

@@ -106,12 +106,13 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         uint32 destinationChainId,
         bytes32 destinationToken,
         bytes32 recipient,
-        bytes32 refundAddress
+        bytes32 refundAddress,
+        bytes calldata bridgeAdapterArgs
     ) external payable whenNotPaused whenNotLocked returns (bytes32 messageId) {
         address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
         _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
 
-        return _sendToken(amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter);
+        return _sendToken(amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter, bridgeAdapterArgs);
     }
 
     function sendToken(
@@ -121,23 +122,12 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         bytes32 destinationToken,
         bytes32 recipient,
         bytes32 refundAddress,
-        address bridgeAdapter
+        address bridgeAdapter,
+        bytes calldata bridgeAdapterArgs
     ) external payable whenNotPaused whenNotLocked returns (bytes32 messageId) {
         _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
-        return _sendToken(amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter);
-    }
-
-    /// @inheritdoc IPortal
-    function sendFillReport(
-        uint32 destinationChainId,
-        IOrderBookLike.FillReport calldata report,
-        bytes32 refundAddress
-    ) external payable whenNotPaused whenNotLocked returns (bytes32 messageId) {
-        address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
-        _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
-
-        return _sendFillReport(destinationChainId, report, refundAddress, bridgeAdapter);
+        return _sendToken(amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter, bridgeAdapterArgs);
     }
 
     /// @inheritdoc IPortal
@@ -145,11 +135,25 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         uint32 destinationChainId,
         IOrderBookLike.FillReport calldata report,
         bytes32 refundAddress,
-        address bridgeAdapter
+        bytes calldata bridgeAdapterArgs
+    ) external payable whenNotPaused whenNotLocked returns (bytes32 messageId) {
+        address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
+        _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
+
+        return _sendFillReport(destinationChainId, report, refundAddress, bridgeAdapter, bridgeAdapterArgs);
+    }
+
+    /// @inheritdoc IPortal
+    function sendFillReport(
+        uint32 destinationChainId,
+        IOrderBookLike.FillReport calldata report,
+        bytes32 refundAddress,
+        address bridgeAdapter,
+        bytes calldata bridgeAdapterArgs
     ) external payable whenNotPaused whenNotLocked returns (bytes32 messageId) {
         _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
-        return _sendFillReport(destinationChainId, report, refundAddress, bridgeAdapter);
+        return _sendFillReport(destinationChainId, report, refundAddress, bridgeAdapter, bridgeAdapterArgs);
     }
 
     /// @inheritdoc IPortal
@@ -319,10 +323,11 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         PayloadType payloadType,
         bytes32 refundAddress,
         bytes memory payload,
-        address bridgeAdapter
+        address bridgeAdapter,
+        bytes calldata bridgeAdapterArgs
     ) internal {
         IBridgeAdapter(bridgeAdapter).sendMessage{ value: msg.value }(
-            destinationChainId, payloadGasLimit(destinationChainId, payloadType), refundAddress, payload
+            destinationChainId, payloadGasLimit(destinationChainId, payloadType), refundAddress, payload, bridgeAdapterArgs
         );
     }
 
@@ -334,7 +339,8 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         bytes32 destinationToken,
         bytes32 recipient,
         bytes32 refundAddress,
-        address bridgeAdapter
+        address bridgeAdapter,
+        bytes calldata bridgeAdapterArgs
     ) internal returns (bytes32 messageId) {
         _revertIfZeroAmount(amount);
         _revertIfZeroRefundAddress(refundAddress);
@@ -369,7 +375,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
             messageId = _getMessageId(destinationChainId);
             bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, destinationToken, msg.sender, recipient, index, messageId);
 
-            _sendMessage(destinationChainId, PayloadType.TokenTransfer, refundAddress, payload, bridgeAdapter);
+            _sendMessage(destinationChainId, PayloadType.TokenTransfer, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
         }
 
         emit TokenSent(sourceToken, destinationChainId, destinationToken, msg.sender, recipient, amount, index, bridgeAdapter, messageId);
@@ -380,7 +386,8 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         uint32 destinationChainId,
         IOrderBookLike.FillReport calldata report,
         bytes32 refundAddress,
-        address bridgeAdapter
+        address bridgeAdapter,
+        bytes calldata bridgeAdapterArgs
     ) private returns (bytes32 messageId) {
         if (msg.sender != orderBook) revert NotOrderBook();
         _revertIfZeroRefundAddress(refundAddress);
@@ -391,7 +398,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
             report.orderId, report.amountOutFilled, report.amountOutFilled, report.originRecipient, messageId
         );
 
-        _sendMessage(destinationChainId, PayloadType.TokenTransfer, refundAddress, payload, bridgeAdapter);
+        _sendMessage(destinationChainId, PayloadType.TokenTransfer, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
 
         emit FillReportSent(
             destinationChainId,

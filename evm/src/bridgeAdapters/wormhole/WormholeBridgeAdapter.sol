@@ -61,7 +61,7 @@ contract WormholeBridgeAdapter is BridgeAdapter, IWormholeBridgeAdapter {
     }
 
     /// @inheritdoc IBridgeAdapter
-    function sendMessage(uint32 destinationChainId, uint256 gasLimit, bytes32 refundAddress, bytes memory payload) external payable {
+    function sendMessage(uint32 destinationChainId, uint256 gasLimit, bytes32 refundAddress, bytes memory payload, bytes calldata signedQuote) external payable {
         if (msg.sender != portal) revert NotPortal();
 
         uint256 coreBridgeFee = ICoreBridge(coreBridge).messageFee();
@@ -76,7 +76,7 @@ contract WormholeBridgeAdapter is BridgeAdapter, IWormholeBridgeAdapter {
             destinationWormholeChainId,
             destinationPeer,
             refundAddress.toAddress(),
-            "", //signedQuote,
+            signedQuote,
             ExecutorMessages.makeVAAv1Request(currentWormholeChainId, address(this).toBytes32(), sequence),
             RelayInstructions.encodeGas(gasLimit.toUint128(), 0)
         );
