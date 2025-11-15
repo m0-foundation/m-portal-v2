@@ -3,7 +3,8 @@ pragma solidity ^0.8.19;
 
 /// @title  IExecutor
 /// @notice Interface for the Executor contract responsible for handling execution requests on destination chains.
-/// @author Wormhole Labs. Copied from https://github.com/wormholelabs-xyz/example-messaging-executor/blob/main/evm/src/interfaces/IExecutor.sol
+/// @author Wormhole Labs. Copied from
+/// https://github.com/wormholelabs-xyz/example-messaging-executor/blob/main/evm/src/interfaces/IExecutor.sol
 interface IExecutor {
     struct SignedQuoteHeader {
         bytes4 prefix;
