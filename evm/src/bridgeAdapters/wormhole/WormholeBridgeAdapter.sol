@@ -2,13 +2,11 @@
 
 pragma solidity 0.8.30;
 
-import { CoreBridgeLib } from "../../../lib/wormhole-solidity-sdk/src/libraries/CoreBridge.sol";
-
 import { BridgeAdapter } from "../BridgeAdapter.sol";
 import { IBridgeAdapter } from "../../interfaces/IBridgeAdapter.sol";
 import { IPortal } from "../../interfaces/IPortal.sol";
 import { IExecutor } from "./interfaces/IExecutor.sol";
-import { ICoreBridge } from "./interfaces/ICoreBridge.sol";
+import { ICoreBridge, CoreBridgeVM } from "./interfaces/ICoreBridge.sol";
 import { IWormholeBridgeAdapter } from "./interfaces/IWormholeBridgeAdapter.sol";
 import { TypeConverter } from "../../libraries/TypeConverter.sol";
 import { RelayInstructions } from "./libraries/RelayInstructions.sol";
@@ -82,11 +80,17 @@ contract WormholeBridgeAdapter is BridgeAdapter, IWormholeBridgeAdapter {
         );
     }
 
-    function executeVAAv1(bytes calldata vaa) external payable {
-        (,, uint16 sourceChainId, bytes32 sender,,, bytes calldata payload) = CoreBridgeLib.decodeAndVerifyVaaCd(coreBridge, vaa);
+    function executeVAAv1(bytes calldata encodedMessage) external payable {
+        // verify VAA against Wormhole Core Bridge contract
+        (CoreBridgeVM memory vm, bool valid, string memory reason) = ICoreBridge(coreBridge).parseAndVerifyVM(encodedMessage);
+
+        // ensure that the VAA is valid
+        if (!valid) revert InvalidVaa(reason);
+
+        //(,, uint16 sourceChainId, bytes32 sender,,, bytes calldata payload) = CoreBridgeLib.decodeAndVerifyVaaCd(coreBridge, vaa);
         
         // TODO: check that sender is a valid peer
-        IPortal(portal).receiveMessage(sourceChainId, payload);
+        IPortal(portal).receiveMessage(vm.emitterChainId, vm.payload);
     }
 }
 
