@@ -87,10 +87,11 @@ contract WormholeBridgeAdapter is BridgeAdapter, IWormholeBridgeAdapter {
         // ensure that the VAA is valid
         if (!valid) revert InvalidVaa(reason);
 
-        //(,, uint16 sourceChainId, bytes32 sender,,, bytes calldata payload) = CoreBridgeLib.decodeAndVerifyVaaCd(coreBridge, vaa);
-        
-        // TODO: check that sender is a valid peer
-        IPortal(portal).receiveMessage(vm.emitterChainId, vm.payload);
+        // Covert Wormhole chain ID to internal chain ID
+        uint32 sourceChainId = _getChainIdOrRevert(vm.emitterChainId);
+        if (vm.emitterAddress != _getPeer(sourceChainId)) revert UnsupportedSender(vm.emitterAddress);
+
+        IPortal(portal).receiveMessage(sourceChainId, vm.payload);
     }
 }
 
