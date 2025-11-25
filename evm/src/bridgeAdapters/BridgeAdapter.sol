@@ -137,7 +137,7 @@ abstract contract BridgeAdapter is IBridgeAdapter, BridgeAdapterStorageLayout, A
         return bridgeChainId;
     }
 
-    function _getChainIdOrRevert(uint256 bridgeChainId) internal view returns (uint256) {
+    function _getChainIdOrRevert(uint256 bridgeChainId) internal view returns (uint32) {
         uint32 chainId = _getChainId(bridgeChainId);
         if (chainId == 0) revert UnsupportedBridgeChain(bridgeChainId);
         return chainId;
