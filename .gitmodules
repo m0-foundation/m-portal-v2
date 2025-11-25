@@ -4,6 +4,3 @@
 [submodule "lib/common"]
 	path = evm/lib/common
 	url = git@github.com:m0-foundation/common.git
-[submodule "evm/lib/wormhole-solidity-sdk"]
-	path = evm/lib/wormhole-solidity-sdk
-	url = git@github.com:wormhole-foundation/wormhole-solidity-sdk.git
