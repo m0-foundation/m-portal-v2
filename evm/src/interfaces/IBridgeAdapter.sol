@@ -2,13 +2,6 @@
 
 pragma solidity 0.8.30;
 
-struct AdapterConfig {
-    /// @notice The provider-specific ID of the remote chain.
-    uint256 bridgeChainId;
-    /// @notice The address of the Bridge Adapter contract on the remote chain.
-    bytes32 peer;
-}
-
 /// @title  IBridgeAdapter interface
 /// @author M0 Labs
 /// @notice Interface defining a bridge adapter for cross-chain messaging functionality.
@@ -52,8 +45,11 @@ interface IBridgeAdapter {
     /// @notice Thrown when the remote bridge is 0x0.
     error ZeroPeer();
 
-    /// @notice Thrown when the destination chain isn't supported.
+    /// @notice Thrown when the specified remote chain isn't supported.
     error UnsupportedChain(uint32 chainId);
+
+    /// @notice Thrown when the specified remote bridge chain isn't supported.
+    error UnsupportedBridgeChain(uint256 bridgeChainId);
 
     ///////////////////////////////////////////////////////////////////////////
     //                          VIEW/PURE FUNCTIONS                          //
@@ -74,8 +70,12 @@ interface IBridgeAdapter {
     function getPeer(uint32 chainId) external view returns (bytes32);
 
     /// @notice Returns the provider-specific chain ID.
-    /// @param  chainId The ID of the chain.
+    /// @param  chainId The internal ID of the chain.
     function getBridgeChainId(uint32 chainId) external view returns (uint256);
+
+    /// @notice Returns the internal chain ID.
+    /// @param  bridgeChainId The provider-specific chain ID.
+    function getChainId(uint256 bridgeChainId) external view returns (uint32);
 
     ///////////////////////////////////////////////////////////////////////////
     //                         INTERACTIVE FUNCTIONS                         //
@@ -97,10 +97,4 @@ interface IBridgeAdapter {
     /// @param  chainId       The ID of the chain.
     /// @param  bridgeChainId The provider-specific chain ID.
     function setBridgeChainId(uint32 chainId, uint256 bridgeChainId) external;
-
-    /// @notice Sets both the provider-specific chain ID and the remote Bridge Adapter address.
-    /// @param  chainId       The ID of the chain.
-    /// @param  bridgeChainId The provider-specific chain ID.
-    /// @param  peer          The address of of the Bridge Adapter contract on the destination chain.
-    function setConfig(uint32 chainId, uint256 bridgeChainId, bytes32 peer) external;
 }

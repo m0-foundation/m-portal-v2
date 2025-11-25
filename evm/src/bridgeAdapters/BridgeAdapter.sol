@@ -6,13 +6,18 @@ import {
     AccessControlUpgradeable
 } from "../../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
 import { UUPSUpgradeable } from "../../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
-import { IBridgeAdapter, AdapterConfig } from "../interfaces/IBridgeAdapter.sol";
+import { IBridgeAdapter } from "../interfaces/IBridgeAdapter.sol";
 import { IPortal } from "../interfaces/IPortal.sol";
 
-abstract contract BridgeAdapterLayout {
+abstract contract BridgeAdapterStorageLayout {
     /// @custom:storage-location erc7201:M0.storage.BridgeAdapter
     struct BridgeAdapterStorageStruct {
-        mapping(uint32 chainId => AdapterConfig) config;
+        /// @notice Maps M0 internal chain IDs to bridge-specific chain IDs.
+        mapping(uint32 internalChainId => uint256 bridgeChainId) internalToBridgeChainId;
+        /// @notice Maps M0 internal chain IDs to remote Bridge Adapter addresses.
+        mapping(uint32 internalChainId => bytes32 peer) remotePeer;
+        /// @notice Maps bridge-specific chain IDs to M0 internal chain IDs.
+        mapping(uint256 bridgeChainId => uint32 internalChainId) bridgeToInternalChainId;
     }
 
     // keccak256(abi.encode(uint256(keccak256("M0.storage.BridgeAdapter")) - 1)) & ~bytes32(uint256(0xff))
@@ -25,7 +30,10 @@ abstract contract BridgeAdapterLayout {
     }
 }
 
-abstract contract BridgeAdapter is IBridgeAdapter, BridgeAdapterLayout, AccessControlUpgradeable, UUPSUpgradeable {
+/// @title  BridgeAdapter abstract contract
+/// @author M0 Labs
+/// @notice Base contract for bridge adapters implementing cross-chain messaging functionality.
+abstract contract BridgeAdapter is IBridgeAdapter, BridgeAdapterStorageLayout, AccessControlUpgradeable, UUPSUpgradeable {
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
     /// @inheritdoc IBridgeAdapter
@@ -62,9 +70,9 @@ abstract contract BridgeAdapter is IBridgeAdapter, BridgeAdapterLayout, AccessCo
 
         BridgeAdapterStorageStruct storage $ = _getBridgeAdapterStorageLocation();
 
-        if ($.config[chainId].peer == peer) return;
+        if ($.remotePeer[chainId] == peer) return;
 
-        $.config[chainId].peer = peer;
+        $.remotePeer[chainId] = peer;
         emit PeerSet(chainId, peer);
     }
 
@@ -75,29 +83,12 @@ abstract contract BridgeAdapter is IBridgeAdapter, BridgeAdapterLayout, AccessCo
 
         BridgeAdapterStorageStruct storage $ = _getBridgeAdapterStorageLocation();
 
-        if ($.config[chainId].bridgeChainId == bridgeChainId) return;
+        if ($.internalToBridgeChainId[chainId] == bridgeChainId) return;
 
-        $.config[chainId].bridgeChainId = bridgeChainId;
+        $.internalToBridgeChainId[chainId] = bridgeChainId;
+        $.bridgeToInternalChainId[bridgeChainId] = chainId;
+
         emit BridgeChainIdSet(chainId, bridgeChainId);
-    }
-
-    /// @inheritdoc IBridgeAdapter
-    function setConfig(uint32 chainId, uint256 bridgeChainId, bytes32 peer) external onlyRole(OPERATOR_ROLE) {
-        _revertIfZeroChain(chainId);
-        _revertIfZeroBridgeChain(bridgeChainId);
-        _revertIfZeroPeer(peer);
-
-        BridgeAdapterStorageStruct storage $ = _getBridgeAdapterStorageLocation();
-
-        if ($.config[chainId].bridgeChainId != bridgeChainId) {
-            $.config[chainId].bridgeChainId = bridgeChainId;
-            emit BridgeChainIdSet(chainId, bridgeChainId);
-        }
-
-        if ($.config[chainId].peer != peer) {
-            $.config[chainId].peer = peer;
-            emit PeerSet(chainId, peer);
-        }
     }
 
     /// @dev Reverts if `msg.sender` is not authorized to upgrade the contract
@@ -113,16 +104,25 @@ abstract contract BridgeAdapter is IBridgeAdapter, BridgeAdapterLayout, AccessCo
     }
 
     /// @inheritdoc IBridgeAdapter
-    function getBridgeChainId(uint32 chainId) public view returns (uint256) {
+    function getBridgeChainId(uint32 chainId) external view returns (uint256) {
         return _getBridgeChainId(chainId);
     }
 
-    function _getPeer(uint32 chainId) public view returns (bytes32) {
-        return _getBridgeAdapterStorageLocation().config[chainId].peer;
+    /// @inheritdoc IBridgeAdapter
+    function getChainId(uint256 bridgeChainId) external view returns (uint32) {
+        return _getChainId(bridgeChainId);
     }
 
-    function _getBridgeChainId(uint32 chainId) public view returns (uint256) {
-        return _getBridgeAdapterStorageLocation().config[chainId].bridgeChainId;
+    function _getPeer(uint32 chainId) internal view returns (bytes32) {
+        return _getBridgeAdapterStorageLocation().remotePeer[chainId];
+    }
+
+    function _getBridgeChainId(uint32 chainId) internal view returns (uint256) {
+        return _getBridgeAdapterStorageLocation().internalToBridgeChainId[chainId];
+    }
+
+    function _getChainId(uint256 bridgeChainId) internal view returns (uint32) {
+        return _getBridgeAdapterStorageLocation().bridgeToInternalChainId[bridgeChainId];
     }
 
     function _getPeerOrRevert(uint32 chainId) internal view returns (bytes32) {
@@ -135,6 +135,12 @@ abstract contract BridgeAdapter is IBridgeAdapter, BridgeAdapterLayout, AccessCo
         uint256 bridgeChainId = _getBridgeChainId(chainId);
         if (bridgeChainId == 0) revert UnsupportedChain(chainId);
         return bridgeChainId;
+    }
+
+    function _getChainIdOrRevert(uint256 bridgeChainId) internal view returns (uint256) {
+        uint32 chainId = _getChainId(bridgeChainId);
+        if (chainId == 0) revert UnsupportedBridgeChain(bridgeChainId);
+        return chainId;
     }
 
     function _revertIfZeroChain(uint32 chainId) internal pure {

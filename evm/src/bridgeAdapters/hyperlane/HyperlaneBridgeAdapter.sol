@@ -59,9 +59,12 @@ contract HyperlaneBridge is BridgeAdapter, IHyperlaneBridgeAdapter {
     }
 
     /// @inheritdoc IMessageRecipient
-    function handle(uint32 sourceChainId, bytes32 sender, bytes calldata payload) external payable {
+    function handle(uint32 sourceBridgeChainId, bytes32 sender, bytes calldata payload) external payable {
         if (msg.sender != mailbox) revert NotMailbox();
+        // Covert Hyperlane domain to internal chain ID
+        uint32 sourceChainId = _getChainIdOrRevert(sourceBridgeChainId);
         if (sender != _getPeer(sourceChainId)) revert UnsupportedSender(sender);
+
         IPortal(portal).receiveMessage(sourceChainId, payload);
     }
 
