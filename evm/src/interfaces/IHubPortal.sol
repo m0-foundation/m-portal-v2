@@ -56,8 +56,8 @@ interface IHubPortal is IPortal {
     );
 
     /// @notice Emitted when cross-Spoke token transfer is enabled for the Spoke chain.
-    /// @param  spokeChainId     The EVM chain Id of the Spoke.
-    /// @param  bridgedPrincipal The principal amount of M tokens bridged to the Spoke chain before the connection was enabled.
+    /// @param  spokeChainId     The chain Id of the Spoke.
+    /// @param  bridgedPrincipal The principal amount of $M tokens bridged to the Spoke chain before transfer was enabled.
     event CrossSpokeTokenTransferEnabled(uint32 spokeChainId, uint248 bridgedPrincipal);
 
     ///////////////////////////////////////////////////////////////////////////
