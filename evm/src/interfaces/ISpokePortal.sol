@@ -28,4 +28,34 @@ interface ISpokePortal is IPortal {
     /// @param  add       Indicates if the account is added or removed from the list.
     /// @param  messageId The unique ID of the message.
     event RegistrarListUpdateReceived(bytes32 indexed listName, address indexed account, bool add, bytes32 messageId);
+
+    /// @notice Emitted when cross-Spoke token transfer is enabled.
+    event CrossSpokeTokenTransferEnabled();
+
+    ///////////////////////////////////////////////////////////////////////////
+    //                             CUSTOM ERRORS                             //
+    ///////////////////////////////////////////////////////////////////////////
+
+    /// @notice Thrown when the Hub chain is 0.
+    error ZeroHubChain();
+
+    /// @notice Thrown when calling `sendToken` and cross-Spoke token transfer is disabled.
+    error CrossSpokeTokenTransferDisabled(uint32 destinationChainId);
+
+    ///////////////////////////////////////////////////////////////////////////
+    //                          VIEW/PURE FUNCTIONS                          //
+    ///////////////////////////////////////////////////////////////////////////
+
+    /// @notice Returns the Hub chain ID.
+    function hubChainId() external view returns (uint32);
+
+    /// @notice Returns whether cross-Spoke token transfer is enabled.
+    function crossSpokeTokenTransferEnabled() external view returns (bool);
+
+    ///////////////////////////////////////////////////////////////////////////
+    //                        INTERACTIVE FUNCTIONS                          //
+    ///////////////////////////////////////////////////////////////////////////
+
+    /// @notice Enables cross-Spoke token transfer.
+    function enableCrossSpokeTokenTransfer() external;
 }

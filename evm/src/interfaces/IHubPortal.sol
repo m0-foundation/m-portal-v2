@@ -4,6 +4,11 @@ pragma solidity 0.8.30;
 
 import { IPortal } from "./IPortal.sol";
 
+struct SpokeChainConfig {
+    uint248 bridgedPrincipal;
+    bool crossSpokeTokenTransferEnabled;
+}
+
 /// @title  HubPortal interface.
 /// @author M0 Labs
 interface IHubPortal is IPortal {
@@ -50,6 +55,11 @@ interface IHubPortal is IPortal {
         bytes32 messageId
     );
 
+    /// @notice Emitted when cross-Spoke token transfer is enabled for the Spoke chain.
+    /// @param  spokeChainId     The EVM chain Id of the Spoke.
+    /// @param  bridgedPrincipal The principal amount of M tokens bridged to the Spoke chain before the connection was enabled.
+    event CrossSpokeTokenTransferEnabled(uint32 spokeChainId, uint248 bridgedPrincipal);
+
     ///////////////////////////////////////////////////////////////////////////
     //                             CUSTOM ERRORS                             //
     ///////////////////////////////////////////////////////////////////////////
@@ -75,6 +85,13 @@ interface IHubPortal is IPortal {
 
     /// @notice Returns the value of M token index when earning for HubPortal was disabled.
     function disableEarningIndex() external view returns (uint128);
+
+    /// @notice Returns the principal amount of M tokens bridged to a specified Spoke chain.
+    /// @dev    Only applicable to isolated Spokes (i.e., `crossSpokeTokenTransferEnabled` == false).
+    function bridgedPrincipal(uint32 spokeChainId) external view returns (uint248);
+
+    /// @notice Returns whether cross-Spoke token transfer is enabled for a specified Spoke chain.
+    function crossSpokeTokenTransferEnabled(uint32 spokeChainId) external view returns (bool);
 
     ///////////////////////////////////////////////////////////////////////////
     //                         INTERACTIVE FUNCTIONS                         //
@@ -150,4 +167,7 @@ interface IHubPortal is IPortal {
 
     /// @notice Disables earning for the Hub Portal if disallowed by TTG.
     function disableEarning() external;
+
+    /// @notice Enables cross-Spoke token transfer for a specified Spoke chain.
+    function enableCrossSpokeTokenTransfer(uint32 spokeChainId) external;
 }
