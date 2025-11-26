@@ -9,8 +9,8 @@ import { IBridgeAdapter } from "./interfaces/IBridgeAdapter.sol";
 import { IMTokenLike } from "./interfaces/IMTokenLike.sol";
 import { IMerkleTreeBuilderLike } from "./interfaces/IMerkleTreeBuilderLike.sol";
 import { IRegistrarLike } from "./interfaces/IRegistrarLike.sol";
-import { IPortal } from "./interfaces/IPortal.sol";
-import { IHubPortal } from "./interfaces/IHubPortal.sol";
+import { IPortal, ChainConfig } from "./interfaces/IPortal.sol";
+import { IHubPortal, SpokeChainConfig } from "./interfaces/IHubPortal.sol";
 
 import { Portal } from "./Portal.sol";
 import { PayloadType, PayloadEncoder } from "./libraries/PayloadEncoder.sol";
@@ -21,6 +21,7 @@ abstract contract HubPortalStorageLayout {
     struct HubPortalStorageStruct {
         bool wasEarningEnabled;
         uint128 disableEarningIndex;
+        mapping(uint32 spokeChainId => SpokeChainConfig) spokeConfig;
     }
 
     // keccak256(abi.encode(uint256(keccak256("M0.storage.HubPortal")) - 1)) & ~bytes32(uint256(0xff))
@@ -63,7 +64,6 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         if ((merkleTreeBuilder = merkleTreeBuilder_) == address(0)) revert ZeroMerkleTreeBuilder();
     }
 
-    /// @inheritdoc IPortal
     function initialize(address owner, address pauser, address operator) external initializer {
         _initialize(owner, pauser, operator);
 
@@ -206,6 +206,26 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     }
 
     ///////////////////////////////////////////////////////////////////////////
+    //                          PRIVILEGED FUNCTIONS                         //
+    ///////////////////////////////////////////////////////////////////////////
+
+    /// @inheritdoc IHubPortal
+    function enableCrossSpokeTokenTransfer(uint32 spokeChainId) external onlyRole(OPERATOR_ROLE) {
+        SpokeChainConfig storage spokeConfig = _getHubPortalStorageLocation().spokeConfig[spokeChainId];
+        if (spokeConfig.crossSpokeTokenTransferEnabled) return;
+
+        spokeConfig.crossSpokeTokenTransferEnabled = true;
+
+        uint248 spokeBridgedPrincipal = spokeConfig.bridgedPrincipal;
+
+        // NOTE: Reset bridged principal, as tracking it
+        //       for connected Spokes isn't possible on-chain.
+        spokeConfig.bridgedPrincipal = 0;
+
+        emit CrossSpokeTokenTransferEnabled(spokeChainId, spokeBridgedPrincipal);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
     //                     EXTERNAL VIEW/PURE FUNCTIONS                      //
     ///////////////////////////////////////////////////////////////////////////
 
@@ -219,6 +239,18 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     function disableEarningIndex() public view returns (uint128) {
         HubPortalStorageStruct storage $ = _getHubPortalStorageLocation();
         return $.disableEarningIndex;
+    }
+
+    /// @inheritdoc IHubPortal
+    function bridgedPrincipal(uint32 spokeChainId) external view returns (uint248) {
+        HubPortalStorageStruct storage $ = _getHubPortalStorageLocation();
+        return $.spokeConfig[spokeChainId].bridgedPrincipal;
+    }
+
+    /// @inheritdoc IHubPortal
+    function crossSpokeTokenTransferEnabled(uint32 spokeChainId) public view returns (bool) {
+        HubPortalStorageStruct storage $ = _getHubPortalStorageLocation();
+        return $.spokeConfig[spokeChainId].crossSpokeTokenTransferEnabled;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -306,12 +338,42 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         emit EarnerMerkleRootSent(destinationChainId, index, earnerMerkleRoot, bridgeAdapter, messageId);
     }
 
-    /// @dev Unlocks M tokens to `recipient_`.
-    /// @param recipient The account to unlock/transfer M tokens to.
-    /// @param amount    The amount of M Token to unlock to the recipient.
-    function _mintOrUnlock(address recipient, uint256 amount, uint128) internal override {
+    function _burnOrLock(uint32 destinationChainId, uint256 amount) internal override {
+        SpokeChainConfig storage spokeConfig = _getHubPortalStorageLocation().spokeConfig[destinationChainId];
+        // Only track bridged principal for isolated Spokes
+        if (spokeConfig.crossSpokeTokenTransferEnabled) return;
+        
+        spokeConfig.bridgedPrincipal += IndexingMath.getPrincipalAmountRoundedDown(uint240(amount), _currentIndex());
+    }
+
+    /// @dev Unlocks M tokens to `recipient`.
+    /// @param sourceChainId The ID of the source chain.
+    /// @param recipient     The account to unlock/transfer M tokens to.
+    /// @param amount        The amount of $M Token to unlock to the recipient.
+    function _mintOrUnlock(uint32 sourceChainId, address recipient, uint256 amount, uint128) internal override {
+        // Only track bridged principal for isolated Spokes
+        if (!crossSpokeTokenTransferEnabled(sourceChainId)) {
+            _decreaseBridgedPrincipal(sourceChainId, amount);
+        }
         if (recipient != address(this)) {
             IERC20(mToken).transfer(recipient, amount);
+        } else {
+            IERC20(mToken).transfer(msg.sender, amount);
+        }
+    }
+
+    /// @dev Decreases the principal amount bridged when receiving transfer from an isolated Spoke chain.
+    ///      Reverts when trying to unlock more than was bridged to the Spoke.
+    function _decreaseBridgedPrincipal(uint32 spokeChainId, uint256 amount) private {
+        SpokeChainConfig storage spokeConfig = _getHubPortalStorageLocation().spokeConfig[spokeChainId];
+        uint248 totalBridgedPrincipal = spokeConfig.bridgedPrincipal;
+        uint248 principalAmount = IndexingMath.getPrincipalAmountRoundedDown(uint240(amount), _currentIndex());
+
+        // Prevents unlocking more than was bridged to the Spoke
+        if (principalAmount > totalBridgedPrincipal) revert InsufficientBridgedBalance();
+
+        unchecked {
+            spokeConfig.bridgedPrincipal = totalBridgedPrincipal - principalAmount;
         }
     }
 

@@ -65,10 +65,10 @@ abstract contract SpokePortalUnitTestBase is Test {
         bridgeAdapter = new MockBridgeAdapter();
 
         // Deploy implementation
-        implementation = new SpokePortal(address(mToken), address(registrar), address(swapFacility), address(mockOrderBook));
+        implementation = new SpokePortal(address(mToken), address(registrar), address(swapFacility), address(mockOrderBook), HUB_CHAIN_ID);
 
         // Deploy UUPS proxy
-        bytes memory initializeData = abi.encodeCall(SpokePortal.initialize, (admin, pauser, operator));
+        bytes memory initializeData = abi.encodeCall(SpokePortal.initialize, (admin, pauser, operator, false));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initializeData);
         spokePortal = SpokePortal(address(proxy));
 

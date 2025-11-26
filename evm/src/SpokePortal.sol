@@ -10,13 +10,32 @@ import { IPortal } from "./interfaces/IPortal.sol";
 import { Portal } from "./Portal.sol";
 import { PayloadType, PayloadEncoder } from "./libraries/PayloadEncoder.sol";
 
+abstract contract SpokePortalStorageLayout {
+    /// @custom:storage-location erc7201:M0.storage.Portal
+    struct SpokePortalStorageStruct {
+        bool crossSpokeTokenTransferEnabled;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("M0.storage.SpokePortal")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 constant SPOKE_PORTAL_STORAGE_LOCATION = 0x69eb231f66ca36530ae1439a642c87296518bd9b871fe76efe7c4b78db4d2800;
+
+    function _getSpokePortalStorageLocation() internal pure returns (SpokePortalStorageStruct storage $) {
+        assembly {
+            $.slot := SPOKE_PORTAL_STORAGE_LOCATION
+        }
+    }
+}
+
 /// @title  SpokePortal
 /// @author M0 Labs
 /// @notice Deployed on Spoke chains and responsible for sending and receiving M tokens
 ///         as well as updating M index and Registrar keys.
 /// @dev    Tokens are bridged using mint-burn mechanism.
-contract SpokePortal is Portal, ISpokePortal {
+contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
     using PayloadEncoder for bytes;
+
+    /// @inheritdoc ISpokePortal
+    uint32 public immutable hubChainId;
 
     /// @notice Constructs SpokePortal Implementation contract
     /// @dev    Sets immutable storage.
@@ -24,16 +43,41 @@ contract SpokePortal is Portal, ISpokePortal {
     /// @param  registrar_    The address of Registrar.
     /// @param  swapFacility_ The address of Swap Facility.
     /// @param  orderBook_    The address of Order Book.
+    /// @param  hubChainId_   The chain ID of the Hub.
     constructor(
         address mToken_,
         address registrar_,
         address swapFacility_,
-        address orderBook_
-    ) Portal(mToken_, registrar_, swapFacility_, orderBook_) { }
+        address orderBook_,
+        uint32 hubChainId_
+    ) Portal(mToken_, registrar_, swapFacility_, orderBook_) {
+        if ((hubChainId = hubChainId_) == 0) revert ZeroHubChain();
+    }
 
-    /// @inheritdoc IPortal
-    function initialize(address owner, address pauser, address operator) external initializer {
+    function initialize(address owner, address pauser, address operator, bool crossSpokeTransferEnabled) external initializer {
         _initialize(owner, pauser, operator);
+        _getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled = crossSpokeTransferEnabled;
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    //                          PRIVILEGED FUNCTIONS                         //
+    ///////////////////////////////////////////////////////////////////////////
+
+    /// @inheritdoc ISpokePortal
+    function enableCrossSpokeTokenTransfer() external onlyRole(OPERATOR_ROLE) {
+        if (_getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled) return;
+
+        _getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled = true;
+        emit CrossSpokeTokenTransferEnabled();
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    //                      EXTERNAL VIEW/PURE FUNCTIONS                     //
+    ///////////////////////////////////////////////////////////////////////////
+
+    /// @inheritdoc ISpokePortal
+    function crossSpokeTokenTransferEnabled() external view returns (bool) {
+        return _getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -87,7 +131,7 @@ contract SpokePortal is Portal, ISpokePortal {
     /// @param recipient The account to mint $M tokens to.
     /// @param amount    The amount of $M Token to mint to the recipient.
     /// @param index     The index from the source chain.
-    function _mintOrUnlock(address recipient, uint256 amount, uint128 index) internal override {
+    function _mintOrUnlock(uint32, address recipient, uint256 amount, uint128 index) internal override {
         // Update M token index only if the index received from the remote chain is bigger
         if (index > _currentIndex()) {
             ISpokeMTokenLike(mToken).mint(recipient, amount, index);
@@ -98,8 +142,16 @@ contract SpokePortal is Portal, ISpokePortal {
 
     /// @dev Burns $M Token.
     /// @param amount The amount of M Token to burn from the SpokePortal.
-    function _burnOrLock(uint256 amount) internal override {
+    function _burnOrLock(uint32, uint256 amount) internal override {
         ISpokeMTokenLike(mToken).burn(amount);
+    }
+
+    /// @dev Reverts if the destination chain is the Hub chain
+    function _revertIfTokenTransferDisabled(uint32 destinationChainId) internal view override {
+        // If cross-Spoke token transfer is enabled, allow send tokens to any supported chain
+        if (_getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled) return;
+        // Otherwise, allow sending tokens only to the Hub chain
+        if (destinationChainId != hubChainId) revert CrossSpokeTokenTransferDisabled(destinationChainId);
     }
 
     ///////////////////////////////////////////////////////////////////////////
