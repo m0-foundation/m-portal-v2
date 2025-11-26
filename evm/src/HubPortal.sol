@@ -357,8 +357,6 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         }
         if (recipient != address(this)) {
             IERC20(mToken).transfer(recipient, amount);
-        } else {
-            IERC20(mToken).transfer(msg.sender, amount);
         }
     }
 
