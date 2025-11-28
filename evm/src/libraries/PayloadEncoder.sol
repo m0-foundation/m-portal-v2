@@ -66,7 +66,14 @@ library PayloadEncoder {
     ) internal pure returns (bytes memory) {
         // Converting addresses to `bytes32` and amount to `uint128` to support non-EVM chains.
         return abi.encodePacked(
-            PayloadType.TokenTransfer, amount.toUint128(), destinationToken, sender.toBytes32(), recipient, index, messageId, finalDestinationChainId
+            PayloadType.TokenTransfer,
+            amount.toUint128(),
+            destinationToken,
+            sender.toBytes32(),
+            recipient,
+            index,
+            messageId,
+            finalDestinationChainId
         );
     }
 
@@ -82,7 +89,15 @@ library PayloadEncoder {
     function decodeTokenTransfer(bytes memory payload)
         internal
         pure
-        returns (uint256 amount, address destinationToken, bytes32 sender, address recipient, uint128 index, bytes32 messageId, uint32 finalDestinationChainId)
+        returns (
+            uint256 amount,
+            address destinationToken,
+            bytes32 sender,
+            address recipient,
+            uint128 index,
+            bytes32 messageId,
+            uint32 finalDestinationChainId
+        )
     {
         uint256 offset = PAYLOAD_TYPE_LENGTH;
         bytes32 destinationTokenBytes32;

@@ -111,7 +111,10 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
         _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
 
-        return _sendToken(amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter, destinationChainId);
+        return
+            _sendToken(
+                amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter, destinationChainId
+            );
     }
 
     function sendToken(
@@ -125,7 +128,10 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     ) external payable virtual whenNotPaused whenNotLocked returns (bytes32 messageId) {
         _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
-        return _sendToken(amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter, destinationChainId);
+        return
+            _sendToken(
+                amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter, destinationChainId
+            );
     }
 
     /// @inheritdoc IPortal
@@ -368,12 +374,16 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
             _burnOrLock(destinationChainId, amount);
 
             messageId = _getMessageId(destinationChainId);
-            bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, destinationToken, msg.sender, recipient, index, messageId, finalDestinationChainId);
+            bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+                amount, destinationToken, msg.sender, recipient, index, messageId, finalDestinationChainId
+            );
 
             _sendMessage(destinationChainId, PayloadType.TokenTransfer, refundAddress, payload, bridgeAdapter);
         }
 
-        emit TokenSent(sourceToken, finalDestinationChainId, destinationToken, msg.sender, recipient, amount, index, bridgeAdapter, messageId);
+        emit TokenSent(
+            sourceToken, finalDestinationChainId, destinationToken, msg.sender, recipient, amount, index, bridgeAdapter, messageId
+        );
     }
 
     /// @dev Sends the fill report to the destination chain.

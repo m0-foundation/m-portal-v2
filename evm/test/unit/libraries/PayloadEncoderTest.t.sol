@@ -80,9 +80,20 @@ contract PayloadEncoderTest is Test {
         bytes32 messageId = "messageId";
 
         uint32 finalDestinationChainId = 1;
-        bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, token, sender, recipient, uint128(index), messageId, finalDestinationChainId);
+        bytes memory payload =
+            PayloadEncoder.encodeTokenTransfer(amount, token, sender, recipient, uint128(index), messageId, finalDestinationChainId);
         assertEq(
-            payload, abi.encodePacked(PayloadType.TokenTransfer, amount.toUint128(), token, sender.toBytes32(), recipient, index, messageId, finalDestinationChainId)
+            payload,
+            abi.encodePacked(
+                PayloadType.TokenTransfer,
+                amount.toUint128(),
+                token,
+                sender.toBytes32(),
+                recipient,
+                index,
+                messageId,
+                finalDestinationChainId
+            )
         );
     }
 
@@ -97,9 +108,20 @@ contract PayloadEncoderTest is Test {
     ) external pure {
         vm.assume(amount < type(uint128).max);
         vm.assume(index < type(uint128).max);
-        bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, token, sender, recipient, index, messageId, finalDestinationChainId);
+        bytes memory payload =
+            PayloadEncoder.encodeTokenTransfer(amount, token, sender, recipient, index, messageId, finalDestinationChainId);
         assertEq(
-            payload, abi.encodePacked(PayloadType.TokenTransfer, amount.toUint128(), token, sender.toBytes32(), recipient, index, messageId, finalDestinationChainId)
+            payload,
+            abi.encodePacked(
+                PayloadType.TokenTransfer,
+                amount.toUint128(),
+                token,
+                sender.toBytes32(),
+                recipient,
+                index,
+                messageId,
+                finalDestinationChainId
+            )
         );
     }
 
@@ -111,21 +133,13 @@ contract PayloadEncoderTest is Test {
         uint128 index = 1.2e12;
         bytes32 messageId = "messageId";
 
-        uint32 finalDestinationChainId = 42161;
+        uint32 finalDestinationChainId = 42_161;
 
-        bytes memory payload =
-            PayloadEncoder.encodeTokenTransfer(amount, token.toBytes32(), sender, recipient.toBytes32(), index, messageId, finalDestinationChainId);
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            amount, token.toBytes32(), sender, recipient.toBytes32(), index, messageId, finalDestinationChainId
+        );
 
-            _assertDecodedTokenTransfer(
-                payload,
-                amount,
-                token,
-                sender.toBytes32(),
-                recipient,
-                index,
-                messageId,
-                finalDestinationChainId
-            );
+        _assertDecodedTokenTransfer(payload, amount, token, sender.toBytes32(), recipient, index, messageId, finalDestinationChainId);
     }
 
     function testFuzz_decodeTokenTransfer(
@@ -140,19 +154,11 @@ contract PayloadEncoderTest is Test {
         vm.assume(amount < type(uint128).max);
         vm.assume(index < type(uint128).max);
 
-        bytes memory payload =
-            PayloadEncoder.encodeTokenTransfer(amount, token.toBytes32(), sender, recipient.toBytes32(), index, messageId, finalDestinationChainId);
-
-        _assertDecodedTokenTransfer(
-            payload,
-            amount,
-            token,
-            sender.toBytes32(),
-            recipient,
-            index,
-            messageId,
-            finalDestinationChainId
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            amount, token.toBytes32(), sender, recipient.toBytes32(), index, messageId, finalDestinationChainId
         );
+
+        _assertDecodedTokenTransfer(payload, amount, token, sender.toBytes32(), recipient, index, messageId, finalDestinationChainId);
     }
 
     function test_encodeIndex() external pure {

@@ -189,6 +189,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     function treasuryBalance() external view returns (uint256) {
         return address(this).balance;
     }
+
     // TODO: Confirm if OZ UUPS contains receive function as that'll take precedence over this one
 
     ///////////////////////////////////////////////////////////////////////////
@@ -301,7 +302,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     /// @param sourceChainId The ID of the source chain.
     /// @param payload       The message payload.
     function _receiveToken(uint32 sourceChainId, bytes memory payload) internal override {
-        (uint256 amount, address destinationToken, bytes32 sender, address recipient, uint128 index, , uint32 finalDestinationChainId) =
+        (uint256 amount, address destinationToken, bytes32 sender, address recipient, uint128 index,, uint32 finalDestinationChainId) =
             PayloadEncoder.decodeTokenTransfer(payload);
 
         // Decrement source spoke's balance
@@ -347,9 +348,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         uint256 fee = IBridgeAdapter(bridgeAdapter).quote(finalDestinationChainId, gasLimit, emptyPayload);
 
         // Hub pays for this leg from treasury
-        IBridgeAdapter(bridgeAdapter).sendMessage{ value: fee }(
-            finalDestinationChainId, gasLimit, address(this).toBytes32(), payload
-        );
+        IBridgeAdapter(bridgeAdapter).sendMessage{ value: fee }(finalDestinationChainId, gasLimit, address(this).toBytes32(), payload);
     }
 
     ///////////////////////////////////////////////////////////////////////////
