@@ -2,10 +2,13 @@
 
 pragma solidity 0.8.30;
 
+import { IERC20 } from "../lib/common/src/interfaces/IERC20.sol";
+
 import { ISpokeMTokenLike } from "./interfaces/ISpokeMTokenLike.sol";
 import { IRegistrarLike } from "./interfaces/IRegistrarLike.sol";
 import { ISpokePortal } from "./interfaces/ISpokePortal.sol";
 import { IPortal } from "./interfaces/IPortal.sol";
+import { ISwapFacilityLike } from "./interfaces/ISwapFacilityLike.sol";
 
 import { Portal } from "./Portal.sol";
 import { PayloadType, PayloadEncoder } from "./libraries/PayloadEncoder.sol";
@@ -18,22 +21,83 @@ import { PayloadType, PayloadEncoder } from "./libraries/PayloadEncoder.sol";
 contract SpokePortal is Portal, ISpokePortal {
     using PayloadEncoder for bytes;
 
+    /// @inheritdoc ISpokePortal
+    uint32 public immutable hubChainId;
+
     /// @notice Constructs SpokePortal Implementation contract
     /// @dev    Sets immutable storage.
     /// @param  mToken_       The address of M token.
     /// @param  registrar_    The address of Registrar.
     /// @param  swapFacility_ The address of Swap Facility.
     /// @param  orderBook_    The address of Order Book.
+    /// @param  hubChainId_   The chain ID of the Hub chain.
     constructor(
         address mToken_,
         address registrar_,
         address swapFacility_,
-        address orderBook_
-    ) Portal(mToken_, registrar_, swapFacility_, orderBook_) { }
+        address orderBook_,
+        uint32 hubChainId_
+    ) Portal(mToken_, registrar_, swapFacility_, orderBook_) {
+        hubChainId = hubChainId_;
+    }
 
     /// @inheritdoc IPortal
     function initialize(address owner, address pauser, address operator) external initializer {
         _initialize(owner, pauser, operator);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    //                     EXTERNAL INTERACTIVE FUNCTIONS                    //
+    ///////////////////////////////////////////////////////////////////////////
+
+    /// @inheritdoc ISpokePortal
+    function sendTokenViaHub(
+        uint256 amount,
+        address sourceToken,
+        uint32 finalDestinationChainId,
+        bytes32 finalDestinationToken,
+        bytes32 recipient,
+        bytes32 refundAddress
+    ) external payable whenNotPaused whenNotLocked returns (bytes32 messageId) {
+        _revertIfZeroAmount(amount);
+        _revertIfZeroRefundAddress(refundAddress);
+        _revertIfZeroSourceToken(sourceToken);
+        _revertIfZeroDestinationToken(finalDestinationToken);
+        _revertIfZeroRecipient(recipient);
+
+        uint128 index = _currentIndex();
+
+        // Prevent stack too deep
+        {
+            uint256 startingBalance = _mBalanceOf(address(this));
+
+            // Transfer source token from the sender
+            IERC20(sourceToken).transferFrom(msg.sender, address(this), amount);
+
+            // If the source token isn't $M token, unwrap it
+            if (sourceToken != address(mToken)) {
+                IERC20(sourceToken).approve(swapFacility, amount);
+                ISwapFacilityLike(swapFacility).swapOutM(sourceToken, amount, address(this));
+            }
+
+            // Adjust amount based on actual received $M tokens for potential fee-on-transfer tokens
+            amount = _getTransferAmount(startingBalance, amount);
+
+            // Burn M tokens on Spoke
+            _burnOrLock(hubChainId, amount);
+
+            messageId = _getMessageId(hubChainId);
+            bytes memory payload = PayloadEncoder.encodeTokenTransferViaHub(
+                amount, finalDestinationToken, msg.sender, recipient, index, messageId, finalDestinationChainId
+            );
+
+            address bridgeAdapter = defaultBridgeAdapter(hubChainId);
+            _revertIfZeroBridgeAdapter(hubChainId, bridgeAdapter);
+
+            _sendMessage(hubChainId, PayloadType.TokenTransferViaHub, refundAddress, payload, bridgeAdapter);
+        }
+
+        emit TokenSentViaHub(sourceToken, finalDestinationChainId, recipient, amount);
     }
 
     ///////////////////////////////////////////////////////////////////////////

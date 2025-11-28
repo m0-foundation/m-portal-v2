@@ -550,7 +550,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     }
 
     /// @dev Reverts if `amount` is zero.
-    function _revertIfZeroAmount(uint256 amount) private pure {
+    function _revertIfZeroAmount(uint256 amount) internal pure {
         if (amount == 0) revert ZeroAmount();
     }
 
