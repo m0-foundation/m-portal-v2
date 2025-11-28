@@ -10,8 +10,7 @@ enum PayloadType {
     Index,
     RegistrarKey,
     RegistrarList,
-    FillReport,
-    TokenTransferViaHub
+    FillReport
 }
 
 /// @title  PayloadEncoder
@@ -27,9 +26,8 @@ library PayloadEncoder {
     ///      PayloadType.Index = 1,
     ///      PayloadType.RegistrarKey = 2,
     ///      PayloadType.RegistrarList = 3,
-    ///      PayloadType.FillReport = 4,
-    ///      PayloadType.TokenTransferViaHub = 5
-    uint256 internal constant MAX_PAYLOAD_TYPE = 5;
+    ///      PayloadType.FillReport = 4
+    uint256 internal constant MAX_PAYLOAD_TYPE = 4;
 
     error InvalidPayloadLength(uint256 length);
     error InvalidPayloadType(uint8 value);
@@ -49,12 +47,13 @@ library PayloadEncoder {
 
     /// @notice Encodes a token transfer payload.
     /// @dev    Encoded values are packed using `abi.encodePacked`.
-    /// @param amount           The amount of tokens to transfer.
-    /// @param destinationToken The address of the destination token.
-    /// @param sender           The address of the sender.
-    /// @param recipient        The address of the recipient.
-    /// @param index            The M token index.
-    /// @param messageId        The message ID.
+    /// @param amount                    The amount of tokens to transfer.
+    /// @param destinationToken          The address of the destination token.
+    /// @param sender                    The address of the sender.
+    /// @param recipient                 The address of the recipient.
+    /// @param index                     The M token index.
+    /// @param messageId                 The message ID.
+    /// @param finalDestinationChainId   The chain ID of the final destination.
     /// @return The encoded payload.
     function encodeTokenTransfer(
         uint256 amount,
@@ -62,26 +61,28 @@ library PayloadEncoder {
         address sender,
         bytes32 recipient,
         uint128 index,
-        bytes32 messageId
+        bytes32 messageId,
+        uint32 finalDestinationChainId
     ) internal pure returns (bytes memory) {
         // Converting addresses to `bytes32` and amount to `uint128` to support non-EVM chains.
         return abi.encodePacked(
-            PayloadType.TokenTransfer, amount.toUint128(), destinationToken, sender.toBytes32(), recipient, index, messageId
+            PayloadType.TokenTransfer, amount.toUint128(), destinationToken, sender.toBytes32(), recipient, index, messageId, finalDestinationChainId
         );
     }
 
     /// @notice Decodes a token transfer payload.
-    /// @param payload           The payload to decode.
-    /// @return amount           The amount of tokens to transfer.
-    /// @return destinationToken The address of the destination token.
-    /// @return sender           The address of the sender.
-    /// @return recipient        The address of the recipient.
-    /// @return index            The M token index.
-    /// @return messageId        The message ID.
+    /// @param payload                    The payload to decode.
+    /// @return amount                    The amount of tokens to transfer.
+    /// @return destinationToken          The address of the destination token.
+    /// @return sender                    The address of the sender.
+    /// @return recipient                 The address of the recipient.
+    /// @return index                     The M token index.
+    /// @return messageId                 The message ID.
+    /// @return finalDestinationChainId   The chain ID of the final destination.
     function decodeTokenTransfer(bytes memory payload)
         internal
         pure
-        returns (uint256 amount, address destinationToken, bytes32 sender, address recipient, uint128 index, bytes32 messageId)
+        returns (uint256 amount, address destinationToken, bytes32 sender, address recipient, uint128 index, bytes32 messageId, uint32 finalDestinationChainId)
     {
         uint256 offset = PAYLOAD_TYPE_LENGTH;
         bytes32 destinationTokenBytes32;
@@ -93,6 +94,7 @@ library PayloadEncoder {
         (recipientBytes32, offset) = payload.asBytes32Unchecked(offset);
         (index, offset) = payload.asUint128Unchecked(offset);
         (messageId, offset) = payload.asBytes32Unchecked(offset);
+        (finalDestinationChainId, offset) = payload.asUint32Unchecked(offset);
 
         destinationToken = destinationTokenBytes32.toAddress();
         recipient = recipientBytes32.toAddress();
@@ -216,64 +218,11 @@ library PayloadEncoder {
         payload.checkLength(offset);
     }
 
-    /// @notice Encodes a token transfer via Hub payload.
-    /// @param amount                    The amount of tokens to transfer.
-    /// @param finalDestinationToken     The address of the token on the final destination chain.
-    /// @param sender                    The address of the sender.
-    /// @param recipient                 The address of the recipient.
-    /// @param index                     The M token index.
-    /// @param messageId                 The message ID.
-    /// @param finalDestinationChainId   The chain ID of the final destination.
-    /// @return The encoded payload.
-    function encodeTokenTransferViaHub(
-        uint256 amount,
-        bytes32 finalDestinationToken,
-        address sender,
-        bytes32 recipient,
-        uint128 index,
-        bytes32 messageId,
-        uint32 finalDestinationChainId
-    ) internal pure returns (bytes memory) {
-        return abi.encodePacked(
-            PayloadType.TokenTransferViaHub, amount.toUint128(), finalDestinationToken, sender.toBytes32(), recipient, index, messageId, finalDestinationChainId
-        );
-    }
-
-    /// @notice Decodes a token transfer via Hub payload.
-    /// @param payload                    The payload to decode.
-    /// @return amount                    The amount of tokens to transfer.
-    /// @return finalDestinationToken     The address of the token on the final destination chain.
-    /// @return sender                    The address of the sender.
-    /// @return recipient                 The address of the recipient.
-    /// @return index                     The M token index.
-    /// @return messageId                 The message ID.
-    /// @return finalDestinationChainId   The chain ID of the final destination.
-    function decodeTokenTransferViaHub(bytes memory payload)
-        internal
-        pure
-        returns (uint256 amount, bytes32 finalDestinationToken, bytes32 sender, address recipient, uint128 index, bytes32 messageId, uint32 finalDestinationChainId)
-    {
-        uint256 offset = PAYLOAD_TYPE_LENGTH;
-        bytes32 recipientBytes32;
-
-        (amount, offset) = payload.asUint128Unchecked(offset);
-        (finalDestinationToken, offset) = payload.asBytes32Unchecked(offset);
-        (sender, offset) = payload.asBytes32Unchecked(offset);
-        (recipientBytes32, offset) = payload.asBytes32Unchecked(offset);
-        (index, offset) = payload.asUint128Unchecked(offset);
-        (messageId, offset) = payload.asBytes32Unchecked(offset);
-        (finalDestinationChainId, offset) = payload.asUint32Unchecked(offset);
-
-        recipient = recipientBytes32.toAddress();
-
-        payload.checkLength(offset);
-    }
-
     /// @notice Generates a payload with empty data for the given payload type.
     /// @dev    Used for estimating gas costs for different payload types.
     function generateEmptyPayload(PayloadType payloadType) internal pure returns (bytes memory) {
         if (payloadType == PayloadType.TokenTransfer) {
-            return encodeTokenTransfer(0, bytes32(0), address(0), bytes32(0), 0, bytes32(0));
+            return encodeTokenTransfer(0, bytes32(0), address(0), bytes32(0), 0, bytes32(0), 0);
         } else if (payloadType == PayloadType.Index) {
             return encodeIndex(0, bytes32(0));
         } else if (payloadType == PayloadType.RegistrarKey) {
@@ -282,8 +231,6 @@ library PayloadEncoder {
             return encodeRegistrarList(bytes32(0), address(0), false, bytes32(0));
         } else if (payloadType == PayloadType.FillReport) {
             return encodeFillReport(bytes32(0), 0, 0, bytes32(0), bytes32(0));
-        } else if (payloadType == PayloadType.TokenTransferViaHub) {
-            return encodeTokenTransferViaHub(0, bytes32(0), address(0), bytes32(0), 0, bytes32(0), 0);
         }
 
         revert InvalidPayloadType(uint8(payloadType));

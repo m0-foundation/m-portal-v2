@@ -50,54 +50,33 @@ contract SpokePortal is Portal, ISpokePortal {
     //                     EXTERNAL INTERACTIVE FUNCTIONS                    //
     ///////////////////////////////////////////////////////////////////////////
 
-    /// @inheritdoc ISpokePortal
-    function sendTokenViaHub(
+    /// @inheritdoc IPortal
+    function sendToken(
         uint256 amount,
         address sourceToken,
-        uint32 finalDestinationChainId,
-        bytes32 finalDestinationToken,
+        uint32 destinationChainId,
+        bytes32 destinationToken,
         bytes32 recipient,
         bytes32 refundAddress
-    ) external payable whenNotPaused whenNotLocked returns (bytes32 messageId) {
-        _revertIfZeroAmount(amount);
-        _revertIfZeroRefundAddress(refundAddress);
-        _revertIfZeroSourceToken(sourceToken);
-        _revertIfZeroDestinationToken(finalDestinationToken);
-        _revertIfZeroRecipient(recipient);
+    ) external payable override(IPortal, Portal) whenNotPaused whenNotLocked returns (bytes32 messageId) {
+        address bridgeAdapter = defaultBridgeAdapter(hubChainId);
+        _revertIfZeroBridgeAdapter(hubChainId, bridgeAdapter);
 
-        uint128 index = _currentIndex();
+        return _sendToken(amount, sourceToken, hubChainId, destinationToken, recipient, refundAddress, bridgeAdapter, destinationChainId);
+    }
 
-        // Prevent stack too deep
-        {
-            uint256 startingBalance = _mBalanceOf(address(this));
+    function sendToken(
+        uint256 amount,
+        address sourceToken,
+        uint32 destinationChainId,
+        bytes32 destinationToken,
+        bytes32 recipient,
+        bytes32 refundAddress,
+        address bridgeAdapter
+    ) external payable override(IPortal, Portal) whenNotPaused whenNotLocked returns (bytes32 messageId) {
+        _revertIfUnsupportedBridgeAdapter(hubChainId, bridgeAdapter);
 
-            // Transfer source token from the sender
-            IERC20(sourceToken).transferFrom(msg.sender, address(this), amount);
-
-            // If the source token isn't $M token, unwrap it
-            if (sourceToken != address(mToken)) {
-                IERC20(sourceToken).approve(swapFacility, amount);
-                ISwapFacilityLike(swapFacility).swapOutM(sourceToken, amount, address(this));
-            }
-
-            // Adjust amount based on actual received $M tokens for potential fee-on-transfer tokens
-            amount = _getTransferAmount(startingBalance, amount);
-
-            // Burn M tokens on Spoke
-            _burnOrLock(hubChainId, amount);
-
-            messageId = _getMessageId(hubChainId);
-            bytes memory payload = PayloadEncoder.encodeTokenTransferViaHub(
-                amount, finalDestinationToken, msg.sender, recipient, index, messageId, finalDestinationChainId
-            );
-
-            address bridgeAdapter = defaultBridgeAdapter(hubChainId);
-            _revertIfZeroBridgeAdapter(hubChainId, bridgeAdapter);
-
-            _sendMessage(hubChainId, PayloadType.TokenTransferViaHub, refundAddress, payload, bridgeAdapter);
-        }
-
-        emit TokenSentViaHub(sourceToken, finalDestinationChainId, recipient, amount);
+        return _sendToken(amount, sourceToken, hubChainId, destinationToken, recipient, refundAddress, bridgeAdapter, destinationChainId);
     }
 
     ///////////////////////////////////////////////////////////////////////////

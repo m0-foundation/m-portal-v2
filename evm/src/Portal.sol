@@ -107,11 +107,11 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         bytes32 destinationToken,
         bytes32 recipient,
         bytes32 refundAddress
-    ) external payable whenNotPaused whenNotLocked returns (bytes32 messageId) {
+    ) external payable virtual whenNotPaused whenNotLocked returns (bytes32 messageId) {
         address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
         _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
 
-        return _sendToken(amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter);
+        return _sendToken(amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter, destinationChainId);
     }
 
     function sendToken(
@@ -122,10 +122,10 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         bytes32 recipient,
         bytes32 refundAddress,
         address bridgeAdapter
-    ) external payable whenNotPaused whenNotLocked returns (bytes32 messageId) {
+    ) external payable virtual whenNotPaused whenNotLocked returns (bytes32 messageId) {
         _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
-        return _sendToken(amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter);
+        return _sendToken(amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter, destinationChainId);
     }
 
     /// @inheritdoc IPortal
@@ -160,11 +160,6 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
 
         if (payloadType == PayloadType.TokenTransfer) {
             _receiveToken(sourceChainId, payload);
-            return;
-        }
-
-        if (payloadType == PayloadType.TokenTransferViaHub) {
-            _receiveTokenViaHub(sourceChainId, payload);
             return;
         }
 
@@ -339,7 +334,8 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         bytes32 destinationToken,
         bytes32 recipient,
         bytes32 refundAddress,
-        address bridgeAdapter
+        address bridgeAdapter,
+        uint32 finalDestinationChainId
     ) internal returns (bytes32 messageId) {
         _revertIfZeroAmount(amount);
         _revertIfZeroRefundAddress(refundAddress);
@@ -347,7 +343,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         _revertIfZeroDestinationToken(destinationToken);
         _revertIfZeroRecipient(recipient);
         _revertIfInvalidDestinationChain(destinationChainId);
-        _revertIfUnsupportedBridgingPath(sourceToken, destinationChainId, destinationToken);
+        _revertIfUnsupportedBridgingPath(sourceToken, finalDestinationChainId, destinationToken);
 
         uint128 index = _currentIndex();
 
@@ -372,12 +368,12 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
             _burnOrLock(destinationChainId, amount);
 
             messageId = _getMessageId(destinationChainId);
-            bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, destinationToken, msg.sender, recipient, index, messageId);
+            bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, destinationToken, msg.sender, recipient, index, messageId, finalDestinationChainId);
 
             _sendMessage(destinationChainId, PayloadType.TokenTransfer, refundAddress, payload, bridgeAdapter);
         }
 
-        emit TokenSent(sourceToken, destinationChainId, destinationToken, msg.sender, recipient, amount, index, bridgeAdapter, messageId);
+        emit TokenSent(sourceToken, finalDestinationChainId, destinationToken, msg.sender, recipient, amount, index, bridgeAdapter, messageId);
     }
 
     /// @dev Sends the fill report to the destination chain.
@@ -412,8 +408,8 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     /// @dev   Handles token transfer message on the destination.
     /// @param sourceChainId The ID of the source chain.
     /// @param payload       The message payload.
-    function _receiveToken(uint32 sourceChainId, bytes memory payload) internal {
-        (uint256 amount, address destinationToken, bytes32 sender, address recipient, uint128 index, bytes32 messageId) =
+    function _receiveToken(uint32 sourceChainId, bytes memory payload) internal virtual {
+        (uint256 amount, address destinationToken, bytes32 sender, address recipient, uint128 index, bytes32 messageId,) =
             payload.decodeTokenTransfer();
 
         emit TokenReceived(sourceChainId, destinationToken, sender, recipient, amount, index, messageId);
@@ -435,7 +431,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     /// @param destinationToken The address of the Extension token.
     /// @param recipient        The account to receive wrapped token.
     /// @param amount           The amount to wrap.
-    function _wrap(address destinationToken, address recipient, uint256 amount) private {
+    function _wrap(address destinationToken, address recipient, uint256 amount) internal {
         IERC20(mToken).approve(swapFacility, amount);
 
         // Attempt to wrap $M token
@@ -483,11 +479,6 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     /// @param payloadType The type of the payload (Index, RegistrarKey, or RegistrarList).
     /// @param payload     The message payload to process.
     function _receiveCustomPayload(PayloadType payloadType, bytes memory payload) internal virtual { }
-
-    /// @dev   Overridden in HubPortal to handle token transfers via hub routing.
-    /// @param sourceChainId The ID of the source chain.
-    /// @param payload       The message payload.
-    function _receiveTokenViaHub(uint32 sourceChainId, bytes memory payload) internal virtual { }
 
     /// @dev   HubPortal:   unlocks and transfers `amount` $M tokens to `recipient`.
     ///        SpokePortal: mints `amount` $M tokens to `recipient`.

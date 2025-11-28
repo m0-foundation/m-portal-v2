@@ -299,33 +299,29 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         }
     }
 
-    /// @dev Receives and routes token transfers via Hub.
-    /// @param sourceChainId The ID of the source spoke chain.
+    /// @dev Receives token transfers and routes based on finalDestinationChainId.
+    /// @param sourceChainId The ID of the source chain.
     /// @param payload       The message payload.
-    function _receiveTokenViaHub(uint32 sourceChainId, bytes memory payload) internal override {
-        (
-            uint256 amount,
-            bytes32 finalDestinationToken,
-            bytes32 sender,
-            address recipient,
-            uint128 index,
-            bytes32 messageId,
-            uint32 finalDestinationChainId
-        ) = PayloadEncoder.decodeTokenTransferViaHub(payload);
+    function _receiveToken(uint32 sourceChainId, bytes memory payload) internal override {
+        (uint256 amount, address destinationToken, bytes32 sender, address recipient, uint128 index, bytes32 messageId, uint32 finalDestinationChainId) =
+            PayloadEncoder.decodeTokenTransfer(payload);
 
         // Decrement source spoke's balance
         _decreaseBridgedPrincipal(sourceChainId, amount);
 
         if (finalDestinationChainId == currentChainId) {
-            // Spoke→Hub: reuse _receiveToken logic for wrapping/unwrapping
-            bytes memory tokenPayload = PayloadEncoder.encodeTokenTransfer(
-                amount, finalDestinationToken, sender.toAddress(), recipient.toBytes32(), index, messageId
-            );
-            _receiveToken(sourceChainId, tokenPayload);
+            // Final destination is Hub - deliver locally
+            emit TokenReceived(sourceChainId, destinationToken, sender, recipient, amount, index, messageId);
+
+            if (destinationToken == mToken) {
+                IERC20(mToken).transfer(recipient, amount);
+            } else {
+                _wrap(destinationToken, recipient, amount);
+            }
         } else {
-            // Spoke→Spoke: forward to final destination
+            // Final destination is another spoke - forward
             _increaseBridgedPrincipal(finalDestinationChainId, amount);
-            _forwardToSpoke(finalDestinationChainId, finalDestinationToken, sender, recipient, amount, index);
+            _forwardToSpoke(finalDestinationChainId, destinationToken.toBytes32(), sender, recipient, amount, index);
             emit TokenForwarded(sourceChainId, finalDestinationChainId, recipient, amount);
         }
     }
@@ -347,7 +343,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     ) private {
         bytes32 messageId = _getMessageId(finalDestinationChainId);
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
-            amount, finalDestinationToken, sender.toAddress(), recipient.toBytes32(), index, messageId
+            amount, finalDestinationToken, sender.toAddress(), recipient.toBytes32(), index, messageId, finalDestinationChainId
         );
 
         address bridgeAdapter = defaultBridgeAdapter(finalDestinationChainId);
