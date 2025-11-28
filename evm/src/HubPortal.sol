@@ -9,17 +9,18 @@ import { IBridgeAdapter } from "./interfaces/IBridgeAdapter.sol";
 import { IMTokenLike } from "./interfaces/IMTokenLike.sol";
 import { IRegistrarLike } from "./interfaces/IRegistrarLike.sol";
 import { IPortal, ChainConfig } from "./interfaces/IPortal.sol";
-import { IHubPortal } from "./interfaces/IHubPortal.sol";
+import { IHubPortal, SpokeChainConfig } from "./interfaces/IHubPortal.sol";
 
 import { Portal } from "./Portal.sol";
 import { PayloadType, PayloadEncoder } from "./libraries/PayloadEncoder.sol";
 import { TypeConverter } from "./libraries/TypeConverter.sol";
 
 abstract contract HubPortalStorageLayout {
-    /// @custom:storage-location erc7201:M0.storage.Portal
+    /// @custom:storage-location erc7201:M0.storage.HubPortal
     struct HubPortalStorageStruct {
         bool wasEarningEnabled;
         uint128 disableEarningIndex;
+        mapping(uint32 spokeChainId => SpokeChainConfig) spokeConfig;
     }
 
     // keccak256(abi.encode(uint256(keccak256("M0.storage.HubPortal")) - 1)) & ~bytes32(uint256(0xff))
@@ -176,6 +177,17 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     function disableEarningIndex() public view returns (uint128) {
         HubPortalStorageStruct storage $ = _getHubPortalStorageLocation();
         return $.disableEarningIndex;
+    }
+
+    /// @inheritdoc IHubPortal
+    function bridgedPrincipal(uint32 spokeChainId) external view returns (uint248) {
+        HubPortalStorageStruct storage $ = _getHubPortalStorageLocation();
+        return $.spokeConfig[spokeChainId].bridgedPrincipal;
+    }
+
+    /// @inheritdoc IHubPortal
+    function treasuryBalance() external view returns (uint256) {
+        return address(this).balance;
     }
 
     ///////////////////////////////////////////////////////////////////////////

@@ -28,4 +28,11 @@ interface ISpokePortal is IPortal {
     /// @param  add       Indicates if the account is added or removed from the list.
     /// @param  messageId The unique ID of the message.
     event RegistrarListUpdateReceived(bytes32 indexed listName, address indexed account, bool add, bytes32 messageId);
+
+    /// @notice Emitted when a token is sent via the Hub to another spoke or to the Hub itself.
+    /// @param  sourceToken             The address of the source token on this spoke.
+    /// @param  finalDestinationChainId The chain Id of the final destination.
+    /// @param  recipient               The recipient on the final destination.
+    /// @param  amount                  The amount of tokens sent.
+    event TokenSentViaHub(address indexed sourceToken, uint32 indexed finalDestinationChainId, bytes32 indexed recipient, uint256 amount);
 }

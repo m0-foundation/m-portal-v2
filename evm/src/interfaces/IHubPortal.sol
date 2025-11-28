@@ -4,6 +4,10 @@ pragma solidity 0.8.30;
 
 import { IPortal } from "./IPortal.sol";
 
+struct SpokeChainConfig {
+    uint248 bridgedPrincipal;
+}
+
 /// @title  HubPortal interface.
 /// @author M0 Labs
 interface IHubPortal is IPortal {
@@ -50,6 +54,18 @@ interface IHubPortal is IPortal {
         bytes32 messageId
     );
 
+    /// @notice Emitted when a token is forwarded from one spoke to another via the Hub.
+    /// @param  sourceChainId           The chain Id of the source spoke.
+    /// @param  finalDestinationChainId The chain Id of the final destination spoke.
+    /// @param  recipient               The recipient on the final destination spoke.
+    /// @param  amount                  The amount of tokens forwarded.
+    event TokenForwarded(uint32 indexed sourceChainId, uint32 indexed finalDestinationChainId, address indexed recipient, uint256 amount);
+
+    /// @notice Emitted when the Hub treasury is funded for bridge fees.
+    /// @param  funder The address funding the treasury.
+    /// @param  amount The amount of native gas funded.
+    event TreasuryFunded(address indexed funder, uint256 amount);
+
     ///////////////////////////////////////////////////////////////////////////
     //                             CUSTOM ERRORS                             //
     ///////////////////////////////////////////////////////////////////////////
@@ -75,6 +91,13 @@ interface IHubPortal is IPortal {
 
     /// @notice Returns the value of M token index when earning for HubPortal was disabled.
     function disableEarningIndex() external view returns (uint128);
+
+    /// @notice Returns the principal amount of M tokens bridged to a specified spoke chain.
+    /// @param  spokeChainId The EVM chain Id of the spoke.
+    function bridgedPrincipal(uint32 spokeChainId) external view returns (uint248);
+
+    /// @notice Returns the Hub's native balance available for paying bridge fees.
+    function treasuryBalance() external view returns (uint256);
 
     ///////////////////////////////////////////////////////////////////////////
     //                         INTERACTIVE FUNCTIONS                         //
