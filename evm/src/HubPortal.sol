@@ -39,7 +39,7 @@ abstract contract HubPortalStorageLayout {
 ///         as well as propagating M token index, Registrar keys and list status to the Spoke chain.
 /// @dev    Tokens are bridged using lock-release mechanism.
 contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
-    using TypeConverter for uint256;
+    using TypeConverter for *;
 
     /// @notice Constructs HubPortal Implementation contract
     /// @dev    Sets immutable storage.
@@ -189,6 +189,16 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     function treasuryBalance() external view returns (uint256) {
         return address(this).balance;
     }
+    // TODO: Confirm if OZ UUPS contains receive function as that'll take precedence over this one
+
+    ///////////////////////////////////////////////////////////////////////////
+    //                          RECEIVE FUNCTIONS                            //
+    ///////////////////////////////////////////////////////////////////////////
+
+    /// @notice Allows funding the Hub treasury for bridge fees.
+    receive() external payable {
+        emit TreasuryFunded(msg.sender, msg.value);
+    }
 
     ///////////////////////////////////////////////////////////////////////////
     //                INTERNAL/PRIVATE INTERACTIVE FUNCTIONS                 //
@@ -287,6 +297,70 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         unchecked {
             config.bridgedPrincipal -= principal;
         }
+    }
+
+    /// @dev Receives and routes token transfers via Hub.
+    /// @param sourceChainId The ID of the source spoke chain.
+    /// @param payload       The message payload.
+    function _receiveTokenViaHub(uint32 sourceChainId, bytes memory payload) internal override {
+        (
+            uint256 amount,
+            bytes32 finalDestinationToken,
+            bytes32 sender,
+            address recipient,
+            uint128 index,
+            bytes32 messageId,
+            uint32 finalDestinationChainId
+        ) = PayloadEncoder.decodeTokenTransferViaHub(payload);
+
+        // Decrement source spoke's balance
+        _decreaseBridgedPrincipal(sourceChainId, amount);
+
+        if (finalDestinationChainId == currentChainId) {
+            // Spoke→Hub: reuse _receiveToken logic for wrapping/unwrapping
+            bytes memory tokenPayload = PayloadEncoder.encodeTokenTransfer(
+                amount, finalDestinationToken, sender.toAddress(), recipient.toBytes32(), index, messageId
+            );
+            _receiveToken(sourceChainId, tokenPayload);
+        } else {
+            // Spoke→Spoke: forward to final destination
+            _increaseBridgedPrincipal(finalDestinationChainId, amount);
+            _forwardToSpoke(finalDestinationChainId, finalDestinationToken, sender, recipient, amount, index);
+            emit TokenForwarded(sourceChainId, finalDestinationChainId, recipient, amount);
+        }
+    }
+
+    /// @dev Forwards tokens to final spoke destination (Hub pays bridge fee).
+    /// @param finalDestinationChainId The chain ID of the final spoke destination.
+    /// @param finalDestinationToken   The token address on the final destination.
+    /// @param sender                  The original sender from the source spoke.
+    /// @param recipient               The recipient on the final destination.
+    /// @param amount                  The amount of tokens to forward.
+    /// @param index                   The M token index.
+    function _forwardToSpoke(
+        uint32 finalDestinationChainId,
+        bytes32 finalDestinationToken,
+        bytes32 sender,
+        address recipient,
+        uint256 amount,
+        uint128 index
+    ) private {
+        bytes32 messageId = _getMessageId(finalDestinationChainId);
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            amount, finalDestinationToken, sender.toAddress(), recipient.toBytes32(), index, messageId
+        );
+
+        address bridgeAdapter = defaultBridgeAdapter(finalDestinationChainId);
+        uint256 gasLimit = payloadGasLimit(finalDestinationChainId, PayloadType.TokenTransfer);
+
+        // Quote delivery fee
+        bytes memory emptyPayload = PayloadEncoder.generateEmptyPayload(PayloadType.TokenTransfer);
+        uint256 fee = IBridgeAdapter(bridgeAdapter).quote(finalDestinationChainId, gasLimit, emptyPayload);
+
+        // Hub pays for this leg from treasury
+        IBridgeAdapter(bridgeAdapter).sendMessage{ value: fee }(
+            finalDestinationChainId, gasLimit, address(this).toBytes32(), payload
+        );
     }
 
     ///////////////////////////////////////////////////////////////////////////

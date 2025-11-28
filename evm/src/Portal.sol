@@ -163,6 +163,11 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
             return;
         }
 
+        if (payloadType == PayloadType.TokenTransferViaHub) {
+            _receiveTokenViaHub(sourceChainId, payload);
+            return;
+        }
+
         if (payloadType == PayloadType.FillReport) {
             _receiveFillReport(sourceChainId, payload);
             return;
@@ -407,7 +412,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     /// @dev   Handles token transfer message on the destination.
     /// @param sourceChainId The ID of the source chain.
     /// @param payload       The message payload.
-    function _receiveToken(uint32 sourceChainId, bytes memory payload) private {
+    function _receiveToken(uint32 sourceChainId, bytes memory payload) internal {
         (uint256 amount, address destinationToken, bytes32 sender, address recipient, uint128 index, bytes32 messageId) =
             payload.decodeTokenTransfer();
 
@@ -478,6 +483,11 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     /// @param payloadType The type of the payload (Index, RegistrarKey, or RegistrarList).
     /// @param payload     The message payload to process.
     function _receiveCustomPayload(PayloadType payloadType, bytes memory payload) internal virtual { }
+
+    /// @dev   Overridden in HubPortal to handle token transfers via hub routing.
+    /// @param sourceChainId The ID of the source chain.
+    /// @param payload       The message payload.
+    function _receiveTokenViaHub(uint32 sourceChainId, bytes memory payload) internal virtual { }
 
     /// @dev   HubPortal:   unlocks and transfers `amount` $M tokens to `recipient`.
     ///        SpokePortal: mints `amount` $M tokens to `recipient`.
