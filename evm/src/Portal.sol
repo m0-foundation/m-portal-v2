@@ -431,7 +431,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     /// @param destinationToken The address of the Extension token.
     /// @param recipient        The account to receive wrapped token.
     /// @param amount           The amount to wrap.
-    function _wrap(address destinationToken, address recipient, uint256 amount) internal {
+    function _wrap(address destinationToken, address recipient, uint256 amount) private {
         IERC20(mToken).approve(swapFacility, amount);
 
         // Attempt to wrap $M token

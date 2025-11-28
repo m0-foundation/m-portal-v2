@@ -255,11 +255,9 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     }
 
     /// @dev Unlocks M tokens to `recipient`.
-    /// @param sourceChainId The ID of the source chain.
     /// @param recipient     The account to unlock/transfer M tokens to.
     /// @param amount        The amount of M Token to unlock to the recipient.
-    function _mintOrUnlock(uint32 sourceChainId, address recipient, uint256 amount, uint128) internal override {
-        _decreaseBridgedPrincipal(sourceChainId, amount);
+    function _mintOrUnlock(uint32, address recipient, uint256 amount, uint128) internal override {
         if (recipient != address(this)) {
             IERC20(mToken).transfer(recipient, amount);
         }
@@ -303,21 +301,15 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     /// @param sourceChainId The ID of the source chain.
     /// @param payload       The message payload.
     function _receiveToken(uint32 sourceChainId, bytes memory payload) internal override {
-        (uint256 amount, address destinationToken, bytes32 sender, address recipient, uint128 index, bytes32 messageId, uint32 finalDestinationChainId) =
+        (uint256 amount, address destinationToken, bytes32 sender, address recipient, uint128 index, , uint32 finalDestinationChainId) =
             PayloadEncoder.decodeTokenTransfer(payload);
 
         // Decrement source spoke's balance
         _decreaseBridgedPrincipal(sourceChainId, amount);
 
         if (finalDestinationChainId == currentChainId) {
-            // Final destination is Hub - deliver locally
-            emit TokenReceived(sourceChainId, destinationToken, sender, recipient, amount, index, messageId);
-
-            if (destinationToken == mToken) {
-                IERC20(mToken).transfer(recipient, amount);
-            } else {
-                _wrap(destinationToken, recipient, amount);
-            }
+            // Final destination is Hub - deliver locally using parent implementation
+            super._receiveToken(sourceChainId, payload);
         } else {
             // Final destination is another spoke - forward
             _increaseBridgedPrincipal(finalDestinationChainId, amount);
@@ -326,6 +318,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         }
     }
 
+    // TODO: Investigate this properly
     /// @dev Forwards tokens to final spoke destination (Hub pays bridge fee).
     /// @param finalDestinationChainId The chain ID of the final spoke destination.
     /// @param finalDestinationToken   The token address on the final destination.
