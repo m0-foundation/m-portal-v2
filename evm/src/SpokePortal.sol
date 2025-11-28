@@ -87,7 +87,7 @@ contract SpokePortal is Portal, ISpokePortal {
     /// @param recipient The account to mint $M tokens to.
     /// @param amount    The amount of $M Token to mint to the recipient.
     /// @param index     The index from the source chain.
-    function _mintOrUnlock(address recipient, uint256 amount, uint128 index) internal override {
+    function _mintOrUnlock(uint32, address recipient, uint256 amount, uint128 index) internal override {
         // Update M token index only if the index received from the remote chain is bigger
         if (index > _currentIndex()) {
             ISpokeMTokenLike(mToken).mint(recipient, amount, index);
@@ -98,7 +98,7 @@ contract SpokePortal is Portal, ISpokePortal {
 
     /// @dev Burns $M Token.
     /// @param amount The amount of M Token to burn from the SpokePortal.
-    function _burnOrLock(uint256 amount) internal override {
+    function _burnOrLock(uint32, uint256 amount) internal override {
         ISpokeMTokenLike(mToken).burn(amount);
     }
 

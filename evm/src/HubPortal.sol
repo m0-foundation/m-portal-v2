@@ -244,12 +244,48 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         emit RegistrarListStatusSent(destinationChainId, listName, account, status, bridgeAdapter, messageId);
     }
 
-    /// @dev Unlocks M tokens to `recipient_`.
-    /// @param recipient The account to unlock/transfer M tokens to.
-    /// @param amount    The amount of M Token to unlock to the recipient.
-    function _mintOrUnlock(address recipient, uint256 amount, uint128) internal override {
+    /// @dev Unlocks M tokens to `recipient`.
+    /// @param sourceChainId The ID of the source chain.
+    /// @param recipient     The account to unlock/transfer M tokens to.
+    /// @param amount        The amount of M Token to unlock to the recipient.
+    function _mintOrUnlock(uint32 sourceChainId, address recipient, uint256 amount, uint128) internal override {
+        _decreaseBridgedPrincipal(sourceChainId, amount);
         if (recipient != address(this)) {
             IERC20(mToken).transfer(recipient, amount);
+        }
+    }
+
+    /// @dev Updates bridged principal when tokens are locked for a destination spoke.
+    /// @param destinationChainId The ID of the destination chain.
+    /// @param amount             The amount of M Token to lock.
+    function _burnOrLock(uint32 destinationChainId, uint256 amount) internal override {
+        _increaseBridgedPrincipal(destinationChainId, amount);
+    }
+
+    /// @dev Increases the principal amount bridged to a spoke chain.
+    /// @param spokeChainId The ID of the spoke chain.
+    /// @param amount       The amount of M Token being bridged.
+    function _increaseBridgedPrincipal(uint32 spokeChainId, uint256 amount) private {
+        SpokeChainConfig storage config = _getHubPortalStorageLocation().spokeConfig[spokeChainId];
+
+        // Won't overflow since `getPrincipalAmountRoundedDown` returns uint112
+        unchecked {
+            config.bridgedPrincipal += IndexingMath.getPrincipalAmountRoundedDown(uint240(amount), _currentIndex());
+        }
+    }
+
+    /// @dev Decreases the principal amount bridged to a spoke chain.
+    /// @param spokeChainId The ID of the spoke chain.
+    /// @param amount       The amount of M Token being unlocked.
+    function _decreaseBridgedPrincipal(uint32 spokeChainId, uint256 amount) private {
+        SpokeChainConfig storage config = _getHubPortalStorageLocation().spokeConfig[spokeChainId];
+        uint248 principal = IndexingMath.getPrincipalAmountRoundedDown(uint240(amount), _currentIndex());
+
+        // Prevents unlocking more than was bridged to the Spoke
+        if (principal > config.bridgedPrincipal) revert InsufficientBridgedBalance();
+
+        unchecked {
+            config.bridgedPrincipal -= principal;
         }
     }
 
