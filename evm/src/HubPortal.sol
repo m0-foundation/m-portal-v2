@@ -271,11 +271,8 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         SpokeChainConfig storage spokeConfig = _getHubPortalStorageLocation().spokeConfig[destinationChainId];
         // Only track bridged principal for isolated Spokes
         if (spokeConfig.crossSpokeTokenTransferEnabled) return;
-
-        // Won't overflow since `getPrincipalAmountRoundedDown` returns uint112
-        unchecked {
-            spokeConfig.bridgedPrincipal += IndexingMath.getPrincipalAmountRoundedDown(uint240(amount), _currentIndex());
-        }
+        
+        spokeConfig.bridgedPrincipal += IndexingMath.getPrincipalAmountRoundedDown(uint240(amount), _currentIndex());
     }
 
     /// @dev Unlocks M tokens to `recipient`.
