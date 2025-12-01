@@ -69,6 +69,7 @@ contract WormholeBridgeAdapter is BridgeAdapter, IWormholeBridgeAdapter {
         uint64 sequence = ICoreBridge(coreBridge).publishMessage{ value: coreBridgeFee }(0, payload, consistencyLevel);
         bytes32 destinationPeer = _getPeerOrRevert(destinationChainId);
         uint16 destinationWormholeChainId = _getBridgeChainIdOrRevert(destinationChainId).toUint16();
+        bytes memory relayInstructions = RelayInstructions.encodeGas(gasLimit.toUint128(), 0);
 
         IExecutor(executor).requestExecution{ value: msg.value - coreBridgeFee }(
             destinationWormholeChainId,
@@ -76,7 +77,7 @@ contract WormholeBridgeAdapter is BridgeAdapter, IWormholeBridgeAdapter {
             refundAddress.toAddress(),
             signedQuote,
             ExecutorMessages.makeVAAv1Request(currentWormholeChainId, address(this).toBytes32(), sequence),
-            RelayInstructions.encodeGas(gasLimit.toUint128(), 0)
+            relayInstructions
         );
     }
 

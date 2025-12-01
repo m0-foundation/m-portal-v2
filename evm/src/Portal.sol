@@ -351,34 +351,30 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         _revertIfUnsupportedBridgingPath(sourceToken, destinationChainId, destinationToken);
 
         uint128 index = _currentIndex();
+        uint256 startingBalance = _mBalanceOf(address(this));
 
-        // Prevent stack too deep
-        {
-            uint256 startingBalance = _mBalanceOf(address(this));
+        // Transfer source token from the sender
+        IERC20(sourceToken).transferFrom(msg.sender, address(this), amount);
 
-            // Transfer source token from the sender
-            IERC20(sourceToken).transferFrom(msg.sender, address(this), amount);
-
-            // If the source token isn't $M token, unwrap it
-            if (sourceToken != address(mToken)) {
-                IERC20(sourceToken).approve(swapFacility, amount);
-                ISwapFacilityLike(swapFacility).swapOutM(sourceToken, amount, address(this));
-            }
-
-            // Adjust amount based on actual received $M tokens for potential fee-on-transfer tokens
-            amount = _getTransferAmount(startingBalance, amount);
-
-            // Burn M tokens on Spoke.
-            // In case of Hub, only update the bridged principal amount as tokens already transferred.
-            _burnOrLock(amount);
-
-            messageId = _getMessageId(destinationChainId);
-            bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, destinationToken, msg.sender, recipient, index, messageId);
-
-            _sendMessage(destinationChainId, PayloadType.TokenTransfer, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
+        // If the source token isn't $M token, unwrap it
+        if (sourceToken != address(mToken)) {
+            IERC20(sourceToken).approve(swapFacility, amount);
+            ISwapFacilityLike(swapFacility).swapOutM(sourceToken, amount, address(this));
         }
 
-        emit TokenSent(sourceToken, destinationChainId, destinationToken, msg.sender, recipient, amount, index, bridgeAdapter, messageId);
+        // Adjust amount based on actual received $M tokens for potential fee-on-transfer tokens
+        uint256 transferAmount = _getTransferAmount(startingBalance, amount);
+
+        // Burn M tokens on Spoke.
+        // In case of Hub, only update the bridged principal amount as tokens already transferred.
+        _burnOrLock(transferAmount);
+
+        messageId = _getMessageId(destinationChainId);
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(transferAmount, destinationToken, msg.sender, recipient, index, messageId);
+
+        _sendMessage(destinationChainId, PayloadType.TokenTransfer, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
+
+        emit TokenSent(sourceToken, destinationChainId, destinationToken, msg.sender, recipient, transferAmount, index, bridgeAdapter, messageId);
     }
 
     /// @dev Sends the fill report to the destination chain.

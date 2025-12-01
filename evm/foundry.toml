@@ -9,7 +9,6 @@ verbosity = 3
 dynamic_test_linking = true
 ignored_warnings_from = ["lib", "test", "script"]
 no_match_coverage = "script|test"
-via_ir = true
 
 [lint]
 lint_on_build = false
