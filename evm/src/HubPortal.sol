@@ -16,7 +16,7 @@ import { PayloadType, PayloadEncoder } from "./libraries/PayloadEncoder.sol";
 import { TypeConverter } from "./libraries/TypeConverter.sol";
 
 abstract contract HubPortalStorageLayout {
-    /// @custom:storage-location erc7201:M0.storage.Portal
+    /// @custom:storage-location erc7201:M0.storage.HubPortal
     struct HubPortalStorageStruct {
         bool wasEarningEnabled;
         uint128 disableEarningIndex;
@@ -271,7 +271,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         SpokeChainConfig storage spokeConfig = _getHubPortalStorageLocation().spokeConfig[destinationChainId];
         // Only track bridged principal for isolated Spokes
         if (spokeConfig.crossSpokeTokenTransferEnabled) return;
-        
+
         spokeConfig.bridgedPrincipal += IndexingMath.getPrincipalAmountRoundedDown(uint240(amount), _currentIndex());
     }
 

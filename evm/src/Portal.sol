@@ -575,7 +575,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         if (!supportedBridgeAdapter(chainId, bridgeAdapter)) revert UnsupportedBridgeAdapter(chainId, bridgeAdapter);
     }
 
-    /// @dev Overridden in SpokePortal to allow bringing only to the Hub chain for isolated Spokes.
+    /// @dev Overridden in SpokePortal to allow bridging only to the Hub chain for isolated Spokes.
     function _revertIfTokenTransferDisabled(uint32 chainId) internal view virtual { }
 
     function _revertIfUnsupportedBridgingPath(address sourceToken, uint32 destinationChainId, bytes32 destinationToken) internal view {
