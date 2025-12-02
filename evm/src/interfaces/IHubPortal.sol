@@ -60,6 +60,11 @@ interface IHubPortal is IPortal {
     /// @param  bridgedPrincipal The principal amount of $M tokens bridged to the Spoke chain before transfer was enabled.
     event CrossSpokeTokenTransferEnabled(uint32 spokeChainId, uint248 bridgedPrincipal);
 
+    /// @notice Emitted when cross-Spoke token transfer is disabled for the Spoke chain.
+    /// @param  spokeChainId     The chain Id of the Spoke.
+    /// @param  bridgedPrincipal The principal amount of $M tokens bridged to the Spoke chain.
+    event CrossSpokeTokenTransferDisabled(uint32 spokeChainId, uint248 bridgedPrincipal);
+
     ///////////////////////////////////////////////////////////////////////////
     //                             CUSTOM ERRORS                             //
     ///////////////////////////////////////////////////////////////////////////
@@ -169,5 +174,14 @@ interface IHubPortal is IPortal {
     function disableEarning() external;
 
     /// @notice Enables cross-Spoke token transfer for a specified Spoke chain.
+    /// @dev    Must be called after calling `disableCrossSpokeTokenTransfer` in SpokePortal.
+    /// @param  spokeChainId The chain Id of the Spoke.
     function enableCrossSpokeTokenTransfer(uint32 spokeChainId) external;
+
+    /// @notice Disables cross-Spoke token transfer for a specified Spoke chain.
+    /// @dev    Should be called if `enableCrossSpokeTokenTransfer` was called by mistake or is not possible/needed.
+    ///         Must be called after calling `disableCrossSpokeTokenTransfer` in SpokePortal.
+    /// @param  spokeChainId The chain Id of the Spoke.
+    /// @param  principal    The principal amount of $M tokens bridged to the Spoke chain.
+    function disableCrossSpokeTokenTransfer(uint32 spokeChainId, uint248 principal) external;
 }

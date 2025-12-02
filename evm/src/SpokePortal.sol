@@ -71,6 +71,14 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
         emit CrossSpokeTokenTransferEnabled();
     }
 
+    /// @inheritdoc ISpokePortal
+    function disableCrossSpokeTokenTransfer() external onlyRole(OPERATOR_ROLE) {
+        if (!_getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled) return;
+
+        _getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled = false;
+        emit CrossSpokeTokenTransferDisabled();
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     //                      EXTERNAL VIEW/PURE FUNCTIONS                     //
     ///////////////////////////////////////////////////////////////////////////
@@ -151,7 +159,7 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
         // If cross-Spoke token transfer is enabled, allow send tokens to any supported chain
         if (_getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled) return;
         // Otherwise, allow sending tokens only to the Hub chain
-        if (destinationChainId != hubChainId) revert CrossSpokeTokenTransferDisabled(destinationChainId);
+        if (destinationChainId != hubChainId) revert TokenTransferToSpokeDisabled(destinationChainId);
     }
 
     ///////////////////////////////////////////////////////////////////////////

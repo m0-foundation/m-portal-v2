@@ -182,6 +182,18 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         emit CrossSpokeTokenTransferEnabled(spokeChainId, spokeBridgedPrincipal);
     }
 
+    /// @inheritdoc IHubPortal
+    function disableCrossSpokeTokenTransfer(uint32 spokeChainId, uint248 principal) external onlyRole(OPERATOR_ROLE) {
+        SpokeChainConfig storage spokeConfig = _getHubPortalStorageLocation().spokeConfig[spokeChainId];
+        if (!spokeConfig.crossSpokeTokenTransferEnabled) return;
+
+        spokeConfig.crossSpokeTokenTransferEnabled = false;
+        // Manually override bridged principal amount
+        spokeConfig.bridgedPrincipal = principal;
+
+        emit CrossSpokeTokenTransferDisabled(spokeChainId, principal);
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     //                     EXTERNAL VIEW/PURE FUNCTIONS                      //
     ///////////////////////////////////////////////////////////////////////////

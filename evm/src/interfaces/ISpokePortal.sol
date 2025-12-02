@@ -32,6 +32,9 @@ interface ISpokePortal is IPortal {
     /// @notice Emitted when cross-Spoke token transfer is enabled.
     event CrossSpokeTokenTransferEnabled();
 
+    /// @notice Emitted when cross-Spoke token transfer is disabled.
+    event CrossSpokeTokenTransferDisabled();
+
     ///////////////////////////////////////////////////////////////////////////
     //                             CUSTOM ERRORS                             //
     ///////////////////////////////////////////////////////////////////////////
@@ -40,7 +43,7 @@ interface ISpokePortal is IPortal {
     error ZeroHubChain();
 
     /// @notice Thrown when calling `sendToken` and cross-Spoke token transfer is disabled.
-    error CrossSpokeTokenTransferDisabled(uint32 destinationChainId);
+    error TokenTransferToSpokeDisabled(uint32 destinationChainId);
 
     ///////////////////////////////////////////////////////////////////////////
     //                          VIEW/PURE FUNCTIONS                          //
@@ -58,4 +61,8 @@ interface ISpokePortal is IPortal {
 
     /// @notice Enables cross-Spoke token transfer.
     function enableCrossSpokeTokenTransfer() external;
+
+    /// @notice Disables cross-Spoke token transfer.
+    /// @dev    Must be called before calling `disableCrossSpokeTokenTransfer` in HubPortal.
+    function disableCrossSpokeTokenTransfer() external;
 }
