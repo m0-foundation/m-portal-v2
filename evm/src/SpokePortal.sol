@@ -11,7 +11,7 @@ import { Portal } from "./Portal.sol";
 import { PayloadType, PayloadEncoder } from "./libraries/PayloadEncoder.sol";
 
 abstract contract SpokePortalStorageLayout {
-    /// @custom:storage-location erc7201:M0.storage.Portal
+    /// @custom:storage-location erc7201:M0.storage.SpokePortal
     struct SpokePortalStorageStruct {
         bool crossSpokeTokenTransferEnabled;
     }
