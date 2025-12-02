@@ -55,7 +55,7 @@ contract WormholeBridgeAdapter is BridgeAdapter, IWormholeBridgeAdapter {
     function quote(uint32, uint256, bytes memory) external pure returns (uint256 fee) {
         // NOTE: At the moment Wormhole doesn't provide a way to quote the fee on-chain.
         //       The signed quote must be provided by the Executor off-chain API.
-        return 0;
+        revert OnChainQuoteNotSupported();
     }
 
     /// @inheritdoc IBridgeAdapter
