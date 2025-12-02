@@ -60,7 +60,7 @@ contract WormholeBridgeAdapter is BridgeAdapter, IWormholeBridgeAdapter {
 
     /// @inheritdoc IBridgeAdapter
     function sendMessage(uint32 destinationChainId, uint256 gasLimit, bytes32 refundAddress, bytes memory payload, bytes calldata signedQuote) external payable {
-        if (msg.sender != portal) revert NotPortal();
+        _revertIfNotPortal();
 
         uint256 coreBridgeFee = ICoreBridge(coreBridge).messageFee();
         if (msg.value < coreBridgeFee) revert InsufficientFee();

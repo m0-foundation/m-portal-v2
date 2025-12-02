@@ -154,5 +154,9 @@ abstract contract BridgeAdapter is IBridgeAdapter, BridgeAdapterStorageLayout, A
     function _revertIfZeroPeer(bytes32 peer) internal pure {
         if (peer == bytes32(0)) revert ZeroPeer();
     }
+
+    function _revertIfNotPortal() internal view {
+        if (msg.sender != portal) revert NotPortal();
+    }
 }
 

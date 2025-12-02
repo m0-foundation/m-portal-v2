@@ -46,7 +46,7 @@ contract HyperlaneBridge is BridgeAdapter, IHyperlaneBridgeAdapter {
 
     /// @inheritdoc IBridgeAdapter
     function sendMessage(uint32 destinationChainId, uint256 gasLimit, bytes32 refundAddress, bytes memory payload, bytes calldata) external payable {
-        if (msg.sender != portal) revert NotPortal();
+        _revertIfNotPortal();
 
         IMailbox mailbox_ = IMailbox(mailbox);
         bytes memory metadata_ = StandardHookMetadata.formatMetadata(0, gasLimit, refundAddress.toAddress(), "");
