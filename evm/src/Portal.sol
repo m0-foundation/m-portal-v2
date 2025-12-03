@@ -391,7 +391,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
 
         messageId = _getMessageId(destinationChainId);
         bytes memory payload = PayloadEncoder.encodeFillReport(
-            report.orderId, report.amountOutFilled, report.amountOutFilled, report.originRecipient, messageId
+            report.orderId, report.amountOutFilled, report.amountOutFilled, report.originRecipient, report.tokenIn, messageId
         );
 
         _sendMessage(destinationChainId, PayloadType.TokenTransfer, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
@@ -402,6 +402,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
             report.amountInToRelease,
             report.amountOutFilled,
             report.originRecipient,
+            report.tokenIn,
             bridgeAdapter,
             messageId
         );
@@ -455,7 +456,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     /// @param sourceChainId The ID of the source chain.
     /// @param payload       The message payload.
     function _receiveFillReport(uint32 sourceChainId, bytes memory payload) private {
-        (bytes32 orderId, uint128 amountInToRelease, uint128 amountOutFilled, bytes32 originRecipient, bytes32 messageId) =
+        (bytes32 orderId, uint128 amountInToRelease, uint128 amountOutFilled, bytes32 originRecipient, bytes32 tokenIn, bytes32 messageId) =
             payload.decodeFillReport();
 
         IOrderBookLike(orderBook)
@@ -464,11 +465,12 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
                     orderId: orderId,
                     amountInToRelease: amountInToRelease,
                     amountOutFilled: amountOutFilled,
-                    originRecipient: originRecipient
+                    originRecipient: originRecipient,
+                    tokenIn: tokenIn
                 })
             );
 
-        emit FillReportReceived(sourceChainId, orderId, amountInToRelease, amountOutFilled, originRecipient, messageId);
+        emit FillReportReceived(sourceChainId, orderId, amountInToRelease, amountOutFilled, originRecipient, tokenIn, messageId);
     }
 
     /// @dev Generates a unique across all chains message ID.

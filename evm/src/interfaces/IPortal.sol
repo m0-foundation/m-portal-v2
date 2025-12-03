@@ -68,6 +68,7 @@ interface IPortal {
     /// @param amountInToRelease  The amount of input token to release to the filler on the origin chain
     /// @param amountOutFilled    The amount of output token that was filled on the destination chain
     /// @param originRecipient    The address on the origin chain that should receive released funds
+    /// @param tokenIn            The address of the input token on the origin chain
     /// @param bridgeAdapter      The address of the bridge adapter used to send the message.
     /// @param messageId          The unique identifier for the sent message.
     event FillReportSent(
@@ -76,6 +77,7 @@ interface IPortal {
         uint128 amountInToRelease,
         uint128 amountOutFilled,
         bytes32 originRecipient,
+        bytes32 tokenIn,
         address bridgeAdapter,
         bytes32 messageId
     );
@@ -86,6 +88,7 @@ interface IPortal {
     /// @param amountInToRelease  The amount of input token to release to the filler on the origin chain
     /// @param amountOutFilled    The amount of output token that was filled on the destination chain
     /// @param originRecipient    The address on the origin chain that should receive released funds
+    /// @param tokenIn            The address of the input token on the origin chain
     /// @param messageId          The unique identifier for the message.
     event FillReportReceived(
         uint32 indexed sourceChainId,
@@ -93,6 +96,7 @@ interface IPortal {
         uint128 amountInToRelease,
         uint128 amountOutFilled,
         bytes32 originRecipient,
+        bytes32 tokenIn,
         bytes32 messageId
     );
 

@@ -13,11 +13,14 @@ interface IOrderBookLike {
     /// @param amountInToRelease The amount of input token to release to the filler on the origin chain
     /// @param amountOutFilled The amount of output token that was filled on the destination chain
     /// @param originRecipient The address on the origin chain that should receive released funds
+    /// @param tokenIn The address of the input token on the origin chain
+    ///                This is included for non-EVM chains to provide a way to resolve the account
     struct FillReport {
         bytes32 orderId;
         uint128 amountInToRelease;
         uint128 amountOutFilled;
         bytes32 originRecipient;
+        bytes32 tokenIn;
     }
 
     /// @notice Report a fill that was made on another chain back to this chain as the origin chain
