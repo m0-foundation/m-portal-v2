@@ -98,4 +98,9 @@ interface IBridgeAdapter {
     /// @param  chainId       The ID of the chain.
     /// @param  bridgeChainId The provider-specific chain ID.
     function setBridgeChainId(uint32 chainId, uint256 bridgeChainId) external;
+
+    /// @notice Initializes the Bridge Adapter Proxy contract.
+    /// @param  admin    The address of the admin.
+    /// @param  operator The address of the operator.
+    function initialize(address admin, address operator) external;
 }

@@ -27,6 +27,7 @@ contract HyperlaneBridge is BridgeAdapter, IHyperlaneBridgeAdapter {
         if ((mailbox = mailbox_) == address(0)) revert ZeroMailbox();
     }
 
+    /// @inheritdoc IBridgeAdapter
     function initialize(address owner, address operator) external initializer {
         _initialize(owner, operator);
     }

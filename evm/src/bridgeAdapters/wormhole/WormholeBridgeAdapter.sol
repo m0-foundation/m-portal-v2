@@ -51,6 +51,7 @@ contract WormholeBridgeAdapter is BridgeAdapter, IWormholeBridgeAdapter {
         currentWormholeChainId = currentWormholeChainId_;
     }
 
+    /// @inheritdoc IBridgeAdapter
     function initialize(address owner, address operator) external initializer {
         _initialize(owner, operator);
     }
