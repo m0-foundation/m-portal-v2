@@ -94,7 +94,7 @@ contract WormholeBridgeAdapter is BridgeAdapter, IWormholeBridgeAdapter {
         // ensure that the VAA is valid
         if (!valid) revert InvalidVaa(reason);
 
-        // Covert Wormhole chain ID to internal chain ID
+        // Convert Wormhole chain ID to internal chain ID
         uint32 sourceChainId = _getChainIdOrRevert(vm.emitterChainId);
         if (vm.emitterAddress != _getPeer(sourceChainId)) revert UnsupportedSender(vm.emitterAddress);
 

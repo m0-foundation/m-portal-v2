@@ -16,7 +16,7 @@ import { PayloadType, PayloadEncoder } from "./libraries/PayloadEncoder.sol";
 import { TypeConverter } from "./libraries/TypeConverter.sol";
 
 abstract contract HubPortalStorageLayout {
-    /// @custom:storage-location erc7201:M0.storage.Portal
+    /// @custom:storage-location erc7201:M0.storage.HubPortal
     struct HubPortalStorageStruct {
         bool wasEarningEnabled;
         uint128 disableEarningIndex;

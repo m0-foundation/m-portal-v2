@@ -391,7 +391,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
 
         messageId = _getMessageId(destinationChainId);
         bytes memory payload = PayloadEncoder.encodeFillReport(
-            report.orderId, report.amountOutFilled, report.amountOutFilled, report.originRecipient, report.tokenIn, messageId
+            report.orderId, report.amountInToRelease, report.amountOutFilled, report.originRecipient, report.tokenIn, messageId
         );
 
         _sendMessage(destinationChainId, PayloadType.TokenTransfer, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);

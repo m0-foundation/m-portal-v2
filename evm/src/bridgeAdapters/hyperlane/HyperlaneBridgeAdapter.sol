@@ -60,7 +60,7 @@ contract HyperlaneBridge is BridgeAdapter, IHyperlaneBridgeAdapter {
         bytes32 destinationPeer = _getPeerOrRevert(destinationChainId);
         uint32 destinationDomain = _getHyperlaneDomainOrRevert(destinationChainId);
 
-        // NOTE: The transaction reverts if mgs.value isn't enough to cover the fee.
+        // NOTE: The transaction reverts if msg.value isn't enough to cover the fee.
         //       If msg.value is greater than the required fee, the excess is sent to the refund address.
         IMailbox(mailbox).dispatch{ value: msg.value }(destinationDomain, destinationPeer, payload, metadata);
     }

@@ -178,7 +178,7 @@ library PayloadEncoder {
     /// @param orderId           The ID of the order being reported.
     /// @param amountInToRelease The amount of input token to release to the filler on the source chain.
     /// @param amountOutFilled   The amount of output tokens filled.
-    /// @param originRecipient   The amount of output token that was filled on the destination chain.
+    /// @param originRecipient   The address on the origin chain that should receive released funds.
     /// @param tokenIn           The address of the input token on the origin chain.
     /// @param messageId         The message ID.
     /// @return The encoded payload.
@@ -198,7 +198,7 @@ library PayloadEncoder {
     /// @return orderId           The ID of the order being reported.
     /// @return amountInToRelease The amount of input token to release to the filler on the source chain.
     /// @return amountOutFilled   The amount of output tokens filled.
-    /// @return originRecipient   The amount of output token that was filled on the destination chain.
+    /// @return originRecipient   The address on the origin chain that should receive released funds.
     /// @return tokenIn           The address of the input token on the origin chain.
     /// @return messageId         The message ID.
     function decodeFillReport(bytes memory payload)
