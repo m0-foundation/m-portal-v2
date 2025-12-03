@@ -5,6 +5,9 @@ pragma solidity 0.8.30;
 import { IBridgeAdapter } from "../../../interfaces/IBridgeAdapter.sol";
 import { IVaaV1Receiver } from "./IVaaV1Receiver.sol";
 
+/// @title  IWormholeBridgeAdapter interface.
+/// @author M0 Labs
+/// @notice Defines interface specific to Wormhole Bridge Adapter.
 interface IWormholeBridgeAdapter is IBridgeAdapter, IVaaV1Receiver {
     ///////////////////////////////////////////////////////////////////////////
     //                             CUSTOM ERRORS                             //

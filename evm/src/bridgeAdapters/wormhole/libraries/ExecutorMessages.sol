@@ -12,10 +12,10 @@ library ExecutorMessages {
     error PayloadTooLarge();
 
     /// @notice Encodes a version 1 VAA request payload.
-    /// @param emitterChain The emitter chain from the VAA.
-    /// @param emitterAddress The emitter address from the VAA.
-    /// @param sequence The sequence number from the VAA.
-    /// @return bytes The encoded request.
+    /// @param  emitterChain   The emitter chain from the VAA.
+    /// @param  emitterAddress The emitter address from the VAA.
+    /// @param  sequence       The sequence number from the VAA.
+    /// @return bytes          The encoded request.
     function makeVAAv1Request(uint16 emitterChain, bytes32 emitterAddress, uint64 sequence) internal pure returns (bytes memory) {
         return abi.encodePacked(REQ_VAA_V1, emitterChain, emitterAddress, sequence);
     }

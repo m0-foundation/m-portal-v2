@@ -12,6 +12,7 @@ import { IPortal } from "../../interfaces/IPortal.sol";
 import { TypeConverter } from "../../libraries/TypeConverter.sol";
 
 /// @title  HyperLane Bridge Adapter
+/// @author M0 Labs
 /// @notice Sends and receives messages to and from remote chains using Hyperlane protocol
 contract HyperlaneBridge is BridgeAdapter, IHyperlaneBridgeAdapter {
     using TypeConverter for *;

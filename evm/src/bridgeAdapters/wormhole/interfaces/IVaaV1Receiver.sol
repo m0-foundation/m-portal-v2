@@ -7,6 +7,6 @@ pragma solidity ^0.8.19;
 /// https://github.com/wormholelabs-xyz/example-messaging-executor/blob/main/evm/src/interfaces/IVaaV1Receiver.sol
 interface IVaaV1Receiver {
     /// @notice Receive an attested message from the executor relayer.
-    /// @param msg The attested message payload.
+    /// @param  msg The attested message payload.
     function executeVAAv1(bytes memory msg) external payable;
 }

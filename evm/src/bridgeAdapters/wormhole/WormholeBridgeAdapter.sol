@@ -8,10 +8,14 @@ import { IPortal } from "../../interfaces/IPortal.sol";
 import { IExecutor } from "./interfaces/IExecutor.sol";
 import { ICoreBridge, CoreBridgeVM } from "./interfaces/ICoreBridge.sol";
 import { IWormholeBridgeAdapter } from "./interfaces/IWormholeBridgeAdapter.sol";
+import { IVaaV1Receiver } from "./interfaces/IVaaV1Receiver.sol";
 import { TypeConverter } from "../../libraries/TypeConverter.sol";
 import { RelayInstructions } from "./libraries/RelayInstructions.sol";
 import { ExecutorMessages } from "./libraries/ExecutorMessages.sol";
 
+/// @title  Wormhole Bridge Adapter
+/// @author M0 Labs
+/// @notice Sends and receives messages to and from remote chains using Wormhole protocol
 contract WormholeBridgeAdapter is BridgeAdapter, IWormholeBridgeAdapter {
     using TypeConverter for *;
 
@@ -43,6 +47,7 @@ contract WormholeBridgeAdapter is BridgeAdapter, IWormholeBridgeAdapter {
 
         if ((coreBridge = coreBridge_) == address(0)) revert ZeroCoreBridge();
         if ((executor = executor_) == address(0)) revert ZeroExecutor();
+        
         consistencyLevel = consistencyLevel_;
         currentWormholeChainId = currentWormholeChainId_;
     }
@@ -52,7 +57,7 @@ contract WormholeBridgeAdapter is BridgeAdapter, IWormholeBridgeAdapter {
     }
 
     /// @inheritdoc IBridgeAdapter
-    function quote(uint32, uint256, bytes memory) external pure returns (uint256 fee) {
+    function quote(uint32, uint256, bytes memory) external pure returns (uint256) {
         // NOTE: At the moment Wormhole doesn't provide a way to quote the fee on-chain.
         //       The signed quote must be provided by the Executor off-chain API.
         revert OnChainQuoteNotSupported();
@@ -81,6 +86,7 @@ contract WormholeBridgeAdapter is BridgeAdapter, IWormholeBridgeAdapter {
         );
     }
 
+    /// @inheritdoc IVaaV1Receiver
     function executeVAAv1(bytes calldata encodedMessage) external payable {
         // verify VAA against Wormhole Core Bridge contract
         (CoreBridgeVM memory vm, bool valid, string memory reason) = ICoreBridge(coreBridge).parseAndVerifyVM(encodedMessage);

@@ -5,6 +5,9 @@ pragma solidity 0.8.30;
 import { IBridgeAdapter } from "../../../interfaces/IBridgeAdapter.sol";
 import { IMessageRecipient } from "./IMessageRecipient.sol";
 
+/// @title  IHyperlaneBridgeAdapter interface.
+/// @author M0 Labs
+/// @notice Defines interface specific to Hyperlane Bridge Adapter.
 interface IHyperlaneBridgeAdapter is IBridgeAdapter, IMessageRecipient {
     ///////////////////////////////////////////////////////////////////////////
     //                             CUSTOM ERRORS                             //

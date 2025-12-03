@@ -28,15 +28,18 @@ struct CoreBridgeVM {
     bytes32 hash; //see comment above
 }
 
-/// @title ICoreBridge
+/// @title  ICoreBridge
 /// @notice Interface of the Wormhole Core Bridge contract
 /// @author Wormhole Labs. Modified from
 /// https://github.com/wormhole-foundation/wormhole-solidity-sdk/blob/main/src/interfaces/ICoreBridge.sol
 interface ICoreBridge {
+    /// @notice Returns the fee required to publish a message
     function messageFee() external view returns (uint256);
 
+    /// @notice Publishes a message to Wormhole Core Bridge
     function publishMessage(uint32 nonce, bytes memory payload, uint8 consistencyLevel) external payable returns (uint64 sequence);
 
+    /// @notice Parses and verifies a Wormhole VAA.
     /// @dev Consider using `VaaLib` and `CoreBridgeLib` instead to save on gas (though at the expense of some code size)
     function parseAndVerifyVM(bytes calldata encodedVM) external view returns (CoreBridgeVM memory vm, bool valid, string memory reason);
 }
