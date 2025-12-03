@@ -22,7 +22,7 @@ library TypeConverter {
     /// @param  value The uint256 value to convert.
     /// @return The uint16 representation of the value.
     function toUint16(uint256 value) internal pure returns (uint16) {
-        if (value > type(uint16).max) revert Uint32Overflow();
+        if (value > type(uint16).max) revert Uint16Overflow();
         return uint16(value);
     }
 

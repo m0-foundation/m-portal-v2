@@ -32,10 +32,11 @@ contract WormholeBridgeAdapter is BridgeAdapter, IWormholeBridgeAdapter {
     uint16 public immutable currentWormholeChainId;
 
     /// @notice Constructs Wormhole Bridge Adapter Implementation contract
-    /// @param coreBridge_       The address of the Wormhole Core Bridge.
-    /// @param executor_         The address of the Executor.
-    /// @param consistencyLevel_ The consistency level.
-    /// @param portal_           The address of the Portal.
+    /// @param coreBridge_             The address of the Wormhole Core Bridge.
+    /// @param executor_               The address of the Executor.
+    /// @param consistencyLevel_       The consistency level.
+    /// @param currentWormholeChainId_ The Wormhole chain ID of the current chain.
+    /// @param portal_                 The address of the Portal.
     constructor(
         address coreBridge_,
         address executor_,
@@ -43,8 +44,6 @@ contract WormholeBridgeAdapter is BridgeAdapter, IWormholeBridgeAdapter {
         uint16 currentWormholeChainId_,
         address portal_
     ) BridgeAdapter(portal_) {
-        _disableInitializers();
-
         if ((coreBridge = coreBridge_) == address(0)) revert ZeroCoreBridge();
         if ((executor = executor_) == address(0)) revert ZeroExecutor();
         
