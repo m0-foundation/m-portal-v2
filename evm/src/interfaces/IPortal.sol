@@ -102,15 +102,6 @@ interface IPortal {
     /// @param  amount               The amount of tokens.
     event WrapFailed(address indexed destinationExtension, address indexed recipient, uint256 amount);
 
-    /// @notice Emitted when a bridging path support status is updated.
-    /// @param  sourceToken        The address of the token on the current chain.
-    /// @param  destinationChainId The ID of the destination chain.
-    /// @param  destinationToken   The address of the token on the destination chain.
-    /// @param  supported          `True` if the token is supported, `false` otherwise.
-    event SupportedBridgingPathSet(
-        address indexed sourceToken, uint32 indexed destinationChainId, bytes32 indexed destinationToken, bool supported
-    );
-
     /// @notice Emitted when the gas limit for a payload type is updated.
     /// @param  destinationChainId The ID of the destination chain.
     /// @param  payloadType        The type of payload.
@@ -185,9 +176,6 @@ interface IPortal {
     /// @notice Thrown if bridging to the destination chain is not supported.
     error UnsupportedDestinationChain(uint32 destinationChainId);
 
-    /// @notice Thrown in `transferMLikeToken` function when bridging path is not supported
-    error UnsupportedBridgingPath(address sourceToken, uint32 destinationChainId, bytes32 destinationToken);
-
     /// @notice Thrown when the bridge adapter is not supported for the destination chain.
     error UnsupportedBridgeAdapter(uint32 destinationChainId, address bridgeAdapter);
 
@@ -221,12 +209,6 @@ interface IPortal {
     /// @param  destinationChainId The ID of the destination chain.
     /// @param  bridgingAdapter    The address of the bridge adapter.
     function supportedBridgeAdapter(uint32 destinationChainId, address bridgingAdapter) external view returns (bool);
-
-    /// @notice Indicates whether the provided bridging path is supported.
-    /// @param  sourceToken        The address of the token on the current chain.
-    /// @param  destinationChainId The ID of the destination chain.
-    /// @param  destinationToken   The address of the token on the destination chain.
-    function supportedBridgingPath(address sourceToken, uint32 destinationChainId, bytes32 destinationToken) external view returns (bool);
 
     /// @notice Returns the gas limit required to process a message
     ///         with the specified payload type on the destination chain.
@@ -262,13 +244,6 @@ interface IPortal {
     /// @param  initialPauser The address of the pauser.
     /// @param  initialOperator The address of the operator.
     function initialize(address initialOwner, address initialPauser, address initialOperator) external;
-
-    /// @notice Sets a bridging path support status.
-    /// @param  sourceToken        The address of the token on the current chain.
-    /// @param  destinationChainId The ID of the destination chain.
-    /// @param  destinationToken   The address of the token on the destination chain.
-    /// @param  supported          `True` if the token is supported, `false` otherwise.
-    function setSupportedBridgingPath(address sourceToken, uint32 destinationChainId, bytes32 destinationToken, bool supported) external;
 
     /// @notice Sets the gas limit required to process a message
     ///         with the specified payload type on the destination chain.

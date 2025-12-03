@@ -26,9 +26,6 @@ abstract contract PortalStorageLayout {
         uint256 nonce;
         /// @notice Configuration required to sent cross-chain messages to the remote chain.
         mapping(uint32 chainId => ChainConfig) remoteChainConfig;
-        /// @notice Supported bridging paths for cross-chain transfers.
-        mapping(address sourceToken => mapping(uint32 destinationChainId => mapping(bytes32 destinationToken => bool supported)))
-            supportedBridgingPath;
     }
 
     // keccak256(abi.encode(uint256(keccak256("M0.storage.Portal")) - 1)) & ~bytes32(uint256(0xff))
@@ -208,25 +205,6 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     }
 
     /// @inheritdoc IPortal
-    function setSupportedBridgingPath(
-        address sourceToken,
-        uint32 destinationChainId,
-        bytes32 destinationToken,
-        bool supported
-    ) external onlyRole(OPERATOR_ROLE) {
-        _revertIfZeroSourceToken(sourceToken);
-        _revertIfInvalidDestinationChain(destinationChainId);
-        _revertIfZeroDestinationToken(destinationToken);
-
-        PortalStorageStruct storage $ = _getPortalStorageLocation();
-
-        if ($.supportedBridgingPath[sourceToken][destinationChainId][destinationToken] == supported) return;
-
-        $.supportedBridgingPath[sourceToken][destinationChainId][destinationToken] = supported;
-        emit SupportedBridgingPathSet(sourceToken, destinationChainId, destinationToken, supported);
-    }
-
-    /// @inheritdoc IPortal
     function setPayloadGasLimit(uint32 destinationChainId, PayloadType payloadType, uint256 gasLimit) external onlyRole(OPERATOR_ROLE) {
         _revertIfInvalidDestinationChain(destinationChainId);
         ChainConfig storage remoteChainConfig = _getPortalStorageLocation().remoteChainConfig[destinationChainId];
@@ -270,12 +248,6 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     function supportedBridgeAdapter(uint32 destinationChainId, address bridgeAdapter) public view returns (bool) {
         PortalStorageStruct storage $ = _getPortalStorageLocation();
         return $.remoteChainConfig[destinationChainId].supportedBridgeAdapter[bridgeAdapter];
-    }
-
-    /// @inheritdoc IPortal
-    function supportedBridgingPath(address sourceToken, uint32 destinationChainId, bytes32 destinationToken) external view returns (bool) {
-        PortalStorageStruct storage $ = _getPortalStorageLocation();
-        return $.supportedBridgingPath[sourceToken][destinationChainId][destinationToken];
     }
 
     /// @inheritdoc IPortal
@@ -342,7 +314,6 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         _revertIfZeroDestinationToken(destinationToken);
         _revertIfZeroRecipient(recipient);
         _revertIfInvalidDestinationChain(destinationChainId);
-        _revertIfUnsupportedBridgingPath(sourceToken, destinationChainId, destinationToken);
 
         uint128 index = _currentIndex();
 
@@ -570,13 +541,6 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
 
     function _revertIfUnsupportedBridgeAdapter(uint32 chainId, address bridgeAdapter) internal view {
         if (!supportedBridgeAdapter(chainId, bridgeAdapter)) revert UnsupportedBridgeAdapter(chainId, bridgeAdapter);
-    }
-
-    function _revertIfUnsupportedBridgingPath(address sourceToken, uint32 destinationChainId, bytes32 destinationToken) internal view {
-        PortalStorageStruct storage $ = _getPortalStorageLocation();
-        if (!$.supportedBridgingPath[sourceToken][destinationChainId][destinationToken]) {
-            revert UnsupportedBridgingPath(sourceToken, destinationChainId, destinationToken);
-        }
     }
 
     /// @dev Returns the current M token index used by the Portal.
