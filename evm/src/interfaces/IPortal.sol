@@ -12,6 +12,8 @@ struct ChainConfig {
     mapping(address bridgeAdapter => bool supported) supportedBridgeAdapter;
     /// @notice Gas limit required to process different types of payload on destination chains.
     mapping(PayloadType payloadType => uint256 gasLimit) payloadGasLimit;
+    /// @notice Defines whether an extension is permissioned.
+    mapping(bytes32 extension => bool permissioned) permissionedExtensions;
 }
 
 /// @title  IPortal interface
@@ -127,6 +129,12 @@ interface IPortal {
     /// @param  bridgeAdapter      The address of the bridge adapter.
     /// @param  supported          `True` if the bridge adapter is supported, `false` otherwise.
     event SupportedBridgeAdapterSet(uint32 indexed destinationChainId, address indexed bridgeAdapter, bool supported);
+
+    /// @notice Emitted when an extension permissioned status is set.
+    /// @param  destinationChainId The ID of the destination chain.
+    /// @param  extension          The address of the extension.
+    /// @param  permissioned       `True` if the extension is permissioned, `false` otherwise.
+    event PermissionedExtensionSet(uint32 indexed destinationChainId, bytes32 indexed extension, bool permissioned);
     ///////////////////////////////////////////////////////////////////////////
     //                             CUSTOM ERRORS                             //
     ///////////////////////////////////////////////////////////////////////////
@@ -276,6 +284,12 @@ interface IPortal {
     /// @param  payloadType        The payload type.
     /// @param  gasLimit           The gas limit required to process the message.
     function setPayloadGasLimit(uint32 destinationChainId, PayloadType payloadType, uint256 gasLimit) external;
+
+    /// @notice Sets whether an extension is permissioned.
+    /// @param  destinationChainId The ID of the destination chain.
+    /// @param  extension          The address of the extension.
+    /// @param  permissioned       `True` if the extension is permissioned, `false` otherwise.
+    function setPermissionedExtension(uint32 destinationChainId, bytes32 extension, bool permissioned) external;
 
     /// @notice Sets the default bridge adapter for a destination chain.
     /// @param  destinationChainId The ID of the destination chain.

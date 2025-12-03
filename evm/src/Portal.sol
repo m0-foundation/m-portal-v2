@@ -237,6 +237,17 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         emit PayloadGasLimitSet(destinationChainId, payloadType, gasLimit);
     }
 
+    /// @inheritdoc IPortal
+    function setPermissionedExtension(uint32 destinationChainId, bytes32 extension, bool permissioned) external onlyRole(OPERATOR_ROLE) {
+        _revertIfInvalidDestinationChain(destinationChainId);
+        ChainConfig storage remoteChainConfig = _getPortalStorageLocation().remoteChainConfig[destinationChainId];
+
+        if (remoteChainConfig.permissionedExtensions[extension] == permissioned) return;
+
+        remoteChainConfig.permissionedExtensions[extension] == permissioned;
+        emit PermissionedExtensionSet(destinationChainId, extension, permissioned);
+    }
+
     /// @dev Reverts if `msg.sender` is not authorized to upgrade the contract
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) { }
 
@@ -574,9 +585,19 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
 
     function _revertIfUnsupportedBridgingPath(address sourceToken, uint32 destinationChainId, bytes32 destinationToken) internal view {
         PortalStorageStruct storage $ = _getPortalStorageLocation();
-        if (!$.supportedBridgingPath[sourceToken][destinationChainId][destinationToken]) {
+        bool sourceTokenPermissioned = ISwapFacilityLike(swapFacility).isPermissionedExtension(sourceToken);
+        bool destinationTokenPermissioned = $.remoteChainConfig[destinationChainId].permissionedExtensions[destinationToken];
+        
+        // If both tokens aren't permissioned, no need to check further
+        if (!sourceTokenPermissioned && !destinationTokenPermissioned) return;
+        
+        // If one of the tokens is permissioned, but the other isn't, revert
+        if (sourceTokenPermissioned != destinationTokenPermissioned)
             revert UnsupportedBridgingPath(sourceToken, destinationChainId, destinationToken);
-        }
+
+        // If both tokens are permissioned, check if the bridging path is supported
+        if (!$.supportedBridgingPath[sourceToken][destinationChainId][destinationToken])
+            revert UnsupportedBridgingPath(sourceToken, destinationChainId, destinationToken);
     }
 
     /// @dev Returns the current M token index used by the Portal.

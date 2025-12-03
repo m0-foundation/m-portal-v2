@@ -17,4 +17,8 @@ interface ISwapFacilityLike {
     /// @param  amount      The amount of $M Extension tokens to swap.
     /// @param  recipient   The address to receive $M tokens.
     function swapOutM(address extensionIn, uint256 amount, address recipient) external;
+
+    /// @notice Checks if the extension is permissioned.
+    /// @param  extension The extension address to check.
+    function isPermissionedExtension(address extension) external view returns (bool);
 }
