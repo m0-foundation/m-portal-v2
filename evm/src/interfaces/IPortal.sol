@@ -14,6 +14,13 @@ struct ChainConfig {
     mapping(PayloadType payloadType => uint256 gasLimit) payloadGasLimit;
 }
 
+struct ClusterConfig {
+    /// @notice The address of the token that will be used as a fallback if the destination token is not supported on received transfers.
+    address fallbackToken;
+    /// @notice
+    mapping(uint32 chainId => bool supported) supportedChains; // Supported chains in the cluster
+}
+
 /// @title  IPortal interface
 /// @author M0 Labs
 /// @notice Subset of functions inherited by both IHubPortal and ISpokePortal.
@@ -131,6 +138,10 @@ interface IPortal {
     /// @param  bridgeAdapter      The address of the bridge adapter.
     /// @param  supported          `True` if the bridge adapter is supported, `false` otherwise.
     event SupportedBridgeAdapterSet(uint32 indexed destinationChainId, address indexed bridgeAdapter, bool supported);
+
+    event ClusterSet(bytes32 indexed cluster, address fallbackToken);
+    event ClusterSupportedChainSet(bytes32 indexed cluster, uint32 indexed chainId, bool supported);
+    event TokenClusterSet(address indexed token, bytes32 indexed cluster);
     ///////////////////////////////////////////////////////////////////////////
     //                             CUSTOM ERRORS                             //
     ///////////////////////////////////////////////////////////////////////////
@@ -194,6 +205,14 @@ interface IPortal {
 
     /// @notice Thrown when the bridge adapter is not supported for the destination chain.
     error UnsupportedBridgeAdapter(uint32 destinationChainId, address bridgeAdapter);
+
+    error ClusterAlreadySet(address fallbackToken);
+    error ClusterDoesNotSupportDestinationChain(bytes32 cluster, uint32 destinationChainId);
+    error ClusterDoesNotExist(bytes32 cluster);
+    error TokenIsFallbackToken(bytes32 cluster, address token);
+    error ZeroCluster();
+    error ZeroToken();
+
 
     ///////////////////////////////////////////////////////////////////////////
     //                          VIEW/PURE FUNCTIONS                          //

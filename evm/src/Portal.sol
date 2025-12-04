@@ -12,7 +12,7 @@ import { UUPSUpgradeable } from "../lib/common/lib/openzeppelin-contracts-upgrad
 
 import { IBridgeAdapter } from "./interfaces/IBridgeAdapter.sol";
 import { IMTokenLike } from "./interfaces/IMTokenLike.sol";
-import { IPortal, ChainConfig } from "./interfaces/IPortal.sol";
+import { IPortal, ChainConfig, ClusterConfig } from "./interfaces/IPortal.sol";
 import { ISwapFacilityLike } from "./interfaces/ISwapFacilityLike.sol";
 import { IOrderBookLike } from "./interfaces/IOrderBookLike.sol";
 import { ReentrancyLock } from "./utils/ReentrancyLock.sol";
@@ -26,9 +26,10 @@ abstract contract PortalStorageLayout {
         uint256 nonce;
         /// @notice Configuration required to sent cross-chain messages to the remote chain.
         mapping(uint32 chainId => ChainConfig) remoteChainConfig;
-        /// @notice Supported bridging paths for cross-chain transfers.
-        mapping(address sourceToken => mapping(uint32 destinationChainId => mapping(bytes32 destinationToken => bool supported)))
-            supportedBridgingPath;
+        /// @notice The cluster a token belongs to.
+        mapping(address token => bytes32 cluster) clusterOf;
+        /// @notice The cluster configuration for each cluster.
+        mapping(bytes32 cluster => ClusterConfig) clusterConfig;
     }
 
     // keccak256(abi.encode(uint256(keccak256("M0.storage.Portal")) - 1)) & ~bytes32(uint256(0xff))
@@ -211,23 +212,81 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         emit SupportedBridgeAdapterSet(destinationChainId, bridgeAdapter, supported);
     }
 
-    /// @inheritdoc IPortal
-    function setSupportedBridgingPath(
-        address sourceToken,
-        uint32 destinationChainId,
-        bytes32 destinationToken,
-        bool supported
+    // /// @inheritdoc IPortal
+    // function setSupportedBridgingPath(
+    //     address sourceToken,
+    //     uint32 destinationChainId,
+    //     bytes32 destinationToken,
+    //     bool supported
+    // ) external onlyRole(OPERATOR_ROLE) {
+    //     _revertIfZeroSourceToken(sourceToken);
+    //     _revertIfInvalidDestinationChain(destinationChainId);
+    //     _revertIfZeroDestinationToken(destinationToken);
+
+    //     PortalStorageStruct storage $ = _getPortalStorageLocation();
+
+    //     if ($.supportedBridgingPath[sourceToken][destinationChainId][destinationToken] == supported) return;
+
+    //     $.supportedBridgingPath[sourceToken][destinationChainId][destinationToken] = supported;
+    //     emit SupportedBridgingPathSet(sourceToken, destinationChainId, destinationToken, supported);
+    // }
+
+    function setClusterConfig(
+        bytes32 cluster,
+        address fallbackToken
     ) external onlyRole(OPERATOR_ROLE) {
-        _revertIfZeroSourceToken(sourceToken);
-        _revertIfInvalidDestinationChain(destinationChainId);
-        _revertIfZeroDestinationToken(destinationToken);
+        if (cluster == bytes32(0)) revert ZeroCluster();
 
         PortalStorageStruct storage $ = _getPortalStorageLocation();
+        ClusterConfig storage clusterConfig = $.clusterConfig[cluster];
 
-        if ($.supportedBridgingPath[sourceToken][destinationChainId][destinationToken] == supported) return;
+        // Validate the fallback token is not already assigned to a cluster
+        if ($.clusterOf[fallbackToken] != bytes32(0)) revert ClusterAlreadySet(fallbackToken);
 
-        $.supportedBridgingPath[sourceToken][destinationChainId][destinationToken] = supported;
-        emit SupportedBridgingPathSet(sourceToken, destinationChainId, destinationToken, supported);
+        // Assign the fallback token to the cluster
+        // If zero address, we are removing the cluster
+        clusterConfig.fallbackToken = fallbackToken;
+
+        // Assign the cluster to the fallback token (if not zero address)
+        if (fallbackToken != address(0)) $.clusterOf[fallbackToken] = cluster;
+
+        emit ClusterSet(cluster, fallbackToken);
+    }
+
+    function setClusterSupportedChain(
+        bytes32 cluster,
+        uint32 destinationChainId,
+        bool supported
+    ) external onlyRole(OPERATOR_ROLE) {
+        _revertIfInvalidCluster(cluster);
+        
+        ClusterConfig storage clusterConfig = _getPortalStorageLocation().clusterConfig[cluster];
+
+        // Validate the chain is not already set to the desired state
+        if (clusterConfig.supportedChains[destinationChainId] == supported) return;
+
+        clusterConfig.supportedChains[destinationChainId] = supported;
+        emit ClusterSupportedChainSet(cluster, destinationChainId, supported);
+    }
+
+    function setTokenCluster(address token, bytes32 cluster) external onlyRole(OPERATOR_ROLE) {
+        if (token == address(0)) revert ZeroToken();
+        if (cluster == bytes32(0)) revert ZeroCluster();
+
+        PortalStorageStruct storage $ = _getPortalStorageLocation();
+        bytes32 currentCluster = $.clusterOf[token];
+
+        // If the token is already assigned to the specified cluster, do nothing
+        if (currentCluster == cluster) return;
+
+        // Validate the token is not the current cluster's fallback token
+        if (currentCluster != bytes32(0) && $.clusterConfig[currentCluster].fallbackToken == token) {
+            revert TokenIsFallbackToken(currentCluster, token);
+        }
+
+        // Assign the token to the new cluster
+        $.clusterOf[token] = cluster;
+        emit TokenClusterSet(token, cluster);
     }
 
     /// @inheritdoc IPortal
@@ -276,10 +335,27 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         return $.remoteChainConfig[destinationChainId].supportedBridgeAdapter[bridgeAdapter];
     }
 
-    /// @inheritdoc IPortal
-    function supportedBridgingPath(address sourceToken, uint32 destinationChainId, bytes32 destinationToken) external view returns (bool) {
+    // /// @inheritdoc IPortal
+    // function supportedBridgingPath(address sourceToken, uint32 destinationChainId, bytes32 destinationToken) external view returns (bool) {
+    //     PortalStorageStruct storage $ = _getPortalStorageLocation();
+    //     return $.supportedBridgingPath[sourceToken][destinationChainId][destinationToken];
+    // }
+
+    function supportedClusterDestinationChain(bytes32 cluster, uint32 destinationChainId) external view returns (bool) {
         PortalStorageStruct storage $ = _getPortalStorageLocation();
-        return $.supportedBridgingPath[sourceToken][destinationChainId][destinationToken];
+        ClusterConfig storage clusterConfig = $.clusterConfig[cluster];
+        return clusterConfig.supportedChains[destinationChainId];
+    }
+
+    function tokenCluster(address token) external view returns (bytes32) {
+        PortalStorageStruct storage $ = _getPortalStorageLocation();
+        return $.clusterOf[token];
+    }
+
+    function clusterFallbackToken(bytes32 cluster) external view returns (address) {
+        PortalStorageStruct storage $ = _getPortalStorageLocation();
+        ClusterConfig storage clusterConfig = $.clusterConfig[cluster];
+        return clusterConfig.fallbackToken;
     }
 
     /// @inheritdoc IPortal
@@ -347,8 +423,10 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         _revertIfZeroSourceToken(sourceToken);
         _revertIfZeroDestinationToken(destinationToken);
         _revertIfZeroRecipient(recipient);
-        _revertIfInvalidDestinationChain(destinationChainId);
-        _revertIfUnsupportedBridgingPath(sourceToken, destinationChainId, destinationToken);
+        // _revertIfInvalidDestinationChain(destinationChainId);
+        // _revertIfUnsupportedBridgingPath(sourceToken, destinationChainId, destinationToken);
+        bytes32 sourceTokenCluster = _getPortalStorageLocation().clusterOf[sourceToken];
+        _revertIfUnsupportedTokenDestination(sourceTokenCluster, destinationChainId);
 
         uint128 index = _currentIndex();
         uint256 startingBalance = _mBalanceOf(address(this));
@@ -370,7 +448,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         _burnOrLock(transferAmount);
 
         messageId = _getMessageId(destinationChainId);
-        bytes memory payload = PayloadEncoder.encodeTokenTransfer(transferAmount, destinationToken, msg.sender, recipient, index, messageId);
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(transferAmount, sourceTokenCluster, destinationToken, msg.sender, recipient, index, messageId);
 
         _sendMessage(destinationChainId, PayloadType.TokenTransfer, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
 
@@ -412,21 +490,33 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     /// @param sourceChainId The ID of the source chain.
     /// @param payload       The message payload.
     function _receiveToken(uint32 sourceChainId, bytes memory payload) private {
-        (uint256 amount, address destinationToken, bytes32 sender, address recipient, uint128 index, bytes32 messageId) =
+        (uint256 amount, bytes32 cluster, address destinationToken, bytes32 sender, address recipient, uint128 index, bytes32 messageId) =
             payload.decodeTokenTransfer();
 
         emit TokenReceived(sourceChainId, destinationToken, sender, recipient, amount, index, messageId);
 
-        if (destinationToken == mToken) {
+        PortalStorageStruct storage $ = _getPortalStorageLocation();
+        ClusterConfig storage clusterConfig = $.clusterConfig[cluster];
+
+        // TODO: do we want to allow bridging to $M directly? In the current setup, you can from any cluster
+        // M is used as the ultimate fallback token if the cluster is not configured on this chain
+        if (destinationToken == mToken || clusterConfig.fallbackToken == address(0)) {
             // mints or unlocks $M Token to the recipient
             _mintOrUnlock(recipient, amount, index);
-        } else {
-            // mints or unlocks $M Token to the Portal
-            _mintOrUnlock(address(this), amount, index);
 
-            // wraps $M token and transfers it to the recipient
-            _wrap(destinationToken, recipient, amount);
+            return;
         }
+        
+        // Determine the output token: either the requested destination token (if it belongs to the same cluster) or the cluster's fallback token
+        address outputToken = cluster == $.clusterOf[destinationToken]
+            ? destinationToken
+            : $.clusterConfig[cluster].fallbackToken;
+        
+        // mints or unlocks $M Token to the Portal
+        _mintOrUnlock(address(this), amount, index);
+
+        // wraps $M token and transfers it to the recipient
+        _wrap(outputToken, recipient, amount);
     }
 
     /// @dev   Wraps $M token to the token specified by `destinationToken`.
@@ -577,11 +667,31 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         if (!supportedBridgeAdapter(chainId, bridgeAdapter)) revert UnsupportedBridgeAdapter(chainId, bridgeAdapter);
     }
 
-    function _revertIfUnsupportedBridgingPath(address sourceToken, uint32 destinationChainId, bytes32 destinationToken) internal view {
-        PortalStorageStruct storage $ = _getPortalStorageLocation();
-        if (!$.supportedBridgingPath[sourceToken][destinationChainId][destinationToken]) {
-            revert UnsupportedBridgingPath(sourceToken, destinationChainId, destinationToken);
+    // function _revertIfUnsupportedBridgingPath(address sourceToken, uint32 destinationChainId, bytes32 destinationToken) internal view {
+    //     PortalStorageStruct storage $ = _getPortalStorageLocation();
+    //     if (!$.supportedBridgingPath[sourceToken][destinationChainId][destinationToken]) {
+    //         revert UnsupportedBridgingPath(sourceToken, destinationChainId, destinationToken);
+    //     }
+    // }
+
+    function _revertIfUnsupportedTokenDestination(bytes32 cluster, uint32 destinationChainId) internal view {
+        // Validate the cluster exists
+        if (cluster == bytes32(0)) revert ZeroCluster();
+
+        ClusterConfig storage clusterConfig = _getPortalStorageLocation().clusterConfig[cluster];
+
+        // Validate the destination chain is supported in the cluster
+        if (!clusterConfig.supportedChains[destinationChainId]) {
+            revert ClusterDoesNotSupportDestinationChain(cluster, destinationChainId);
         }
+    }
+
+    function _revertIfInvalidCluster(bytes32 cluster) internal view {
+        if (cluster == bytes32(0)) revert ZeroCluster();
+        PortalStorageStruct storage $ = _getPortalStorageLocation();
+        ClusterConfig storage clusterConfig = $.clusterConfig[cluster];
+        // Validate the cluster exists
+        if (clusterConfig.fallbackToken == address(0)) revert ClusterDoesNotExist(cluster);
     }
 
     /// @dev Returns the current M token index used by the Portal.

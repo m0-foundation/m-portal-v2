@@ -48,6 +48,7 @@ library PayloadEncoder {
     /// @notice Encodes a token transfer payload.
     /// @dev    Encoded values are packed using `abi.encodePacked`.
     /// @param amount           The amount of tokens to transfer.
+    /// @param cluster          The cluster in which the transfer occurs.
     /// @param destinationToken The address of the destination token.
     /// @param sender           The address of the sender.
     /// @param recipient        The address of the recipient.
@@ -56,6 +57,7 @@ library PayloadEncoder {
     /// @return The encoded payload.
     function encodeTokenTransfer(
         uint256 amount,
+        bytes32 cluster,
         bytes32 destinationToken,
         address sender,
         bytes32 recipient,
@@ -64,13 +66,14 @@ library PayloadEncoder {
     ) internal pure returns (bytes memory) {
         // Converting addresses to `bytes32` and amount to `uint128` to support non-EVM chains.
         return abi.encodePacked(
-            PayloadType.TokenTransfer, amount.toUint128(), destinationToken, sender.toBytes32(), recipient, index, messageId
+            PayloadType.TokenTransfer, amount.toUint128(), cluster, destinationToken, sender.toBytes32(), recipient, index, messageId
         );
     }
 
     /// @notice Decodes a token transfer payload.
     /// @param payload           The payload to decode.
     /// @return amount           The amount of tokens to transfer.
+    /// @return cluster          The cluster in which the transfer occurs.
     /// @return destinationToken The address of the destination token.
     /// @return sender           The address of the sender.
     /// @return recipient        The address of the recipient.
@@ -79,13 +82,14 @@ library PayloadEncoder {
     function decodeTokenTransfer(bytes memory payload)
         internal
         pure
-        returns (uint256 amount, address destinationToken, bytes32 sender, address recipient, uint128 index, bytes32 messageId)
+        returns (uint256 amount, bytes32 cluster, address destinationToken, bytes32 sender, address recipient, uint128 index, bytes32 messageId)
     {
         uint256 offset = PAYLOAD_TYPE_LENGTH;
         bytes32 destinationTokenBytes32;
         bytes32 recipientBytes32;
 
         (amount, offset) = payload.asUint128Unchecked(offset);
+        (cluster, offset) = payload.asBytes32Unchecked(offset);
         (destinationTokenBytes32, offset) = payload.asBytes32Unchecked(offset);
         (sender, offset) = payload.asBytes32Unchecked(offset);
         (recipientBytes32, offset) = payload.asBytes32Unchecked(offset);
@@ -222,7 +226,7 @@ library PayloadEncoder {
     /// @dev    Used for estimating gas costs for different payload types.
     function generateEmptyPayload(PayloadType payloadType) internal pure returns (bytes memory) {
         if (payloadType == PayloadType.TokenTransfer) {
-            return encodeTokenTransfer(0, bytes32(0), address(0), bytes32(0), 0, bytes32(0));
+            return encodeTokenTransfer(0, bytes32(0), bytes32(0), address(0), bytes32(0), 0, bytes32(0));
         } else if (payloadType == PayloadType.Index) {
             return encodeIndex(0, bytes32(0));
         } else if (payloadType == PayloadType.RegistrarKey) {
