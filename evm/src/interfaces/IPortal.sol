@@ -68,6 +68,7 @@ interface IPortal {
     /// @param amountInToRelease  The amount of input token to release to the filler on the origin chain
     /// @param amountOutFilled    The amount of output token that was filled on the destination chain
     /// @param originRecipient    The address on the origin chain that should receive released funds
+    /// @param tokenIn            The address of the input token on the origin chain
     /// @param bridgeAdapter      The address of the bridge adapter used to send the message.
     /// @param messageId          The unique identifier for the sent message.
     event FillReportSent(
@@ -76,6 +77,7 @@ interface IPortal {
         uint128 amountInToRelease,
         uint128 amountOutFilled,
         bytes32 originRecipient,
+        bytes32 tokenIn,
         address bridgeAdapter,
         bytes32 messageId
     );
@@ -86,6 +88,7 @@ interface IPortal {
     /// @param amountInToRelease  The amount of input token to release to the filler on the origin chain
     /// @param amountOutFilled    The amount of output token that was filled on the destination chain
     /// @param originRecipient    The address on the origin chain that should receive released funds
+    /// @param tokenIn            The address of the input token on the origin chain
     /// @param messageId          The unique identifier for the message.
     event FillReportReceived(
         uint32 indexed sourceChainId,
@@ -93,6 +96,7 @@ interface IPortal {
         uint128 amountInToRelease,
         uint128 amountOutFilled,
         bytes32 originRecipient,
+        bytes32 tokenIn,
         bytes32 messageId
     );
 
@@ -296,6 +300,7 @@ interface IPortal {
     /// @param  destinationToken   The address of the token ($M or $M Extension) on the destination chain.
     /// @param  recipient          The account to receive tokens.
     /// @param  refundAddress      The address to receive excess native gas on the source chain.
+    /// @param  bridgeAdapterArgs  The optional bridge adapter arguments, could be empty.
     /// @return messageId          The unique identifier of the message sent.
     function sendToken(
         uint256 amount,
@@ -303,7 +308,8 @@ interface IPortal {
         uint32 destinationChainId,
         bytes32 destinationToken,
         bytes32 recipient,
-        bytes32 refundAddress
+        bytes32 refundAddress,
+        bytes calldata bridgeAdapterArgs
     ) external payable returns (bytes32 messageId);
 
     /// @notice Transfers $M Token or $M Extension to the destination chain using the specified bridge adapter.
@@ -314,6 +320,8 @@ interface IPortal {
     /// @param  destinationToken   The address of the token ($M or $M Extension) on the destination chain.
     /// @param  recipient          The account to receive tokens.
     /// @param  refundAddress      The address to receive excess native gas on the source chain.
+    /// @param  bridgeAdapter      The address of the bridge adapter to use.
+    /// @param  bridgeAdapterArgs  The optional bridge adapter arguments, could be empty.
     /// @return messageId          The unique identifier of the message sent.
     function sendToken(
         uint256 amount,
@@ -322,18 +330,21 @@ interface IPortal {
         bytes32 destinationToken,
         bytes32 recipient,
         bytes32 refundAddress,
-        address bridgeAdapter
+        address bridgeAdapter,
+        bytes calldata bridgeAdapterArgs
     ) external payable returns (bytes32 messageId);
 
     /// @notice Sends the fill report to the destination chain using the default bridge adapter.
     /// @param  destinationChainId The ID of the destination chain.
     /// @param  report             The OrderBook fill report to send.
     /// @param  refundAddress      The address to receive excess native gas on the source chain.
+    /// @param  bridgeAdapterArgs  The optional bridge adapter arguments, could be empty.
     /// @return messageId          The ID uniquely identifying the message.
     function sendFillReport(
         uint32 destinationChainId,
         IOrderBookLike.FillReport calldata report,
-        bytes32 refundAddress
+        bytes32 refundAddress,
+        bytes calldata bridgeAdapterArgs
     ) external payable returns (bytes32 messageId);
 
     /// @notice Sends the fill report to the destination chain using the specified bridge adapter.
@@ -341,12 +352,14 @@ interface IPortal {
     /// @param  report             The OrderBook fill report to send.
     /// @param  refundAddress      The address to receive excess native gas on the source chain.
     /// @param  bridgeAdapter      The address of the bridge adapter to use.
+    /// @param  bridgeAdapterArgs  The optional bridge adapter arguments, could be empty.
     /// @return messageId          The ID uniquely identifying the message.
     function sendFillReport(
         uint32 destinationChainId,
         IOrderBookLike.FillReport calldata report,
         bytes32 refundAddress,
-        address bridgeAdapter
+        address bridgeAdapter,
+        bytes calldata bridgeAdapterArgs
     ) external payable returns (bytes32 messageId);
 
     /// @notice Receives a message from the bridge.

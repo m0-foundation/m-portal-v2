@@ -12,6 +12,7 @@ import { IPortal } from "../../interfaces/IPortal.sol";
 import { TypeConverter } from "../../libraries/TypeConverter.sol";
 
 /// @title  HyperLane Bridge Adapter
+/// @author M0 Labs
 /// @notice Sends and receives messages to and from remote chains using Hyperlane protocol
 contract HyperlaneBridge is BridgeAdapter, IHyperlaneBridgeAdapter {
     using TypeConverter for *;
@@ -26,6 +27,7 @@ contract HyperlaneBridge is BridgeAdapter, IHyperlaneBridgeAdapter {
         if ((mailbox = mailbox_) == address(0)) revert ZeroMailbox();
     }
 
+    /// @inheritdoc IBridgeAdapter
     function initialize(address owner, address operator) external initializer {
         _initialize(owner, operator);
     }
@@ -45,23 +47,28 @@ contract HyperlaneBridge is BridgeAdapter, IHyperlaneBridgeAdapter {
     }
 
     /// @inheritdoc IBridgeAdapter
-    function sendMessage(uint32 destinationChainId, uint256 gasLimit, bytes32 refundAddress, bytes memory payload) external payable {
-        if (msg.sender != portal) revert NotPortal();
+    function sendMessage(
+        uint32 destinationChainId, 
+        uint256 gasLimit, 
+        bytes32 refundAddress, 
+        bytes memory payload,
+        bytes calldata  /* extraArguments */
+    ) external payable {
+        _revertIfNotPortal();
 
-        IMailbox mailbox_ = IMailbox(mailbox);
-        bytes memory metadata_ = StandardHookMetadata.formatMetadata(0, gasLimit, refundAddress.toAddress(), "");
+        bytes memory metadata = StandardHookMetadata.formatMetadata(0, gasLimit, refundAddress.toAddress(), "");
         bytes32 destinationPeer = _getPeerOrRevert(destinationChainId);
         uint32 destinationDomain = _getHyperlaneDomainOrRevert(destinationChainId);
 
-        // NOTE: The transaction reverts if mgs.value isn't enough to cover the fee.
+        // NOTE: The transaction reverts if msg.value isn't enough to cover the fee.
         //       If msg.value is greater than the required fee, the excess is sent to the refund address.
-        mailbox_.dispatch{ value: msg.value }(destinationDomain, destinationPeer, payload, metadata_);
+        IMailbox(mailbox).dispatch{ value: msg.value }(destinationDomain, destinationPeer, payload, metadata);
     }
 
     /// @inheritdoc IMessageRecipient
     function handle(uint32 sourceBridgeChainId, bytes32 sender, bytes calldata payload) external payable {
         if (msg.sender != mailbox) revert NotMailbox();
-        // Covert Hyperlane domain to internal chain ID
+        // Convert Hyperlane domain to internal chain ID
         uint32 sourceChainId = _getChainIdOrRevert(sourceBridgeChainId);
         if (sender != _getPeer(sourceChainId)) revert UnsupportedSender(sender);
 

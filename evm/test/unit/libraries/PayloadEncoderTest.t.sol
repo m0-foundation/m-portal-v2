@@ -247,11 +247,12 @@ contract PayloadEncoderTest is Test {
         uint128 amountInToRelease = 100;
         uint128 amountOutFilled = 100;
         bytes32 originRecipient = "recipient";
+        bytes32 tokenIn = "tokenIn";
         bytes32 messageId = "messageId";
         bytes memory payload =
-            abi.encodePacked(PayloadType.FillReport, orderId, amountInToRelease, amountOutFilled, originRecipient, messageId);
+            abi.encodePacked(PayloadType.FillReport, orderId, amountInToRelease, amountOutFilled, originRecipient, tokenIn, messageId);
 
-        assertEq(PayloadEncoder.encodeFillReport(orderId, amountInToRelease, amountOutFilled, originRecipient, messageId), payload);
+        assertEq(PayloadEncoder.encodeFillReport(orderId, amountInToRelease, amountOutFilled, originRecipient, tokenIn, messageId), payload);
     }
 
     function test_decodeFillReport() external pure {
@@ -259,13 +260,15 @@ contract PayloadEncoderTest is Test {
         uint128 amountInToRelease = 100;
         uint128 amountOutFilled = 100;
         bytes32 originRecipient = "recipient";
+        bytes32 tokenIn = "tokenIn";
         bytes32 messageId = "messageId";
-        bytes memory payload = PayloadEncoder.encodeFillReport(orderId, amountInToRelease, amountOutFilled, originRecipient, messageId);
+        bytes memory payload = PayloadEncoder.encodeFillReport(orderId, amountInToRelease, amountOutFilled, originRecipient, tokenIn, messageId);
         (
             bytes32 decodedOrderId,
             uint128 decodedAmountInToRelease,
             uint128 decodedAmountOutFilled,
             bytes32 decodedOriginRecipient,
+            bytes32 decodedTokenIn,
             bytes32 decodedMessageId
         ) = PayloadEncoder.decodeFillReport(payload);
 
@@ -273,6 +276,7 @@ contract PayloadEncoderTest is Test {
         assertEq(decodedAmountInToRelease, amountInToRelease);
         assertEq(decodedAmountOutFilled, amountOutFilled);
         assertEq(decodedOriginRecipient, originRecipient);
+        assertEq(decodedTokenIn, tokenIn);
         assertEq(decodedMessageId, messageId);
     }
 
@@ -281,16 +285,18 @@ contract PayloadEncoderTest is Test {
         uint128 amountInToRelease,
         uint128 amountOutFilled,
         bytes32 originRecipient,
+        bytes32 tokenIn,
         bytes32 messageId
     ) external pure {
         vm.assume(amountInToRelease < type(uint128).max);
         vm.assume(amountOutFilled < type(uint128).max);
-        bytes memory payload = PayloadEncoder.encodeFillReport(orderId, amountInToRelease, amountOutFilled, originRecipient, messageId);
+        bytes memory payload = PayloadEncoder.encodeFillReport(orderId, amountInToRelease, amountOutFilled, originRecipient, tokenIn, messageId);
         (
             bytes32 decodedOrderId,
             uint128 decodedAmountInToRelease,
             uint128 decodedAmountOutFilled,
             bytes32 decodedOriginRecipient,
+            bytes32 decodedTokenIn,
             bytes32 decodedMessageId
         ) = PayloadEncoder.decodeFillReport(payload);
 
@@ -298,6 +304,7 @@ contract PayloadEncoderTest is Test {
         assertEq(decodedAmountInToRelease, amountInToRelease);
         assertEq(decodedAmountOutFilled, amountOutFilled);
         assertEq(decodedOriginRecipient, originRecipient);
+        assertEq(decodedTokenIn, tokenIn);
         assertEq(decodedMessageId, messageId);
     }
 }

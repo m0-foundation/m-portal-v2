@@ -178,7 +178,8 @@ library PayloadEncoder {
     /// @param orderId           The ID of the order being reported.
     /// @param amountInToRelease The amount of input token to release to the filler on the source chain.
     /// @param amountOutFilled   The amount of output tokens filled.
-    /// @param originRecipient   The amount of output token that was filled on the destination chain.
+    /// @param originRecipient   The address on the origin chain that should receive released funds.
+    /// @param tokenIn           The address of the input token on the origin chain.
     /// @param messageId         The message ID.
     /// @return The encoded payload.
     function encodeFillReport(
@@ -186,9 +187,10 @@ library PayloadEncoder {
         uint128 amountInToRelease,
         uint128 amountOutFilled,
         bytes32 originRecipient,
+        bytes32 tokenIn,
         bytes32 messageId
     ) internal pure returns (bytes memory) {
-        return abi.encodePacked(PayloadType.FillReport, orderId, amountInToRelease, amountOutFilled, originRecipient, messageId);
+        return abi.encodePacked(PayloadType.FillReport, orderId, amountInToRelease, amountOutFilled, originRecipient, tokenIn, messageId);
     }
 
     /// @notice Decodes a fill report payload.
@@ -196,12 +198,13 @@ library PayloadEncoder {
     /// @return orderId           The ID of the order being reported.
     /// @return amountInToRelease The amount of input token to release to the filler on the source chain.
     /// @return amountOutFilled   The amount of output tokens filled.
-    /// @return originRecipient   The amount of output token that was filled on the destination chain.
+    /// @return originRecipient   The address on the origin chain that should receive released funds.
+    /// @return tokenIn           The address of the input token on the origin chain.
     /// @return messageId         The message ID.
     function decodeFillReport(bytes memory payload)
         internal
         pure
-        returns (bytes32 orderId, uint128 amountInToRelease, uint128 amountOutFilled, bytes32 originRecipient, bytes32 messageId)
+        returns (bytes32 orderId, uint128 amountInToRelease, uint128 amountOutFilled, bytes32 originRecipient, bytes32 tokenIn,bytes32 messageId)
     {
         uint256 offset = PAYLOAD_TYPE_LENGTH;
 
@@ -209,6 +212,7 @@ library PayloadEncoder {
         (amountInToRelease, offset) = payload.asUint128Unchecked(offset);
         (amountOutFilled, offset) = payload.asUint128Unchecked(offset);
         (originRecipient, offset) = payload.asBytes32Unchecked(offset);
+        (tokenIn, offset) = payload.asBytes32Unchecked(offset);
         (messageId, offset) = payload.asBytes32Unchecked(offset);
 
         payload.checkLength(offset);
@@ -226,7 +230,7 @@ library PayloadEncoder {
         } else if (payloadType == PayloadType.RegistrarList) {
             return encodeRegistrarList(bytes32(0), address(0), false, bytes32(0));
         } else if (payloadType == PayloadType.FillReport) {
-            return encodeFillReport(bytes32(0), 0, 0, bytes32(0), bytes32(0));
+            return encodeFillReport(bytes32(0), 0, 0, bytes32(0), bytes32(0), bytes32(0));
         }
 
         revert InvalidPayloadType(uint8(payloadType));

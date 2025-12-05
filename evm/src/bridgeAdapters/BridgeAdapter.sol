@@ -113,46 +113,69 @@ abstract contract BridgeAdapter is IBridgeAdapter, BridgeAdapterStorageLayout, A
         return _getChainId(bridgeChainId);
     }
 
+    /// @notice Returns the configured peer for the given internal chain ID.
+    /// @param  chainId The M0 internal chain ID.
     function _getPeer(uint32 chainId) internal view returns (bytes32) {
         return _getBridgeAdapterStorageLocation().remotePeer[chainId];
     }
 
+    /// @notice Returns the bridge-specific chain ID for the given internal chain ID.
+    /// @param  chainId The M0 internal chain ID.
     function _getBridgeChainId(uint32 chainId) internal view returns (uint256) {
         return _getBridgeAdapterStorageLocation().internalToBridgeChainId[chainId];
     }
 
+    /// @notice Returns the internal chain ID for the given bridge-specific chain ID.
+    /// @param  bridgeChainId The bridge-specific chain ID.
     function _getChainId(uint256 bridgeChainId) internal view returns (uint32) {
         return _getBridgeAdapterStorageLocation().bridgeToInternalChainId[bridgeChainId];
     }
 
+    /// @notice Returns the configured peer for the given internal chain ID or reverts if not found.
+    /// @param  chainId The M0 internal chain ID.
     function _getPeerOrRevert(uint32 chainId) internal view returns (bytes32) {
         bytes32 peer = _getPeer(chainId);
         if (peer == bytes32(0)) revert UnsupportedChain(chainId);
         return peer;
     }
 
+    /// @notice Returns the bridge-specific chain ID for the given internal chain ID or reverts if not found.
+    /// @param  chainId The M0 internal chain ID.
     function _getBridgeChainIdOrRevert(uint32 chainId) internal view returns (uint256) {
         uint256 bridgeChainId = _getBridgeChainId(chainId);
         if (bridgeChainId == 0) revert UnsupportedChain(chainId);
         return bridgeChainId;
     }
 
+    /// @notice Returns the internal chain ID for the given bridge-specific chain ID or reverts if not found.
+    /// @param  bridgeChainId The bridge-specific chain ID.
     function _getChainIdOrRevert(uint256 bridgeChainId) internal view returns (uint32) {
         uint32 chainId = _getChainId(bridgeChainId);
         if (chainId == 0) revert UnsupportedBridgeChain(bridgeChainId);
         return chainId;
     }
 
+    /// @notice Reverts if the given chain ID is zero.
+    /// @param  chainId The M0 internal chain ID.
     function _revertIfZeroChain(uint32 chainId) internal pure {
         if (chainId == 0) revert ZeroChain();
     }
 
+    /// @notice Reverts if the given bridge-specific chain ID is zero.
+    /// @param  bridgeChainId The bridge-specific chain ID.
     function _revertIfZeroBridgeChain(uint256 bridgeChainId) internal pure {
         if (bridgeChainId == 0) revert ZeroBridgeChain();
     }
 
+    /// @notice Reverts if the given peer is zero.
+    /// @param  peer The peer address.
     function _revertIfZeroPeer(bytes32 peer) internal pure {
         if (peer == bytes32(0)) revert ZeroPeer();
+    }
+
+    /// @notice Reverts if `msg.sender` is not the Portal.
+    function _revertIfNotPortal() internal view {
+        if (msg.sender != portal) revert NotPortal();
     }
 }
 

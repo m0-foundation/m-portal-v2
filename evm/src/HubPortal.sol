@@ -16,7 +16,7 @@ import { PayloadType, PayloadEncoder } from "./libraries/PayloadEncoder.sol";
 import { TypeConverter } from "./libraries/TypeConverter.sol";
 
 abstract contract HubPortalStorageLayout {
-    /// @custom:storage-location erc7201:M0.storage.Portal
+    /// @custom:storage-location erc7201:M0.storage.HubPortal
     struct HubPortalStorageStruct {
         bool wasEarningEnabled;
         uint128 disableEarningIndex;
@@ -66,34 +66,23 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     ///////////////////////////////////////////////////////////////////////////
 
     /// @inheritdoc IHubPortal
-    function sendMTokenIndex(uint32 destinationChainId, bytes32 refundAddress) external payable whenNotPaused returns (bytes32 messageId) {
+    function sendMTokenIndex(uint32 destinationChainId, bytes32 refundAddress, bytes calldata bridgeAdapterArgs) external payable whenNotPaused returns (bytes32 messageId) {
         address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
         _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
 
-        return _sendMTokenIndex(destinationChainId, refundAddress, bridgeAdapter);
+        return _sendMTokenIndex(destinationChainId, refundAddress, bridgeAdapter, bridgeAdapterArgs);
     }
 
     /// @inheritdoc IHubPortal
     function sendMTokenIndex(
         uint32 destinationChainId,
         bytes32 refundAddress,
-        address bridgeAdapter
+        address bridgeAdapter,
+        bytes calldata bridgeAdapterArgs
     ) external payable whenNotPaused returns (bytes32 messageId) {
         _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
-        return _sendMTokenIndex(destinationChainId, refundAddress, bridgeAdapter);
-    }
-
-    /// @inheritdoc IHubPortal
-    function sendRegistrarKey(
-        uint32 destinationChainId,
-        bytes32 key,
-        bytes32 refundAddress
-    ) external payable whenNotPaused returns (bytes32 messageId) {
-        address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
-        _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
-
-        return _sendRegistrarKey(destinationChainId, key, refundAddress, bridgeAdapter);
+        return _sendMTokenIndex(destinationChainId, refundAddress, bridgeAdapter, bridgeAdapterArgs);
     }
 
     /// @inheritdoc IHubPortal
@@ -101,24 +90,25 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         uint32 destinationChainId,
         bytes32 key,
         bytes32 refundAddress,
-        address bridgeAdapter
-    ) external payable whenNotPaused returns (bytes32 messageId) {
-        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
-
-        return _sendRegistrarKey(destinationChainId, key, refundAddress, bridgeAdapter);
-    }
-
-    /// @inheritdoc IHubPortal
-    function sendRegistrarListStatus(
-        uint32 destinationChainId,
-        bytes32 listName,
-        address account,
-        bytes32 refundAddress
+        bytes calldata bridgeAdapterArgs
     ) external payable whenNotPaused returns (bytes32 messageId) {
         address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
         _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
 
-        return _sendRegistrarListStatus(destinationChainId, listName, account, refundAddress, bridgeAdapter);
+        return _sendRegistrarKey(destinationChainId, key, refundAddress, bridgeAdapter, bridgeAdapterArgs);
+    }
+
+    /// @inheritdoc IHubPortal
+    function sendRegistrarKey(
+        uint32 destinationChainId,
+        bytes32 key,
+        bytes32 refundAddress,
+        address bridgeAdapter,
+        bytes calldata bridgeAdapterArgs
+    ) external payable whenNotPaused returns (bytes32 messageId) {
+        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
+
+        return _sendRegistrarKey(destinationChainId, key, refundAddress, bridgeAdapter, bridgeAdapterArgs);
     }
 
     /// @inheritdoc IHubPortal
@@ -127,11 +117,26 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         bytes32 listName,
         address account,
         bytes32 refundAddress,
-        address bridgeAdapter
+        bytes calldata bridgeAdapterArgs
+    ) external payable whenNotPaused returns (bytes32 messageId) {
+        address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
+        _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
+
+        return _sendRegistrarListStatus(destinationChainId, listName, account, refundAddress, bridgeAdapter, bridgeAdapterArgs);
+    }
+
+    /// @inheritdoc IHubPortal
+    function sendRegistrarListStatus(
+        uint32 destinationChainId,
+        bytes32 listName,
+        address account,
+        bytes32 refundAddress,
+        address bridgeAdapter,
+        bytes calldata bridgeAdapterArgs
     ) external payable whenNotPaused returns (bytes32 messageId) {
         _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
-        return _sendRegistrarListStatus(destinationChainId, listName, account, refundAddress, bridgeAdapter);
+        return _sendRegistrarListStatus(destinationChainId, listName, account, refundAddress, bridgeAdapter, bridgeAdapterArgs);
     }
 
     /// @inheritdoc IHubPortal
@@ -183,14 +188,14 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     ///////////////////////////////////////////////////////////////////////////
 
     /// @dev Sends the M token index to the destination chain.
-    function _sendMTokenIndex(uint32 destinationChainId, bytes32 refundAddress, address bridgeAdapter) private returns (bytes32 messageId) {
+    function _sendMTokenIndex(uint32 destinationChainId, bytes32 refundAddress, address bridgeAdapter, bytes calldata bridgeAdapterArgs) private returns (bytes32 messageId) {
         _revertIfZeroRefundAddress(refundAddress);
 
         uint128 index = _currentIndex();
         messageId = _getMessageId(destinationChainId);
         bytes memory payload = PayloadEncoder.encodeIndex(index, messageId);
 
-        _sendMessage(destinationChainId, PayloadType.Index, refundAddress, payload, bridgeAdapter);
+        _sendMessage(destinationChainId, PayloadType.Index, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
 
         emit MTokenIndexSent(destinationChainId, index, bridgeAdapter, messageId);
     }
@@ -200,7 +205,8 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         uint32 destinationChainId,
         bytes32 key,
         bytes32 refundAddress,
-        address bridgeAdapter
+        address bridgeAdapter,
+        bytes calldata bridgeAdapterArgs
     ) private returns (bytes32 messageId) {
         _revertIfZeroRefundAddress(refundAddress);
 
@@ -208,7 +214,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         messageId = _getMessageId(destinationChainId);
         bytes memory payload = PayloadEncoder.encodeRegistrarKey(key, value, messageId);
 
-        _sendMessage(destinationChainId, PayloadType.RegistrarKey, refundAddress, payload, bridgeAdapter);
+        _sendMessage(destinationChainId, PayloadType.RegistrarKey, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
 
         emit RegistrarKeySent(destinationChainId, key, value, bridgeAdapter, messageId);
     }
@@ -219,7 +225,8 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         bytes32 listName,
         address account,
         bytes32 refundAddress,
-        address bridgeAdapter
+        address bridgeAdapter,
+        bytes calldata bridgeAdapterArgs
     ) private returns (bytes32 messageId) {
         _revertIfZeroRefundAddress(refundAddress);
 
@@ -227,7 +234,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         messageId = _getMessageId(destinationChainId);
         bytes memory payload = PayloadEncoder.encodeRegistrarList(listName, account, status, messageId);
 
-        _sendMessage(destinationChainId, PayloadType.RegistrarList, refundAddress, payload, bridgeAdapter);
+        _sendMessage(destinationChainId, PayloadType.RegistrarList, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
 
         emit RegistrarListStatusSent(destinationChainId, listName, account, status, bridgeAdapter, messageId);
     }

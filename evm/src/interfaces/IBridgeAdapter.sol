@@ -86,7 +86,8 @@ interface IBridgeAdapter {
     /// @param  gasLimit           The gas limit to execute the message on the destination chain.
     /// @param  refundAddress      The address to refund the fee to.
     /// @param  payload            The message payload to send.
-    function sendMessage(uint32 destinationChainId, uint256 gasLimit, bytes32 refundAddress, bytes memory payload) external payable;
+    /// @param  extraArguments     The provider-specific extra arguments required for sending the message.
+    function sendMessage(uint32 destinationChainId, uint256 gasLimit, bytes32 refundAddress, bytes memory payload, bytes calldata extraArguments) external payable;
 
     /// @notice Sets an address of Bridge Adapter contract on the remote chain.
     /// @param  destinationChainId The ID of the destination chain.
@@ -97,4 +98,9 @@ interface IBridgeAdapter {
     /// @param  chainId       The ID of the chain.
     /// @param  bridgeChainId The provider-specific chain ID.
     function setBridgeChainId(uint32 chainId, uint256 bridgeChainId) external;
+
+    /// @notice Initializes the Bridge Adapter Proxy contract.
+    /// @param  admin    The address of the admin.
+    /// @param  operator The address of the operator.
+    function initialize(address admin, address operator) external;
 }
