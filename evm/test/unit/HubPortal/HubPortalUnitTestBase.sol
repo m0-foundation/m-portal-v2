@@ -101,6 +101,7 @@ abstract contract HubPortalUnitTestBase is Test {
         vm.deal(operator, 1 ether);
         vm.deal(pauser, 1 ether);
         vm.deal(user, 1 ether);
+        vm.deal(address(mockOrderBook), 1 ether);
     }
 
     function _getMessageId() internal returns (bytes32) {

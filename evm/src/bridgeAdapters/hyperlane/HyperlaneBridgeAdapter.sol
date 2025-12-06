@@ -7,7 +7,7 @@ import { IBridgeAdapter } from "../../interfaces/IBridgeAdapter.sol";
 import { IMailbox } from "./interfaces/IMailbox.sol";
 import { IMessageRecipient } from "./interfaces/IMessageRecipient.sol";
 import { IHyperlaneBridgeAdapter } from "./interfaces/IHyperlaneBridgeAdapter.sol";
-import { StandardHookMetadata } from "./libs/StandardHookMetadata.sol";
+import { StandardHookMetadata } from "./libraries/StandardHookMetadata.sol";
 import { IPortal } from "../../interfaces/IPortal.sol";
 import { TypeConverter } from "../../libraries/TypeConverter.sol";
 
