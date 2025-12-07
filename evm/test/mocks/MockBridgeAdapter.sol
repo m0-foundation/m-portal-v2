@@ -7,6 +7,7 @@ import { IBridgeAdapter } from "../../src/interfaces/IBridgeAdapter.sol";
 contract MockBridgeAdapter is IBridgeAdapter {
     address public portalAddress;
     bytes32 public messageId;
+    uint256 public quoteValue;
 
     struct SendMessageCall {
         uint32 destinationChainId;
@@ -24,6 +25,10 @@ contract MockBridgeAdapter is IBridgeAdapter {
 
     function setMessageId(bytes32 messageId_) external {
         messageId = messageId_;
+    }
+
+    function setQuote(uint256 quote_) external {
+        quoteValue = quote_;
     }
 
     function sendMessage(
@@ -55,8 +60,8 @@ contract MockBridgeAdapter is IBridgeAdapter {
         return portalAddress;
     }
 
-    function quote(uint32 destinationChainId, uint256 gasLimit, bytes memory payload) external pure returns (uint256) {
-        return 0;
+    function quote(uint32 destinationChainId, uint256 gasLimit, bytes memory payload) external view returns (uint256) {
+        return quoteValue;
     }
 
     function getPeer(uint32 chainId) external pure returns (bytes32) {

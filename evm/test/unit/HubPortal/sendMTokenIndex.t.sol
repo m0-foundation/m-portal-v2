@@ -10,6 +10,7 @@ import { HubPortal } from "../../../src/HubPortal.sol";
 import { TypeConverter } from "../../../src/libraries/TypeConverter.sol";
 import { PayloadEncoder } from "../../../src/libraries/PayloadEncoder.sol";
 
+import { MockBridgeAdapter } from "../../mocks/MockBridgeAdapter.sol";
 import { HubPortalUnitTestBase } from "./HubPortalUnitTestBase.sol";
 
 contract SendMTokenIndexUnitTest is HubPortalUnitTestBase {
@@ -37,6 +38,42 @@ contract SendMTokenIndexUnitTest is HubPortalUnitTestBase {
 
         vm.prank(user);
         hubPortal.sendMTokenIndex{ value: fee }(SPOKE_CHAIN_ID, refundAddress, bridgeAdapterArgs);
+    }
+
+    function test_sendMTokenIndex_withSpecificAdapter() external {
+        uint128 index = 1_100000068703;
+        uint256 fee = 1;
+        bytes32 messageId = _getMessageId();
+        bytes memory payload = PayloadEncoder.encodeIndex(index, messageId);
+
+        // Deploy a new mock adapter
+        MockBridgeAdapter customAdapter = new MockBridgeAdapter();
+        customAdapter.setPortal(address(hubPortal));
+
+        mToken.setCurrentIndex(index);
+        registrar.setListContains(EARNERS_LIST, address(hubPortal), true);
+        hubPortal.enableEarning();
+
+        vm.prank(operator);
+        hubPortal.setSupportedBridgeAdapter(SPOKE_CHAIN_ID, address(customAdapter), true);
+
+        vm.expectCall(
+            address(customAdapter),
+            abi.encodeCall(
+                IBridgeAdapter.sendMessage,
+                (SPOKE_CHAIN_ID, INDEX_UPDATE_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs)
+            )
+        );
+        vm.expectEmit();
+        emit IHubPortal.MTokenIndexSent(SPOKE_CHAIN_ID, index, address(customAdapter), messageId);
+
+        vm.prank(user);
+        hubPortal.sendMTokenIndex{ value: fee }(
+            SPOKE_CHAIN_ID,
+            refundAddress,
+            address(customAdapter),
+            bridgeAdapterArgs
+        );
     }
 
     function test_sendMTokenIndex_revertsIfPaused() external {

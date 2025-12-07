@@ -4,6 +4,7 @@ pragma solidity 0.8.30;
 import { PausableUpgradeable } from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol";
 
 import { IPortal } from "../../../src/interfaces/IPortal.sol";
+import { IOrderBookLike } from "../../../src/interfaces/IOrderBookLike.sol";
 import { HubPortal } from "../../../src/HubPortal.sol";
 import { TypeConverter } from "../../../src/libraries/TypeConverter.sol";
 import { PayloadEncoder } from "../../../src/libraries/PayloadEncoder.sol";
@@ -30,7 +31,7 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
         mToken.mint(address(wrappedMToken), 100e6);
     }
 
-    function test_receiveMessage_mToken() external {
+    function test_receiveMessage_tokenTransfer_mToken() external {
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
             amount,
             address(mToken).toBytes32(),
@@ -57,7 +58,7 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
         assertEq(mToken.balanceOf(recipient), amount);
     }
 
-    function test_receiveMessage_wrappedMToken() external {
+    function test_receiveMessage_tokenTransfer_wrappedMToken() external {
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
             amount,
             address(wrappedMToken).toBytes32(),
@@ -82,6 +83,90 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
         hubPortal.receiveMessage(SPOKE_CHAIN_ID, payload);
 
         assertEq(wrappedMToken.balanceOf(recipient), amount);
+    }
+
+    function test_receiveMessage_fillReport() external {
+        bytes32 orderId = bytes32("orderId");
+        uint128 amountInToRelease = 5e6;
+        uint128 amountOutFilled = 10e6;
+        bytes32 originRecipient = recipient.toBytes32();
+        bytes32 tokenIn = address(mToken).toBytes32();
+
+        bytes memory payload = PayloadEncoder.encodeFillReport(
+            orderId,
+            amountInToRelease,
+            amountOutFilled,
+            originRecipient,
+            tokenIn,
+            messageId
+        );
+
+        vm.expectCall(
+            address(mockOrderBook),
+            abi.encodeCall(
+                IOrderBookLike.reportFill,
+                IOrderBookLike.FillReport({
+                    orderId: orderId,
+                    amountInToRelease: amountInToRelease,
+                    amountOutFilled: amountOutFilled,
+                    originRecipient: originRecipient,
+                    tokenIn: tokenIn
+                })
+            )
+        );
+
+        vm.expectEmit();
+        emit IPortal.FillReportReceived(
+            SPOKE_CHAIN_ID,
+            orderId,
+            amountInToRelease,
+            amountOutFilled,
+            originRecipient,
+            tokenIn,
+            messageId
+        );
+
+        vm.prank(address(bridgeAdapter));
+        hubPortal.receiveMessage(SPOKE_CHAIN_ID, payload);
+    }
+
+    function test_receiveMessage_tokenTransfer_wrapFails() external {
+        // Use an address that doesn't implement wrap() - wrapping will fail
+        address invalidWrappedToken = makeAddr("invalidWrappedToken");
+
+        // First configure this as a supported bridging path
+        vm.prank(operator);
+        hubPortal.setSupportedBridgingPath(address(mToken), SPOKE_CHAIN_ID, invalidWrappedToken.toBytes32(), true);
+
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            amount,
+            invalidWrappedToken.toBytes32(),
+            sender,
+            recipient.toBytes32(),
+            index,
+            messageId
+        );
+
+        vm.expectEmit();
+        emit IPortal.TokenReceived(
+            SPOKE_CHAIN_ID,
+            invalidWrappedToken,
+            sender.toBytes32(),
+            recipient,
+            amount,
+            index,
+            messageId
+        );
+
+        vm.expectEmit();
+        emit IPortal.WrapFailed(invalidWrappedToken, recipient, amount);
+
+        vm.prank(address(bridgeAdapter));
+        hubPortal.receiveMessage(SPOKE_CHAIN_ID, payload);
+
+        // Recipient should receive M tokens instead of wrapped tokens
+        assertEq(mToken.balanceOf(recipient), amount);
+        assertEq(mToken.balanceOf(address(hubPortal)), 100e6 - amount); // Started with 100e6
     }
 
     function test_receiveMessage_revertsIfUnsupportedBridgeAdapter() external {
