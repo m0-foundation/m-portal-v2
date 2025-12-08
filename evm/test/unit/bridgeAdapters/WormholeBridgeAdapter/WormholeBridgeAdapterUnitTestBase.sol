@@ -6,8 +6,6 @@ import { Test } from "../../../../lib/forge-std/src/Test.sol";
 import { ERC1967Proxy } from "../../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import { WormholeBridgeAdapter } from "../../../../src/bridgeAdapters/wormhole/WormholeBridgeAdapter.sol";
-import { IWormholeBridgeAdapter } from "../../../../src/bridgeAdapters/wormhole/interfaces/IWormholeBridgeAdapter.sol";
-import { IBridgeAdapter } from "../../../../src/interfaces/IBridgeAdapter.sol";
 import { TypeConverter } from "../../../../src/libraries/TypeConverter.sol";
 
 import { MockPortal } from "../../../mocks/MockPortal.sol";

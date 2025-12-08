@@ -6,8 +6,6 @@ import { Test } from "../../../../lib/forge-std/src/Test.sol";
 import { ERC1967Proxy } from "../../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import { HyperlaneBridgeAdapter } from "../../../../src/bridgeAdapters/hyperlane/HyperlaneBridgeAdapter.sol";
-import { IHyperlaneBridgeAdapter } from "../../../../src/bridgeAdapters/hyperlane/interfaces/IHyperlaneBridgeAdapter.sol";
-import { IBridgeAdapter } from "../../../../src/interfaces/IBridgeAdapter.sol";
 import { TypeConverter } from "../../../../src/libraries/TypeConverter.sol";
 
 import { MockHyperlaneMailbox } from "../../../mocks/MockHyperlaneMailbox.sol";
