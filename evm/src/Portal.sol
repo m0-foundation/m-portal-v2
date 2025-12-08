@@ -23,7 +23,7 @@ abstract contract PortalStorageLayout {
     struct PortalStorageStruct {
         /// @notice Ensures the uniqueness of each cross-chain message.
         uint256 nonce;
-        /// @notice Configuration required to sent cross-chain messages to the remote chain.
+        /// @notice Configuration required to send cross-chain messages to the remote chain.
         mapping(uint32 chainId => ChainConfig) remoteChainConfig;
         /// @notice Supported bridging paths for cross-chain transfers.
         mapping(address sourceToken => mapping(uint32 destinationChainId => mapping(bytes32 destinationToken => bool supported)))
@@ -401,7 +401,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
             report.orderId, report.amountInToRelease, report.amountOutFilled, report.originRecipient, report.tokenIn, messageId
         );
 
-        _sendMessage(destinationChainId, PayloadType.TokenTransfer, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
+        _sendMessage(destinationChainId, PayloadType.FillReport, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
 
         emit FillReportSent(
             destinationChainId,
@@ -516,7 +516,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
 
         // NOTE: For quoting delivery fee, the content of the message doesn’t matter,
         //       only the destination chain, gas limit required to process the message on the destination
-        //       and, for some protocols, payload size are relevant.
+        //       and, for some protocols, payload size is relevant.
         bytes memory payload = PayloadEncoder.generateEmptyPayload(payloadType);
 
         return IBridgeAdapter(bridgeAdapter).quote(destinationChainId, gasLimit, payload);
