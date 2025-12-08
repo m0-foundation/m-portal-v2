@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { AccessControlUpgradeable } from "../../../../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
-
 import { IBridgeAdapter } from "../../../../src/interfaces/IBridgeAdapter.sol";
 import { TypeConverter } from "../../../../src/libraries/TypeConverter.sol";
 

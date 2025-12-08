@@ -5,7 +5,6 @@ import { IAccessControl } from "../../../lib/common/lib/openzeppelin-contracts-u
 
 import { IPortal } from "../../../src/interfaces/IPortal.sol";
 import { PayloadType } from "../../../src/libraries/PayloadEncoder.sol";
-import { HubPortal } from "../../../src/HubPortal.sol";
 
 import { HubPortalUnitTestBase } from "./HubPortalUnitTestBase.sol";
 

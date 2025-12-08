@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { console } from "forge-std/console.sol";
-
 import { IAccessControl } from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
 
 import { IPortal } from "../../../src/interfaces/IPortal.sol";
-import { HubPortal } from "../../../src/HubPortal.sol";
 
 import { HubPortalUnitTestBase } from "./HubPortalUnitTestBase.sol";
 

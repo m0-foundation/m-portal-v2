@@ -5,7 +5,6 @@ import { PausableUpgradeable } from "../../../lib/common/lib/openzeppelin-contra
 
 import { IBridgeAdapter } from "../../../src/interfaces/IBridgeAdapter.sol";
 import { IPortal } from "../../../src/interfaces/IPortal.sol";
-import { SpokePortal } from "../../../src/SpokePortal.sol";
 import { TypeConverter } from "../../../src/libraries/TypeConverter.sol";
 import { PayloadEncoder } from "../../../src/libraries/PayloadEncoder.sol";
 

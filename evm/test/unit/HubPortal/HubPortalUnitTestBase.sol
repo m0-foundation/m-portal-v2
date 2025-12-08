@@ -6,8 +6,6 @@ import { Test } from "../../../lib/forge-std/src/Test.sol";
 import { ERC1967Proxy } from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import { HubPortal } from "../../../src/HubPortal.sol";
-import { IHubPortal } from "../../../src/interfaces/IHubPortal.sol";
-import { IPortal, ChainConfig } from "../../../src/interfaces/IPortal.sol";
 import { PayloadType } from "../../../src/libraries/PayloadEncoder.sol";
 import { TypeConverter } from "../../../src/libraries/TypeConverter.sol";
 

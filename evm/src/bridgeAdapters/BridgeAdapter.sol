@@ -7,7 +7,6 @@ import {
 } from "../../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
 import { UUPSUpgradeable } from "../../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 import { IBridgeAdapter } from "../interfaces/IBridgeAdapter.sol";
-import { IPortal } from "../interfaces/IPortal.sol";
 
 abstract contract BridgeAdapterStorageLayout {
     /// @custom:storage-location erc7201:M0.storage.BridgeAdapter

@@ -5,10 +5,9 @@ pragma solidity 0.8.30;
 import { IERC20 } from "../lib/common/src/interfaces/IERC20.sol";
 import { IndexingMath } from "../lib/common/src/libs/IndexingMath.sol";
 
-import { IBridgeAdapter } from "./interfaces/IBridgeAdapter.sol";
 import { IMTokenLike } from "./interfaces/IMTokenLike.sol";
 import { IRegistrarLike } from "./interfaces/IRegistrarLike.sol";
-import { IPortal, ChainConfig } from "./interfaces/IPortal.sol";
+import { IPortal } from "./interfaces/IPortal.sol";
 import { IHubPortal } from "./interfaces/IHubPortal.sol";
 
 import { Portal } from "./Portal.sol";

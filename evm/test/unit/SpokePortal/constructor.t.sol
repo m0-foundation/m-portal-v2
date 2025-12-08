@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { IndexingMath } from "../../../lib/common/src/libs/IndexingMath.sol";
-
 import { IPortal } from "../../../src/interfaces/IPortal.sol";
 import { SpokePortal } from "../../../src/SpokePortal.sol";
 

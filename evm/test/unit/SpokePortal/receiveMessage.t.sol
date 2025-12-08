@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { PausableUpgradeable } from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol";
-
 import { IPortal } from "../../../src/interfaces/IPortal.sol";
 import { ISpokePortal } from "../../../src/interfaces/ISpokePortal.sol";
 import { IOrderBookLike } from "../../../src/interfaces/IOrderBookLike.sol";
 import { IRegistrarLike } from "../../../src/interfaces/IRegistrarLike.sol";
-import { SpokePortal } from "../../../src/SpokePortal.sol";
 import { TypeConverter } from "../../../src/libraries/TypeConverter.sol";
 import { PayloadEncoder } from "../../../src/libraries/PayloadEncoder.sol";
 
-import { MockBridgeAdapter } from "../../mocks/MockBridgeAdapter.sol";
 import { SpokePortalUnitTestBase } from "./SpokePortalUnitTestBase.sol";
 
 contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {

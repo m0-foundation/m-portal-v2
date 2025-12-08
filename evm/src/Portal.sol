@@ -11,7 +11,6 @@ import { PausableUpgradeable } from "../lib/common/lib/openzeppelin-contracts-up
 import { UUPSUpgradeable } from "../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import { IBridgeAdapter } from "./interfaces/IBridgeAdapter.sol";
-import { IMTokenLike } from "./interfaces/IMTokenLike.sol";
 import { IPortal, ChainConfig } from "./interfaces/IPortal.sol";
 import { ISwapFacilityLike } from "./interfaces/ISwapFacilityLike.sol";
 import { IOrderBookLike } from "./interfaces/IOrderBookLike.sol";

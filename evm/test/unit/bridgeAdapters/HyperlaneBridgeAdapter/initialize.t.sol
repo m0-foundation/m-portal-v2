@@ -2,7 +2,6 @@
 pragma solidity 0.8.30;
 
 import { ERC1967Proxy } from "../../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { AccessControlUpgradeable } from "../../../../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
 
 import { HyperlaneBridgeAdapter } from "../../../../src/bridgeAdapters/hyperlane/HyperlaneBridgeAdapter.sol";
 import { IBridgeAdapter } from "../../../../src/interfaces/IBridgeAdapter.sol";
