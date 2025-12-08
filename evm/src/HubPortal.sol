@@ -5,10 +5,9 @@ pragma solidity 0.8.30;
 import { IERC20 } from "../lib/common/src/interfaces/IERC20.sol";
 import { IndexingMath } from "../lib/common/src/libs/IndexingMath.sol";
 
-import { IBridgeAdapter } from "./interfaces/IBridgeAdapter.sol";
 import { IMTokenLike } from "./interfaces/IMTokenLike.sol";
 import { IRegistrarLike } from "./interfaces/IRegistrarLike.sol";
-import { IPortal, ChainConfig } from "./interfaces/IPortal.sol";
+import { IPortal } from "./interfaces/IPortal.sol";
 import { IHubPortal } from "./interfaces/IHubPortal.sol";
 
 import { Portal } from "./Portal.sol";
@@ -66,7 +65,11 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     ///////////////////////////////////////////////////////////////////////////
 
     /// @inheritdoc IHubPortal
-    function sendMTokenIndex(uint32 destinationChainId, bytes32 refundAddress, bytes calldata bridgeAdapterArgs) external payable whenNotPaused returns (bytes32 messageId) {
+    function sendMTokenIndex(
+        uint32 destinationChainId,
+        bytes32 refundAddress,
+        bytes calldata bridgeAdapterArgs
+    ) external payable whenNotPaused returns (bytes32 messageId) {
         address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
         _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
 
@@ -188,7 +191,12 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     ///////////////////////////////////////////////////////////////////////////
 
     /// @dev Sends the M token index to the destination chain.
-    function _sendMTokenIndex(uint32 destinationChainId, bytes32 refundAddress, address bridgeAdapter, bytes calldata bridgeAdapterArgs) private returns (bytes32 messageId) {
+    function _sendMTokenIndex(
+        uint32 destinationChainId,
+        bytes32 refundAddress,
+        address bridgeAdapter,
+        bytes calldata bridgeAdapterArgs
+    ) private returns (bytes32 messageId) {
         _revertIfZeroRefundAddress(refundAddress);
 
         uint128 index = _currentIndex();

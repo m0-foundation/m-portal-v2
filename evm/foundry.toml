@@ -8,7 +8,7 @@ optimizer-runs = 10_000
 verbosity = 3
 dynamic_test_linking = true
 ignored_warnings_from = ["lib", "test", "script"]
-no_match_coverage = "script|test"
+no_match_coverage = "script|test|src/bridgeAdapters/hyperlane/libraries/|src/bridgeAdapters/wormhole/libraries/"
 
 [lint]
 lint_on_build = false

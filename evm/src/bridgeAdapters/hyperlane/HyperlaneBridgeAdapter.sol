@@ -7,14 +7,14 @@ import { IBridgeAdapter } from "../../interfaces/IBridgeAdapter.sol";
 import { IMailbox } from "./interfaces/IMailbox.sol";
 import { IMessageRecipient } from "./interfaces/IMessageRecipient.sol";
 import { IHyperlaneBridgeAdapter } from "./interfaces/IHyperlaneBridgeAdapter.sol";
-import { StandardHookMetadata } from "./libs/StandardHookMetadata.sol";
+import { StandardHookMetadata } from "./libraries/StandardHookMetadata.sol";
 import { IPortal } from "../../interfaces/IPortal.sol";
 import { TypeConverter } from "../../libraries/TypeConverter.sol";
 
 /// @title  HyperLane Bridge Adapter
 /// @author M0 Labs
 /// @notice Sends and receives messages to and from remote chains using Hyperlane protocol
-contract HyperlaneBridge is BridgeAdapter, IHyperlaneBridgeAdapter {
+contract HyperlaneBridgeAdapter is BridgeAdapter, IHyperlaneBridgeAdapter {
     using TypeConverter for *;
 
     /// @inheritdoc IHyperlaneBridgeAdapter
@@ -48,11 +48,11 @@ contract HyperlaneBridge is BridgeAdapter, IHyperlaneBridgeAdapter {
 
     /// @inheritdoc IBridgeAdapter
     function sendMessage(
-        uint32 destinationChainId, 
-        uint256 gasLimit, 
-        bytes32 refundAddress, 
+        uint32 destinationChainId,
+        uint256 gasLimit,
+        bytes32 refundAddress,
         bytes memory payload,
-        bytes calldata  /* extraArguments */
+        bytes calldata /* extraArguments */
     ) external payable {
         _revertIfNotPortal();
 

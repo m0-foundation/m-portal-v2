@@ -11,7 +11,6 @@ import { PausableUpgradeable } from "../lib/common/lib/openzeppelin-contracts-up
 import { UUPSUpgradeable } from "../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import { IBridgeAdapter } from "./interfaces/IBridgeAdapter.sol";
-import { IMTokenLike } from "./interfaces/IMTokenLike.sol";
 import { IPortal, ChainConfig } from "./interfaces/IPortal.sol";
 import { ISwapFacilityLike } from "./interfaces/ISwapFacilityLike.sol";
 import { IOrderBookLike } from "./interfaces/IOrderBookLike.sol";
@@ -112,7 +111,10 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
         _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
 
-        return _sendToken(amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter, bridgeAdapterArgs);
+        return
+            _sendToken(
+                amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter, bridgeAdapterArgs
+            );
     }
 
     function sendToken(
@@ -127,7 +129,10 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     ) external payable whenNotPaused whenNotLocked returns (bytes32 messageId) {
         _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
-        return _sendToken(amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter, bridgeAdapterArgs);
+        return
+            _sendToken(
+                amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter, bridgeAdapterArgs
+            );
     }
 
     /// @inheritdoc IPortal
@@ -374,7 +379,9 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
 
         _sendMessage(destinationChainId, PayloadType.TokenTransfer, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
 
-        emit TokenSent(sourceToken, destinationChainId, destinationToken, msg.sender, recipient, transferAmount, index, bridgeAdapter, messageId);
+        emit TokenSent(
+            sourceToken, destinationChainId, destinationToken, msg.sender, recipient, transferAmount, index, bridgeAdapter, messageId
+        );
     }
 
     /// @dev Sends the fill report to the destination chain.

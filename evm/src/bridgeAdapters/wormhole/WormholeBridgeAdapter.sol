@@ -46,7 +46,7 @@ contract WormholeBridgeAdapter is BridgeAdapter, IWormholeBridgeAdapter {
     ) BridgeAdapter(portal_) {
         if ((coreBridge = coreBridge_) == address(0)) revert ZeroCoreBridge();
         if ((executor = executor_) == address(0)) revert ZeroExecutor();
-        
+
         consistencyLevel = consistencyLevel_;
         currentWormholeChainId = currentWormholeChainId_;
     }
@@ -64,7 +64,13 @@ contract WormholeBridgeAdapter is BridgeAdapter, IWormholeBridgeAdapter {
     }
 
     /// @inheritdoc IBridgeAdapter
-    function sendMessage(uint32 destinationChainId, uint256 gasLimit, bytes32 refundAddress, bytes memory payload, bytes calldata signedQuote) external payable {
+    function sendMessage(
+        uint32 destinationChainId,
+        uint256 gasLimit,
+        bytes32 refundAddress,
+        bytes memory payload,
+        bytes calldata signedQuote
+    ) external payable {
         _revertIfNotPortal();
 
         uint256 coreBridgeFee = ICoreBridge(coreBridge).messageFee();
