@@ -13,10 +13,27 @@ import { TypeConverter } from "../../libraries/TypeConverter.sol";
 import { RelayInstructions } from "./libraries/RelayInstructions.sol";
 import { ExecutorMessages } from "./libraries/ExecutorMessages.sol";
 
+abstract contract WormholeBridgeAdapterStorageLayout {
+    /// @custom:storage-location erc7201:M0.storage.WormholeBridgeAdapter
+    struct WormholeBridgeAdapterStorageStruct {
+        /// @notice Indicates whether a message with a given hash has been consumed.
+        mapping(bytes32 hash => bool) consumedMessages;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("M0.storage.WormholeBridgeAdapter")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 constant WORMHOLE_BRIDGE_ADAPTER_STORAGE_LOCATION = 0xc36ee3b8df5129da97f3c315d577051673b9e7cc93523a4006aae68954f30900;
+
+    function _getWormholeBridgeAdapterStorageLocation() internal pure returns (WormholeBridgeAdapterStorageStruct storage $) {
+        assembly {
+            $.slot := WORMHOLE_BRIDGE_ADAPTER_STORAGE_LOCATION
+        }
+    }
+}
+
 /// @title  Wormhole Bridge Adapter
 /// @author M0 Labs
 /// @notice Sends and receives messages to and from remote chains using Wormhole protocol
-contract WormholeBridgeAdapter is BridgeAdapter, IWormholeBridgeAdapter {
+contract WormholeBridgeAdapter is WormholeBridgeAdapterStorageLayout, BridgeAdapter, IWormholeBridgeAdapter {
     using TypeConverter for *;
 
     /// @inheritdoc IWormholeBridgeAdapter
@@ -63,6 +80,11 @@ contract WormholeBridgeAdapter is BridgeAdapter, IWormholeBridgeAdapter {
         revert OnChainQuoteNotSupported();
     }
 
+    /// @inheritdoc IWormholeBridgeAdapter
+    function messageConsumed(bytes32 hash) external view returns (bool) {
+        return _getWormholeBridgeAdapterStorageLocation().consumedMessages[hash];
+    }
+
     /// @inheritdoc IBridgeAdapter
     function sendMessage(
         uint32 destinationChainId,
@@ -94,11 +116,16 @@ contract WormholeBridgeAdapter is BridgeAdapter, IWormholeBridgeAdapter {
 
     /// @inheritdoc IVaaV1Receiver
     function executeVAAv1(bytes calldata encodedMessage) external payable {
-        // verify VAA against Wormhole Core Bridge contract
+        // Verify VAA against Wormhole Core Bridge contract
         (CoreBridgeVM memory vm, bool valid, string memory reason) = ICoreBridge(coreBridge).parseAndVerifyVM(encodedMessage);
 
-        // ensure that the VAA is valid
+        // Ensure that the VAA is valid
         if (!valid) revert InvalidVaa(reason);
+
+        // Replay protection: ensure the message hasn't been consumed yet
+        WormholeBridgeAdapterStorageStruct storage $ = _getWormholeBridgeAdapterStorageLocation();
+        if ($.consumedMessages[vm.hash]) revert MessageAlreadyConsumed(vm.hash);
+        $.consumedMessages[vm.hash] = true;
 
         // Convert Wormhole chain ID to internal chain ID
         uint32 sourceChainId = _getChainIdOrRevert(vm.emitterChainId);
