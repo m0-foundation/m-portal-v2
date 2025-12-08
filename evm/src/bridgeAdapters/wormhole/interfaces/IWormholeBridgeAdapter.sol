@@ -31,6 +31,9 @@ interface IWormholeBridgeAdapter is IBridgeAdapter, IVaaV1Receiver {
     /// @notice Thrown when calling `quote` function.
     error OnChainQuoteNotSupported();
 
+    /// @notice Thrown when a message with a given hash has already been consumed.
+    error MessageAlreadyConsumed(bytes32 hash);
+
     ///////////////////////////////////////////////////////////////////////////
     //                          VIEW/PURE FUNCTIONS                          //
     ///////////////////////////////////////////////////////////////////////////
@@ -47,4 +50,8 @@ interface IWormholeBridgeAdapter is IBridgeAdapter, IVaaV1Receiver {
 
     /// @notice Returns the Wormhole chain ID of the current chain.
     function currentWormholeChainId() external view returns (uint16);
+
+    /// @notice Returns whether a Wormhole message with a given hash has been consumed.
+    /// @param  hash The Wormhole hash of the message.
+    function messageConsumed(bytes32 hash) external view returns (bool);
 }

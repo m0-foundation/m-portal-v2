@@ -99,4 +99,35 @@ contract ExecuteVAAv1UnitTest is WormholeBridgeAdapterUnitTestBase {
         vm.expectRevert(abi.encodeWithSelector(IBridgeAdapter.UnsupportedBridgeChain.selector, unsupportedChain));
         adapter.executeVAAv1(encodedMessage);
     }
+
+    function test_executeVAAv1_revertsOnReplayAttack() external {
+        bytes memory payload = "test payload";
+        bytes memory encodedMessage = "encoded_vaa";
+        bytes32 messageHash = keccak256("unique_message_hash");
+
+        CoreBridgeVM memory mockVM = CoreBridgeVM({
+            version: 1,
+            timestamp: uint32(block.timestamp),
+            nonce: 0,
+            emitterChainId: SPOKE_WORMHOLE_CHAIN_ID,
+            emitterAddress: peerAdapterAddress,
+            sequence: 1,
+            consistencyLevel: CONSISTENCY_LEVEL,
+            payload: payload,
+            guardianSetIndex: 0,
+            signatures: new GuardianSignature[](0),
+            hash: messageHash
+        });
+
+        vm.mockCall(address(coreBridge), abi.encodeWithSelector(ICoreBridge.parseAndVerifyVM.selector), abi.encode(mockVM, true, ""));
+
+        // First execution should succeed
+        vm.expectCall(address(portal), abi.encodeWithSelector(IPortal.receiveMessage.selector, SPOKE_CHAIN_ID, payload));
+        adapter.executeVAAv1(encodedMessage);
+
+        // Second execution with the same message hash should revert
+        vm.mockCall(address(coreBridge), abi.encodeWithSelector(ICoreBridge.parseAndVerifyVM.selector), abi.encode(mockVM, true, ""));
+        vm.expectRevert(abi.encodeWithSelector(IWormholeBridgeAdapter.MessageAlreadyConsumed.selector, messageHash));
+        adapter.executeVAAv1(encodedMessage);
+    }
 }
