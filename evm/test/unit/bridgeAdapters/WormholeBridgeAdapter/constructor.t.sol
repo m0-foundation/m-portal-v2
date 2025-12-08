@@ -18,34 +18,16 @@ contract ConstructorUnitTest is WormholeBridgeAdapterUnitTestBase {
 
     function test_constructor_zeroPortal() external {
         vm.expectRevert(IBridgeAdapter.ZeroPortal.selector);
-        new WormholeBridgeAdapter(
-            address(coreBridge),
-            address(executor),
-            CONSISTENCY_LEVEL,
-            HUB_WORMHOLE_CHAIN_ID,
-            address(0)
-        );
+        new WormholeBridgeAdapter(address(coreBridge), address(executor), CONSISTENCY_LEVEL, HUB_WORMHOLE_CHAIN_ID, address(0));
     }
 
     function test_constructor_zeroCoreBridge() external {
         vm.expectRevert(IWormholeBridgeAdapter.ZeroCoreBridge.selector);
-        new WormholeBridgeAdapter(
-            address(0),
-            address(executor),
-            CONSISTENCY_LEVEL,
-            HUB_WORMHOLE_CHAIN_ID,
-            address(portal)
-        );
+        new WormholeBridgeAdapter(address(0), address(executor), CONSISTENCY_LEVEL, HUB_WORMHOLE_CHAIN_ID, address(portal));
     }
 
     function test_constructor_zeroExecutor() external {
         vm.expectRevert(IWormholeBridgeAdapter.ZeroExecutor.selector);
-        new WormholeBridgeAdapter(
-            address(coreBridge),
-            address(0),
-            CONSISTENCY_LEVEL,
-            HUB_WORMHOLE_CHAIN_ID,
-            address(portal)
-        );
+        new WormholeBridgeAdapter(address(coreBridge), address(0), CONSISTENCY_LEVEL, HUB_WORMHOLE_CHAIN_ID, address(portal));
     }
 }

@@ -38,9 +38,7 @@ contract MockBridgeAdapter is IBridgeAdapter {
         bytes memory payload,
         bytes calldata extraArguments
     ) external payable {
-        sendMessageCalls.push(
-            SendMessageCall(destinationChainId, gasLimit, refundAddress, payload, extraArguments)
-        );
+        sendMessageCalls.push(SendMessageCall(destinationChainId, gasLimit, refundAddress, payload, extraArguments));
     }
 
     function getSendMessageCallCount() external view returns (uint256) {

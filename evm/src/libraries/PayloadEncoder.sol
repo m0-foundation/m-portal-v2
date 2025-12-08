@@ -204,7 +204,14 @@ library PayloadEncoder {
     function decodeFillReport(bytes memory payload)
         internal
         pure
-        returns (bytes32 orderId, uint128 amountInToRelease, uint128 amountOutFilled, bytes32 originRecipient, bytes32 tokenIn,bytes32 messageId)
+        returns (
+            bytes32 orderId,
+            uint128 amountInToRelease,
+            uint128 amountOutFilled,
+            bytes32 originRecipient,
+            bytes32 tokenIn,
+            bytes32 messageId
+        )
     {
         uint256 offset = PAYLOAD_TYPE_LENGTH;
 

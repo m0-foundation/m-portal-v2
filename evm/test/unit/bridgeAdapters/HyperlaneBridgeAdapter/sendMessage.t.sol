@@ -9,7 +9,7 @@ import { HyperlaneBridgeAdapterUnitTestBase } from "./HyperlaneBridgeAdapterUnit
 
 contract SendMessageUnitTest is HyperlaneBridgeAdapterUnitTestBase {
     using TypeConverter for *;
-    
+
     bytes32 hyperlaneMessageId = bytes32("hyperlaneMessageId");
 
     function test_sendMessage_dispatchesToMailbox() external {
@@ -18,12 +18,7 @@ contract SendMessageUnitTest is HyperlaneBridgeAdapterUnitTestBase {
         bytes memory payload = "test payload";
         uint256 fee = 0.001 ether;
 
-        vm.mockCall(
-            address(mailbox),
-            fee,
-            abi.encodeWithSelector(IMailbox.dispatch.selector),
-            abi.encode(hyperlaneMessageId)
-        );
+        vm.mockCall(address(mailbox), fee, abi.encodeWithSelector(IMailbox.dispatch.selector), abi.encode(hyperlaneMessageId));
 
         // Expect the mailbox dispatch to be called with the fee
         vm.expectCall(address(mailbox), fee, abi.encodeWithSelector(IMailbox.dispatch.selector));

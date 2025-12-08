@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { IAccessControl } from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
+import {
+    IAccessControl
+} from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
 
 import { IPortal } from "../../../src/interfaces/IPortal.sol";
 
@@ -37,23 +39,11 @@ contract SetSupportedBridgingPathUnitTest is HubPortalUnitTestBase {
     }
 
     function test_setSupportedBridgingPath_revertsIfCalledByNonOperator() external {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                admin,
-                hubPortal.OPERATOR_ROLE()
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, admin, hubPortal.OPERATOR_ROLE()));
         vm.prank(admin);
         hubPortal.setSupportedBridgingPath(sourceToken, SPOKE_CHAIN_ID, destinationToken, true);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                user,
-                hubPortal.OPERATOR_ROLE()
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, hubPortal.OPERATOR_ROLE()));
         vm.prank(user);
         hubPortal.setSupportedBridgingPath(sourceToken, SPOKE_CHAIN_ID, destinationToken, true);
     }

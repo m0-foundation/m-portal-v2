@@ -30,17 +30,10 @@ contract ExecuteVAAv1UnitTest is WormholeBridgeAdapterUnitTestBase {
             hash: bytes32(0)
         });
 
-        vm.mockCall(
-            address(coreBridge),
-            abi.encodeWithSelector(ICoreBridge.parseAndVerifyVM.selector),
-            abi.encode(mockVM, true, "")
-        );
+        vm.mockCall(address(coreBridge), abi.encodeWithSelector(ICoreBridge.parseAndVerifyVM.selector), abi.encode(mockVM, true, ""));
 
         // Expect portal.receiveMessage to be called with correct parameters
-        vm.expectCall(
-            address(portal),
-            abi.encodeWithSelector(IPortal.receiveMessage.selector, SPOKE_CHAIN_ID, payload)
-        );
+        vm.expectCall(address(portal), abi.encodeWithSelector(IPortal.receiveMessage.selector, SPOKE_CHAIN_ID, payload));
 
         adapter.executeVAAv1(encodedMessage);
     }
@@ -51,11 +44,7 @@ contract ExecuteVAAv1UnitTest is WormholeBridgeAdapterUnitTestBase {
 
         CoreBridgeVM memory mockVM;
 
-        vm.mockCall(
-            address(coreBridge),
-            abi.encodeWithSelector(ICoreBridge.parseAndVerifyVM.selector),
-            abi.encode(mockVM, false, reason)
-        );
+        vm.mockCall(address(coreBridge), abi.encodeWithSelector(ICoreBridge.parseAndVerifyVM.selector), abi.encode(mockVM, false, reason));
 
         vm.expectRevert(abi.encodeWithSelector(IWormholeBridgeAdapter.InvalidVaa.selector, reason));
         adapter.executeVAAv1(encodedMessage);
@@ -80,11 +69,7 @@ contract ExecuteVAAv1UnitTest is WormholeBridgeAdapterUnitTestBase {
             hash: bytes32(0)
         });
 
-        vm.mockCall(
-            address(coreBridge),
-            abi.encodeWithSelector(ICoreBridge.parseAndVerifyVM.selector),
-            abi.encode(mockVM, true, "")
-        );
+        vm.mockCall(address(coreBridge), abi.encodeWithSelector(ICoreBridge.parseAndVerifyVM.selector), abi.encode(mockVM, true, ""));
 
         vm.expectRevert(abi.encodeWithSelector(IWormholeBridgeAdapter.UnsupportedSender.selector, unsupportedSender));
         adapter.executeVAAv1(encodedMessage);
@@ -109,11 +94,7 @@ contract ExecuteVAAv1UnitTest is WormholeBridgeAdapterUnitTestBase {
             hash: bytes32(0)
         });
 
-        vm.mockCall(
-            address(coreBridge),
-            abi.encodeWithSelector(ICoreBridge.parseAndVerifyVM.selector),
-            abi.encode(mockVM, true, "")
-        );
+        vm.mockCall(address(coreBridge), abi.encodeWithSelector(ICoreBridge.parseAndVerifyVM.selector), abi.encode(mockVM, true, ""));
 
         vm.expectRevert(abi.encodeWithSelector(IBridgeAdapter.UnsupportedBridgeChain.selector, unsupportedChain));
         adapter.executeVAAv1(encodedMessage);

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { IAccessControl } from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
+import {
+    IAccessControl
+} from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
 
 import { IPortal } from "../../../src/interfaces/IPortal.sol";
 import { PayloadType } from "../../../src/libraries/PayloadEncoder.sol";
@@ -23,23 +25,11 @@ contract SetPayloadGasLimitUnitTest is HubPortalUnitTestBase {
     function test_setPayloadGasLimit_revertsIfCalledByNonOperator() external {
         uint256 newGasLimit = 300_000;
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                admin,
-                hubPortal.OPERATOR_ROLE()
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, admin, hubPortal.OPERATOR_ROLE()));
         vm.prank(admin);
         hubPortal.setPayloadGasLimit(SPOKE_CHAIN_ID, PayloadType.TokenTransfer, newGasLimit);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                user,
-                hubPortal.OPERATOR_ROLE()
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, hubPortal.OPERATOR_ROLE()));
         vm.prank(user);
         hubPortal.setPayloadGasLimit(SPOKE_CHAIN_ID, PayloadType.TokenTransfer, newGasLimit);
     }

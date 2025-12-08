@@ -9,7 +9,7 @@ contract CurrentIndexUnitTest is HubPortalUnitTestBase {
     using TypeConverter for address;
 
     function test_currentIndex_whenEarningEnabled() external {
-        uint128 expectedIndex = 1_100000068703;
+        uint128 expectedIndex = 1_100_000_068_703;
         mToken.setCurrentIndex(expectedIndex);
 
         // Enable earning so the portal returns mToken's index
@@ -26,6 +26,6 @@ contract CurrentIndexUnitTest is HubPortalUnitTestBase {
         uint128 index = hubPortal.currentIndex();
 
         // Default disableEarningIndex is 1e12 (EXP_SCALED_ONE)
-        assertEq(index, 1_000000000000);
+        assertEq(index, 1_000_000_000_000);
     }
 }

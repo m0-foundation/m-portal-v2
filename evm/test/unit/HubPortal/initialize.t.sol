@@ -2,7 +2,9 @@
 pragma solidity 0.8.30;
 
 import { IndexingMath } from "../../../lib/common/src/libs/IndexingMath.sol";
-import { ERC1967Proxy } from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {
+    ERC1967Proxy
+} from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import { IPortal } from "../../../src/interfaces/IPortal.sol";
 import { HubPortal } from "../../../src/HubPortal.sol";
@@ -21,7 +23,7 @@ contract InitializeUnitTest is HubPortalUnitTestBase {
     function test_initialize_cannotReinitialize() external {
         bytes memory initializeData = abi.encodeCall(HubPortal.initialize, (admin, pauser, operator));
 
-        (bool success, ) = address(hubPortal).call(initializeData);
+        (bool success,) = address(hubPortal).call(initializeData);
         assertFalse(success);
     }
 

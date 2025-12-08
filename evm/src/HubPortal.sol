@@ -65,7 +65,11 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     ///////////////////////////////////////////////////////////////////////////
 
     /// @inheritdoc IHubPortal
-    function sendMTokenIndex(uint32 destinationChainId, bytes32 refundAddress, bytes calldata bridgeAdapterArgs) external payable whenNotPaused returns (bytes32 messageId) {
+    function sendMTokenIndex(
+        uint32 destinationChainId,
+        bytes32 refundAddress,
+        bytes calldata bridgeAdapterArgs
+    ) external payable whenNotPaused returns (bytes32 messageId) {
         address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
         _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
 
@@ -187,7 +191,12 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     ///////////////////////////////////////////////////////////////////////////
 
     /// @dev Sends the M token index to the destination chain.
-    function _sendMTokenIndex(uint32 destinationChainId, bytes32 refundAddress, address bridgeAdapter, bytes calldata bridgeAdapterArgs) private returns (bytes32 messageId) {
+    function _sendMTokenIndex(
+        uint32 destinationChainId,
+        bytes32 refundAddress,
+        address bridgeAdapter,
+        bytes calldata bridgeAdapterArgs
+    ) private returns (bytes32 messageId) {
         _revertIfZeroRefundAddress(refundAddress);
 
         uint128 index = _currentIndex();

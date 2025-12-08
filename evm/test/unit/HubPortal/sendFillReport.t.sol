@@ -42,8 +42,7 @@ contract SendFillReportUnitTest is HubPortalUnitTestBase {
         vm.expectCall(
             defaultBridgeAdapter,
             abi.encodeCall(
-                IBridgeAdapter.sendMessage,
-                (SPOKE_CHAIN_ID, TOKEN_TRANSFER_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs)
+                IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, TOKEN_TRANSFER_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs)
             )
         );
         vm.expectEmit();
@@ -84,8 +83,7 @@ contract SendFillReportUnitTest is HubPortalUnitTestBase {
         vm.expectCall(
             address(customAdapter),
             abi.encodeCall(
-                IBridgeAdapter.sendMessage,
-                (SPOKE_CHAIN_ID, TOKEN_TRANSFER_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs)
+                IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, TOKEN_TRANSFER_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs)
             )
         );
         vm.expectEmit();
@@ -101,13 +99,7 @@ contract SendFillReportUnitTest is HubPortalUnitTestBase {
         );
 
         vm.prank(address(mockOrderBook));
-        hubPortal.sendFillReport{ value: fee }(
-            SPOKE_CHAIN_ID,
-            testReport,
-            refundAddress,
-            address(customAdapter),
-            bridgeAdapterArgs
-        );
+        hubPortal.sendFillReport{ value: fee }(SPOKE_CHAIN_ID, testReport, refundAddress, address(customAdapter), bridgeAdapterArgs);
     }
 
     function test_sendFillReport_revertsIfPaused() external {
@@ -136,22 +128,10 @@ contract SendFillReportUnitTest is HubPortalUnitTestBase {
     function test_sendFillReport_revertsIfUnsupportedBridgeAdapter() external {
         address unsupportedAdapter = makeAddr("unsupported");
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPortal.UnsupportedBridgeAdapter.selector,
-                SPOKE_CHAIN_ID,
-                unsupportedAdapter
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, SPOKE_CHAIN_ID, unsupportedAdapter));
 
         vm.prank(address(mockOrderBook));
-        hubPortal.sendFillReport(
-            SPOKE_CHAIN_ID,
-            testReport,
-            refundAddress,
-            unsupportedAdapter,
-            bridgeAdapterArgs
-        );
+        hubPortal.sendFillReport(SPOKE_CHAIN_ID, testReport, refundAddress, unsupportedAdapter, bridgeAdapterArgs);
     }
 
     function test_sendFillReport_revertsIfNotOrderBook() external {

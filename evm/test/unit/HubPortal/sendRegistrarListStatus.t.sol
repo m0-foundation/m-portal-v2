@@ -31,29 +31,13 @@ contract SendRegistrarListStatusUnitTest is HubPortalUnitTestBase {
 
         vm.expectCall(
             defaultBridgeAdapter,
-            abi.encodeCall(
-                IBridgeAdapter.sendMessage,
-                (SPOKE_CHAIN_ID, LIST_UPDATE_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs)
-            )
+            abi.encodeCall(IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, LIST_UPDATE_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs))
         );
         vm.expectEmit();
-        emit IHubPortal.RegistrarListStatusSent(
-            SPOKE_CHAIN_ID,
-            testListName,
-            testAccount,
-            status,
-            defaultBridgeAdapter,
-            messageId
-        );
+        emit IHubPortal.RegistrarListStatusSent(SPOKE_CHAIN_ID, testListName, testAccount, status, defaultBridgeAdapter, messageId);
 
         vm.prank(user);
-        hubPortal.sendRegistrarListStatus{ value: fee }(
-            SPOKE_CHAIN_ID,
-            testListName,
-            testAccount,
-            refundAddress,
-            bridgeAdapterArgs
-        );
+        hubPortal.sendRegistrarListStatus{ value: fee }(SPOKE_CHAIN_ID, testListName, testAccount, refundAddress, bridgeAdapterArgs);
     }
 
     function test_sendRegistrarListStatus_withDefaultAdapter_accountNotInList() external {
@@ -67,29 +51,13 @@ contract SendRegistrarListStatusUnitTest is HubPortalUnitTestBase {
 
         vm.expectCall(
             defaultBridgeAdapter,
-            abi.encodeCall(
-                IBridgeAdapter.sendMessage,
-                (SPOKE_CHAIN_ID, LIST_UPDATE_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs)
-            )
+            abi.encodeCall(IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, LIST_UPDATE_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs))
         );
         vm.expectEmit();
-        emit IHubPortal.RegistrarListStatusSent(
-            SPOKE_CHAIN_ID,
-            testListName,
-            testAccount,
-            status,
-            defaultBridgeAdapter,
-            messageId
-        );
+        emit IHubPortal.RegistrarListStatusSent(SPOKE_CHAIN_ID, testListName, testAccount, status, defaultBridgeAdapter, messageId);
 
         vm.prank(user);
-        hubPortal.sendRegistrarListStatus{ value: fee }(
-            SPOKE_CHAIN_ID,
-            testListName,
-            testAccount,
-            refundAddress,
-            bridgeAdapterArgs
-        );
+        hubPortal.sendRegistrarListStatus{ value: fee }(SPOKE_CHAIN_ID, testListName, testAccount, refundAddress, bridgeAdapterArgs);
     }
 
     function test_sendRegistrarListStatus_withSpecificAdapter() external {
@@ -109,29 +77,14 @@ contract SendRegistrarListStatusUnitTest is HubPortalUnitTestBase {
 
         vm.expectCall(
             address(customAdapter),
-            abi.encodeCall(
-                IBridgeAdapter.sendMessage,
-                (SPOKE_CHAIN_ID, LIST_UPDATE_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs)
-            )
+            abi.encodeCall(IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, LIST_UPDATE_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs))
         );
         vm.expectEmit();
-        emit IHubPortal.RegistrarListStatusSent(
-            SPOKE_CHAIN_ID,
-            testListName,
-            testAccount,
-            status,
-            address(customAdapter),
-            messageId
-        );
+        emit IHubPortal.RegistrarListStatusSent(SPOKE_CHAIN_ID, testListName, testAccount, status, address(customAdapter), messageId);
 
         vm.prank(user);
         hubPortal.sendRegistrarListStatus{ value: fee }(
-            SPOKE_CHAIN_ID,
-            testListName,
-            testAccount,
-            refundAddress,
-            address(customAdapter),
-            bridgeAdapterArgs
+            SPOKE_CHAIN_ID, testListName, testAccount, refundAddress, address(customAdapter), bridgeAdapterArgs
         );
     }
 
@@ -140,57 +93,26 @@ contract SendRegistrarListStatusUnitTest is HubPortalUnitTestBase {
         hubPortal.pause();
 
         vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
-        hubPortal.sendRegistrarListStatus(
-            SPOKE_CHAIN_ID,
-            testListName,
-            testAccount,
-            refundAddress,
-            bridgeAdapterArgs
-        );
+        hubPortal.sendRegistrarListStatus(SPOKE_CHAIN_ID, testListName, testAccount, refundAddress, bridgeAdapterArgs);
     }
 
     function test_sendRegistrarListStatus_revertsIfZeroRefundAddress() external {
         vm.expectRevert(IPortal.ZeroRefundAddress.selector);
-        hubPortal.sendRegistrarListStatus(
-            SPOKE_CHAIN_ID,
-            testListName,
-            testAccount,
-            bytes32(0),
-            bridgeAdapterArgs
-        );
+        hubPortal.sendRegistrarListStatus(SPOKE_CHAIN_ID, testListName, testAccount, bytes32(0), bridgeAdapterArgs);
     }
 
     function test_sendRegistrarListStatus_revertsIfNoBridgeAdapterSet() external {
         uint32 unconfiguredChain = 3;
 
         vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, unconfiguredChain));
-        hubPortal.sendRegistrarListStatus(
-            unconfiguredChain,
-            testListName,
-            testAccount,
-            refundAddress,
-            bridgeAdapterArgs
-        );
+        hubPortal.sendRegistrarListStatus(unconfiguredChain, testListName, testAccount, refundAddress, bridgeAdapterArgs);
     }
 
     function test_sendRegistrarListStatus_revertsIfUnsupportedBridgeAdapter() external {
         address unsupportedAdapter = makeAddr("unsupported");
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPortal.UnsupportedBridgeAdapter.selector,
-                SPOKE_CHAIN_ID,
-                unsupportedAdapter
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, SPOKE_CHAIN_ID, unsupportedAdapter));
 
-        hubPortal.sendRegistrarListStatus(
-            SPOKE_CHAIN_ID,
-            testListName,
-            testAccount,
-            refundAddress,
-            unsupportedAdapter,
-            bridgeAdapterArgs
-        );
+        hubPortal.sendRegistrarListStatus(SPOKE_CHAIN_ID, testListName, testAccount, refundAddress, unsupportedAdapter, bridgeAdapterArgs);
     }
 }

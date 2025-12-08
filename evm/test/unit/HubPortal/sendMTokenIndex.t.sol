@@ -19,7 +19,7 @@ contract SendMTokenIndexUnitTest is HubPortalUnitTestBase {
     bytes internal bridgeAdapterArgs = "";
 
     function test_sendMTokenIndex_withDefaultAdapter() external {
-        uint128 index = 1_100000068703;
+        uint128 index = 1_100_000_068_703;
         uint256 fee = 1;
         bytes32 messageId = _getMessageId();
         bytes memory payload = PayloadEncoder.encodeIndex(index, messageId);
@@ -30,7 +30,8 @@ contract SendMTokenIndexUnitTest is HubPortalUnitTestBase {
         hubPortal.enableEarning();
 
         vm.expectCall(
-            defaultBridgeAdapter, abi.encodeCall(IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, INDEX_UPDATE_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs))
+            defaultBridgeAdapter,
+            abi.encodeCall(IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, INDEX_UPDATE_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs))
         );
         vm.expectEmit();
         emit IHubPortal.MTokenIndexSent(SPOKE_CHAIN_ID, index, defaultBridgeAdapter, messageId);
@@ -40,7 +41,7 @@ contract SendMTokenIndexUnitTest is HubPortalUnitTestBase {
     }
 
     function test_sendMTokenIndex_withSpecificAdapter() external {
-        uint128 index = 1_100000068703;
+        uint128 index = 1_100_000_068_703;
         uint256 fee = 1;
         bytes32 messageId = _getMessageId();
         bytes memory payload = PayloadEncoder.encodeIndex(index, messageId);
@@ -58,21 +59,13 @@ contract SendMTokenIndexUnitTest is HubPortalUnitTestBase {
 
         vm.expectCall(
             address(customAdapter),
-            abi.encodeCall(
-                IBridgeAdapter.sendMessage,
-                (SPOKE_CHAIN_ID, INDEX_UPDATE_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs)
-            )
+            abi.encodeCall(IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, INDEX_UPDATE_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs))
         );
         vm.expectEmit();
         emit IHubPortal.MTokenIndexSent(SPOKE_CHAIN_ID, index, address(customAdapter), messageId);
 
         vm.prank(user);
-        hubPortal.sendMTokenIndex{ value: fee }(
-            SPOKE_CHAIN_ID,
-            refundAddress,
-            address(customAdapter),
-            bridgeAdapterArgs
-        );
+        hubPortal.sendMTokenIndex{ value: fee }(SPOKE_CHAIN_ID, refundAddress, address(customAdapter), bridgeAdapterArgs);
     }
 
     function test_sendMTokenIndex_revertsIfPaused() external {
@@ -98,19 +91,8 @@ contract SendMTokenIndexUnitTest is HubPortalUnitTestBase {
     function test_sendMTokenIndex_revertsIfUnsupportedBridgeAdapter() external {
         address unsupportedAdapter = makeAddr("unsupported");
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPortal.UnsupportedBridgeAdapter.selector,
-                SPOKE_CHAIN_ID,
-                unsupportedAdapter
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, SPOKE_CHAIN_ID, unsupportedAdapter));
 
-        hubPortal.sendMTokenIndex(
-            SPOKE_CHAIN_ID,
-            refundAddress,
-            unsupportedAdapter,
-            bridgeAdapterArgs
-        );
+        hubPortal.sendMTokenIndex(SPOKE_CHAIN_ID, refundAddress, unsupportedAdapter, bridgeAdapterArgs);
     }
 }

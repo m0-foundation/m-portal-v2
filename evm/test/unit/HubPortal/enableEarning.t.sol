@@ -8,7 +8,7 @@ import { HubPortalUnitTestBase } from "./HubPortalUnitTestBase.sol";
 
 contract EnableEarningUnitTest is HubPortalUnitTestBase {
     function test_enableEarning() external {
-        uint128 currentMIndex = 1_100000068703;
+        uint128 currentMIndex = 1_100_000_068_703;
 
         mToken.setCurrentIndex(currentMIndex);
         registrar.set(EARNERS_LIST_IGNORED, bytes32("1"));
@@ -29,7 +29,7 @@ contract EnableEarningUnitTest is HubPortalUnitTestBase {
     }
 
     function test_enableEarning_revertsWhenReenablingEarning() external {
-        mToken.setCurrentIndex(1_100000068703);
+        mToken.setCurrentIndex(1_100_000_068_703);
 
         // enable
         registrar.setListContains(EARNERS_LIST, address(hubPortal), true);

@@ -3,7 +3,9 @@
 pragma solidity 0.8.30;
 
 import { Test } from "../../../../lib/forge-std/src/Test.sol";
-import { ERC1967Proxy } from "../../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {
+    ERC1967Proxy
+} from "../../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import { WormholeBridgeAdapter } from "../../../../src/bridgeAdapters/wormhole/WormholeBridgeAdapter.sol";
 import { TypeConverter } from "../../../../src/libraries/TypeConverter.sol";
@@ -42,13 +44,8 @@ abstract contract WormholeBridgeAdapterUnitTestBase is Test {
         executor = new MockWormholeExecutor();
 
         // Deploy implementation
-        implementation = new WormholeBridgeAdapter(
-            address(coreBridge),
-            address(executor),
-            CONSISTENCY_LEVEL,
-            HUB_WORMHOLE_CHAIN_ID,
-            address(portal)
-        );
+        implementation =
+            new WormholeBridgeAdapter(address(coreBridge), address(executor), CONSISTENCY_LEVEL, HUB_WORMHOLE_CHAIN_ID, address(portal));
 
         // Deploy UUPS proxy
         bytes memory initializeData = abi.encodeCall(WormholeBridgeAdapter.initialize, (admin, operator));

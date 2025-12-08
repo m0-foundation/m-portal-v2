@@ -5,7 +5,7 @@ pragma solidity 0.8.30;
 import { CoreBridgeVM } from "../../src/bridgeAdapters/wormhole/interfaces/ICoreBridge.sol";
 
 contract MockWormholeCoreBridge {
-    receive() external payable {}
+    receive() external payable { }
 
     /// @notice Returns the fee required to publish a message
     function messageFee() external pure returns (uint256) {

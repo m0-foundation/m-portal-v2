@@ -15,11 +15,7 @@ contract QuoteUnitTest is HyperlaneBridgeAdapterUnitTestBase {
         bytes memory payload = "test payload";
         uint256 expectedFee = 0.001 ether;
 
-        vm.mockCall(
-            address(mailbox),
-            abi.encodeWithSelector(IMailbox.quoteDispatch.selector),
-            abi.encode(expectedFee)
-        );
+        vm.mockCall(address(mailbox), abi.encodeWithSelector(IMailbox.quoteDispatch.selector), abi.encode(expectedFee));
 
         uint256 fee = adapter.quote(SPOKE_CHAIN_ID, gasLimit, payload);
 
@@ -32,11 +28,7 @@ contract QuoteUnitTest is HyperlaneBridgeAdapterUnitTestBase {
 
         bytes memory payload = "test payload";
 
-        vm.mockCall(
-            address(mailbox),
-            abi.encodeWithSelector(IMailbox.quoteDispatch.selector),
-            abi.encode(expectedFee)
-        );
+        vm.mockCall(address(mailbox), abi.encodeWithSelector(IMailbox.quoteDispatch.selector), abi.encode(expectedFee));
 
         uint256 fee = adapter.quote(SPOKE_CHAIN_ID, gasLimit, payload);
 

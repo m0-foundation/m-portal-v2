@@ -3,7 +3,9 @@
 pragma solidity 0.8.30;
 
 import { Test } from "../../../lib/forge-std/src/Test.sol";
-import { ERC1967Proxy } from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {
+    ERC1967Proxy
+} from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import { SpokePortal } from "../../../src/SpokePortal.sol";
 import { ChainConfig } from "../../../src/interfaces/IPortal.sol";
@@ -62,12 +64,7 @@ abstract contract SpokePortalUnitTestBase is Test {
         bridgeAdapter = new MockBridgeAdapter();
 
         // Deploy implementation
-        implementation = new SpokePortal(
-            address(mToken),
-            address(registrar),
-            address(swapFacility),
-            address(mockOrderBook)
-        );
+        implementation = new SpokePortal(address(mToken), address(registrar), address(swapFacility), address(mockOrderBook));
 
         // Deploy UUPS proxy
         bytes memory initializeData = abi.encodeCall(SpokePortal.initialize, (admin, pauser, operator));
@@ -86,7 +83,7 @@ abstract contract SpokePortalUnitTestBase is Test {
 
         spokePortal.setPayloadGasLimit(HUB_CHAIN_ID, PayloadType.TokenTransfer, TOKEN_TRANSFER_GAS_LIMIT);
         spokePortal.setPayloadGasLimit(HUB_CHAIN_ID, PayloadType.FillReport, FILL_REPORT_GAS_LIMIT);
-        
+
         vm.stopPrank();
 
         // Fund accounts

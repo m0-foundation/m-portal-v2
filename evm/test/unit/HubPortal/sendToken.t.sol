@@ -32,16 +32,9 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
 
     function test_sendToken_withMToken() external {
         uint256 fee = 1;
-        uint128 index = 1_100000068703;
+        uint128 index = 1_100_000_068_703;
         bytes32 messageId = _getMessageId();
-        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
-            amount,
-            spokeMToken,
-            user,
-            recipient,
-            index,
-            messageId
-        );
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, spokeMToken, user, recipient, index, messageId);
         address defaultBridgeAdapter = hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID);
 
         mToken.setCurrentIndex(index);
@@ -54,47 +47,23 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
         vm.expectCall(
             defaultBridgeAdapter,
             abi.encodeCall(
-                IBridgeAdapter.sendMessage,
-                (SPOKE_CHAIN_ID, TOKEN_TRANSFER_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs)
+                IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, TOKEN_TRANSFER_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs)
             )
         );
         vm.expectEmit();
         emit IPortal.TokenSent(
-            address(mToken),
-            SPOKE_CHAIN_ID,
-            spokeMToken,
-            user,
-            recipient,
-            amount,
-            index,
-            defaultBridgeAdapter,
-            messageId
+            address(mToken), SPOKE_CHAIN_ID, spokeMToken, user, recipient, amount, index, defaultBridgeAdapter, messageId
         );
 
-        hubPortal.sendToken{ value: fee }(
-            amount,
-            address(mToken),
-            SPOKE_CHAIN_ID,
-            spokeMToken,
-            recipient,
-            refundAddress,
-            bridgeAdapterArgs
-        );
+        hubPortal.sendToken{ value: fee }(amount, address(mToken), SPOKE_CHAIN_ID, spokeMToken, recipient, refundAddress, bridgeAdapterArgs);
         vm.stopPrank();
     }
 
     function test_sendToken_withWrappedMToken() external {
         uint256 fee = 1;
-        uint128 index = 1_100000068703;
+        uint128 index = 1_100_000_068_703;
         bytes32 messageId = _getMessageId();
-        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
-            amount,
-            spokeWrappedMToken,
-            user,
-            recipient,
-            index,
-            messageId
-        );
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, spokeWrappedMToken, user, recipient, index, messageId);
         address defaultBridgeAdapter = hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID);
 
         mToken.setCurrentIndex(index);
@@ -107,47 +76,25 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
         vm.expectCall(
             defaultBridgeAdapter,
             abi.encodeCall(
-                IBridgeAdapter.sendMessage,
-                (SPOKE_CHAIN_ID, TOKEN_TRANSFER_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs)
+                IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, TOKEN_TRANSFER_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs)
             )
         );
         vm.expectEmit();
         emit IPortal.TokenSent(
-            address(wrappedMToken),
-            SPOKE_CHAIN_ID,
-            spokeWrappedMToken,
-            user,
-            recipient,
-            amount,
-            index,
-            defaultBridgeAdapter,
-            messageId
+            address(wrappedMToken), SPOKE_CHAIN_ID, spokeWrappedMToken, user, recipient, amount, index, defaultBridgeAdapter, messageId
         );
 
         hubPortal.sendToken{ value: fee }(
-            amount,
-            address(wrappedMToken),
-            SPOKE_CHAIN_ID,
-            spokeWrappedMToken,
-            recipient,
-            refundAddress,
-            bridgeAdapterArgs
+            amount, address(wrappedMToken), SPOKE_CHAIN_ID, spokeWrappedMToken, recipient, refundAddress, bridgeAdapterArgs
         );
         vm.stopPrank();
     }
 
     function test_sendToken_withSpecificAdapter() external {
         uint256 fee = 1;
-        uint128 index = 1_100000068703;
+        uint128 index = 1_100_000_068_703;
         bytes32 messageId = _getMessageId();
-        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
-            amount,
-            spokeMToken,
-            user,
-            recipient,
-            index,
-            messageId
-        );
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, spokeMToken, user, recipient, index, messageId);
 
         // Deploy a new mock adapter
         MockBridgeAdapter customAdapter = new MockBridgeAdapter();
@@ -166,32 +113,16 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
         vm.expectCall(
             address(customAdapter),
             abi.encodeCall(
-                IBridgeAdapter.sendMessage,
-                (SPOKE_CHAIN_ID, TOKEN_TRANSFER_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs)
+                IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, TOKEN_TRANSFER_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs)
             )
         );
         vm.expectEmit();
         emit IPortal.TokenSent(
-            address(mToken),
-            SPOKE_CHAIN_ID,
-            spokeMToken,
-            user,
-            recipient,
-            amount,
-            index,
-            address(customAdapter),
-            messageId
+            address(mToken), SPOKE_CHAIN_ID, spokeMToken, user, recipient, amount, index, address(customAdapter), messageId
         );
 
         hubPortal.sendToken{ value: fee }(
-            amount,
-            address(mToken),
-            SPOKE_CHAIN_ID,
-            spokeMToken,
-            recipient,
-            refundAddress,
-            address(customAdapter),
-            bridgeAdapterArgs
+            amount, address(mToken), SPOKE_CHAIN_ID, spokeMToken, recipient, refundAddress, address(customAdapter), bridgeAdapterArgs
         );
         vm.stopPrank();
     }
@@ -202,85 +133,37 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
 
         vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
         vm.prank(user);
-        hubPortal.sendToken(
-            amount,
-            address(mToken),
-            SPOKE_CHAIN_ID,
-            spokeMToken,
-            recipient,
-            refundAddress,
-            bridgeAdapterArgs
-        );
+        hubPortal.sendToken(amount, address(mToken), SPOKE_CHAIN_ID, spokeMToken, recipient, refundAddress, bridgeAdapterArgs);
     }
 
     function test_sendToken_revertsIfZeroAmount() external {
         vm.expectRevert(IPortal.ZeroAmount.selector);
         vm.prank(user);
-        hubPortal.sendToken(
-            0,
-            address(mToken),
-            SPOKE_CHAIN_ID,
-            spokeMToken,
-            recipient,
-            refundAddress,
-            bridgeAdapterArgs
-        );
+        hubPortal.sendToken(0, address(mToken), SPOKE_CHAIN_ID, spokeMToken, recipient, refundAddress, bridgeAdapterArgs);
     }
 
     function test_sendToken_revertsIfZeroRefundAddress() external {
         vm.expectRevert(IPortal.ZeroRefundAddress.selector);
         vm.prank(user);
-        hubPortal.sendToken(
-            amount,
-            address(mToken),
-            SPOKE_CHAIN_ID,
-            spokeMToken,
-            recipient,
-            bytes32(0),
-            bridgeAdapterArgs
-        );
+        hubPortal.sendToken(amount, address(mToken), SPOKE_CHAIN_ID, spokeMToken, recipient, bytes32(0), bridgeAdapterArgs);
     }
 
     function test_sendToken_revertsIfZeroSourceToken() external {
         vm.expectRevert(IPortal.ZeroSourceToken.selector);
         vm.prank(user);
-        hubPortal.sendToken(
-            amount,
-            address(0),
-            SPOKE_CHAIN_ID,
-            spokeMToken,
-            recipient,
-            refundAddress,
-            bridgeAdapterArgs
-        );
+        hubPortal.sendToken(amount, address(0), SPOKE_CHAIN_ID, spokeMToken, recipient, refundAddress, bridgeAdapterArgs);
     }
 
     function test_sendToken_revertsIfZeroDestinationToken() external {
         vm.expectRevert(IPortal.ZeroDestinationToken.selector);
         vm.prank(user);
-        hubPortal.sendToken(
-            amount,
-            address(mToken),
-            SPOKE_CHAIN_ID,
-            bytes32(0),
-            recipient,
-            refundAddress,
-            bridgeAdapterArgs
-        );
+        hubPortal.sendToken(amount, address(mToken), SPOKE_CHAIN_ID, bytes32(0), recipient, refundAddress, bridgeAdapterArgs);
     }
 
     function test_sendToken_revertsIfZeroRecipient() external {
         vm.expectRevert(IPortal.ZeroRecipient.selector);
         vm.prank(user);
-        hubPortal.sendToken(
-            amount,
-            address(mToken),
-            SPOKE_CHAIN_ID,
-            spokeMToken,
-            bytes32(0),
-            refundAddress,
-            bridgeAdapterArgs
-        );
+        hubPortal.sendToken(amount, address(mToken), SPOKE_CHAIN_ID, spokeMToken, bytes32(0), refundAddress, bridgeAdapterArgs);
     }
 
     function test_sendToken_revertsIfNoBridgeAdapterSet() external {
@@ -288,38 +171,17 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
 
         vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, unconfiguredChain));
         vm.prank(user);
-        hubPortal.sendToken(
-            amount,
-            address(mToken),
-            unconfiguredChain,
-            spokeMToken,
-            recipient,
-            refundAddress,
-            bridgeAdapterArgs
-        );
+        hubPortal.sendToken(amount, address(mToken), unconfiguredChain, spokeMToken, recipient, refundAddress, bridgeAdapterArgs);
     }
 
     function test_sendToken_revertsIfUnsupportedBridgeAdapter() external {
         address unsupportedAdapter = makeAddr("unsupported");
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPortal.UnsupportedBridgeAdapter.selector,
-                SPOKE_CHAIN_ID,
-                unsupportedAdapter
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, SPOKE_CHAIN_ID, unsupportedAdapter));
 
         vm.prank(user);
         hubPortal.sendToken(
-            amount,
-            address(mToken),
-            SPOKE_CHAIN_ID,
-            spokeMToken,
-            recipient,
-            refundAddress,
-            unsupportedAdapter,
-            bridgeAdapterArgs
+            amount, address(mToken), SPOKE_CHAIN_ID, spokeMToken, recipient, refundAddress, unsupportedAdapter, bridgeAdapterArgs
         );
     }
 
@@ -328,15 +190,7 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
         mToken.approve(address(hubPortal), amount);
 
         vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, HUB_CHAIN_ID));
-        hubPortal.sendToken(
-            amount,
-            address(mToken),
-            HUB_CHAIN_ID,
-            spokeMToken,
-            recipient,
-            refundAddress,
-            bridgeAdapterArgs
-        );
+        hubPortal.sendToken(amount, address(mToken), HUB_CHAIN_ID, spokeMToken, recipient, refundAddress, bridgeAdapterArgs);
         vm.stopPrank();
     }
 
@@ -347,22 +201,11 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
         mToken.approve(address(hubPortal), amount);
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IPortal.UnsupportedBridgingPath.selector,
-                address(mToken),
-                SPOKE_CHAIN_ID,
-                unsupportedDestinationToken
-            )
+            abi.encodeWithSelector(IPortal.UnsupportedBridgingPath.selector, address(mToken), SPOKE_CHAIN_ID, unsupportedDestinationToken)
         );
 
         hubPortal.sendToken(
-            amount,
-            address(mToken),
-            SPOKE_CHAIN_ID,
-            unsupportedDestinationToken,
-            recipient,
-            refundAddress,
-            bridgeAdapterArgs
+            amount, address(mToken), SPOKE_CHAIN_ID, unsupportedDestinationToken, recipient, refundAddress, bridgeAdapterArgs
         );
         vm.stopPrank();
     }

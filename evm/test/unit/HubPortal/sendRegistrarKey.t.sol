@@ -30,10 +30,7 @@ contract SendRegistrarKeyUnitTest is HubPortalUnitTestBase {
 
         vm.expectCall(
             defaultBridgeAdapter,
-            abi.encodeCall(
-                IBridgeAdapter.sendMessage,
-                (SPOKE_CHAIN_ID, KEY_UPDATE_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs)
-            )
+            abi.encodeCall(IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, KEY_UPDATE_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs))
         );
         vm.expectEmit();
         emit IHubPortal.RegistrarKeySent(SPOKE_CHAIN_ID, testKey, testValue, defaultBridgeAdapter, messageId);
@@ -58,28 +55,13 @@ contract SendRegistrarKeyUnitTest is HubPortalUnitTestBase {
 
         vm.expectCall(
             address(customAdapter),
-            abi.encodeCall(
-                IBridgeAdapter.sendMessage,
-                (SPOKE_CHAIN_ID, KEY_UPDATE_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs)
-            )
+            abi.encodeCall(IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, KEY_UPDATE_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs))
         );
         vm.expectEmit();
-        emit IHubPortal.RegistrarKeySent(
-            SPOKE_CHAIN_ID,
-            testKey,
-            testValue,
-            address(customAdapter),
-            messageId
-        );
+        emit IHubPortal.RegistrarKeySent(SPOKE_CHAIN_ID, testKey, testValue, address(customAdapter), messageId);
 
         vm.prank(user);
-        hubPortal.sendRegistrarKey{ value: fee }(
-            SPOKE_CHAIN_ID,
-            testKey,
-            refundAddress,
-            address(customAdapter),
-            bridgeAdapterArgs
-        );
+        hubPortal.sendRegistrarKey{ value: fee }(SPOKE_CHAIN_ID, testKey, refundAddress, address(customAdapter), bridgeAdapterArgs);
     }
 
     function test_sendRegistrarKey_revertsIfPaused() external {
@@ -105,20 +87,8 @@ contract SendRegistrarKeyUnitTest is HubPortalUnitTestBase {
     function test_sendRegistrarKey_revertsIfUnsupportedBridgeAdapter() external {
         address unsupportedAdapter = makeAddr("unsupported");
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPortal.UnsupportedBridgeAdapter.selector,
-                SPOKE_CHAIN_ID,
-                unsupportedAdapter
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, SPOKE_CHAIN_ID, unsupportedAdapter));
 
-        hubPortal.sendRegistrarKey(
-            SPOKE_CHAIN_ID,
-            testKey,
-            refundAddress,
-            unsupportedAdapter,
-            bridgeAdapterArgs
-        );
+        hubPortal.sendRegistrarKey(SPOKE_CHAIN_ID, testKey, refundAddress, unsupportedAdapter, bridgeAdapterArgs);
     }
 }

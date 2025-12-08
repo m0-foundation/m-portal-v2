@@ -20,18 +20,9 @@ contract SendMessageUnitTest is WormholeBridgeAdapterUnitTestBase {
         uint256 executorFee = 0.002 ether;
         uint256 totalFee = coreBridgeFee + executorFee;
 
-        vm.mockCall(
-            address(coreBridge),
-            coreBridgeFee,
-            abi.encodeWithSelector(ICoreBridge.publishMessage.selector),
-            abi.encode(uint64(0))
-        );
+        vm.mockCall(address(coreBridge), coreBridgeFee, abi.encodeWithSelector(ICoreBridge.publishMessage.selector), abi.encode(uint64(0)));
 
-        vm.mockCall(
-            address(coreBridge),
-            abi.encodeWithSelector(ICoreBridge.messageFee.selector),
-            abi.encode(coreBridgeFee)
-        );
+        vm.mockCall(address(coreBridge), abi.encodeWithSelector(ICoreBridge.messageFee.selector), abi.encode(coreBridgeFee));
 
         vm.expectCall(
             address(coreBridge),
@@ -39,14 +30,10 @@ contract SendMessageUnitTest is WormholeBridgeAdapterUnitTestBase {
             abi.encodeWithSelector(ICoreBridge.publishMessage.selector, uint32(0), payload, CONSISTENCY_LEVEL)
         );
 
-        vm.expectCall(
-            address(executor),
-            executorFee,
-            abi.encodeWithSelector(IExecutor.requestExecution.selector)
-        );
+        vm.expectCall(address(executor), executorFee, abi.encodeWithSelector(IExecutor.requestExecution.selector));
 
         vm.prank(address(portal));
-        adapter.sendMessage{value: totalFee}(SPOKE_CHAIN_ID, gasLimit, refundAddress, payload, "signed_quote");
+        adapter.sendMessage{ value: totalFee }(SPOKE_CHAIN_ID, gasLimit, refundAddress, payload, "signed_quote");
     }
 
     function test_sendMessage_revertsIfNotCalledByPortal() external {
@@ -57,7 +44,7 @@ contract SendMessageUnitTest is WormholeBridgeAdapterUnitTestBase {
         vm.expectRevert(IBridgeAdapter.NotPortal.selector);
 
         vm.prank(user);
-        adapter.sendMessage{value: 0.001 ether}(SPOKE_CHAIN_ID, gasLimit, refundAddress, payload, "");
+        adapter.sendMessage{ value: 0.001 ether }(SPOKE_CHAIN_ID, gasLimit, refundAddress, payload, "");
     }
 
     function test_sendMessage_revertsIfChainNotConfigured() external {
@@ -69,7 +56,7 @@ contract SendMessageUnitTest is WormholeBridgeAdapterUnitTestBase {
         vm.expectRevert(abi.encodeWithSelector(IBridgeAdapter.UnsupportedChain.selector, unconfiguredChain));
 
         vm.prank(address(portal));
-        adapter.sendMessage{value: 0.001 ether}(unconfiguredChain, gasLimit, refundAddress, payload, "");
+        adapter.sendMessage{ value: 0.001 ether }(unconfiguredChain, gasLimit, refundAddress, payload, "");
     }
 
     function test_sendMessage_revertsIfBridgeChainIdNotSet() external {
@@ -82,7 +69,7 @@ contract SendMessageUnitTest is WormholeBridgeAdapterUnitTestBase {
         vm.expectRevert(abi.encodeWithSelector(IBridgeAdapter.UnsupportedChain.selector, newChainId));
 
         vm.prank(address(portal));
-        adapter.sendMessage{value: 0.001 ether}(newChainId, 250_000, makeAddr("refund").toBytes32(), "test", "");
+        adapter.sendMessage{ value: 0.001 ether }(newChainId, 250_000, makeAddr("refund").toBytes32(), "test", "");
     }
 
     function test_sendMessage_revertsIfPeerNotSet() external {
@@ -94,7 +81,7 @@ contract SendMessageUnitTest is WormholeBridgeAdapterUnitTestBase {
         vm.expectRevert(abi.encodeWithSelector(IBridgeAdapter.UnsupportedChain.selector, newChainId));
 
         vm.prank(address(portal));
-        adapter.sendMessage{value: 0.001 ether}(newChainId, 250_000, makeAddr("refund").toBytes32(), "test", "");
+        adapter.sendMessage{ value: 0.001 ether }(newChainId, 250_000, makeAddr("refund").toBytes32(), "test", "");
     }
 
     function test_sendMessage_revertsIfInsufficientFee() external {
@@ -103,15 +90,11 @@ contract SendMessageUnitTest is WormholeBridgeAdapterUnitTestBase {
         bytes memory payload = "test payload";
         uint256 coreBridgeFee = 0.001 ether;
 
-        vm.mockCall(
-            address(coreBridge),
-            abi.encodeWithSelector(ICoreBridge.messageFee.selector),
-            abi.encode(coreBridgeFee)
-        );
+        vm.mockCall(address(coreBridge), abi.encodeWithSelector(ICoreBridge.messageFee.selector), abi.encode(coreBridgeFee));
 
         vm.expectRevert(IWormholeBridgeAdapter.InsufficientFee.selector);
 
         vm.prank(address(portal));
-        adapter.sendMessage{value: coreBridgeFee - 1}(SPOKE_CHAIN_ID, gasLimit, refundAddress, payload, "");
+        adapter.sendMessage{ value: coreBridgeFee - 1 }(SPOKE_CHAIN_ID, gasLimit, refundAddress, payload, "");
     }
 }

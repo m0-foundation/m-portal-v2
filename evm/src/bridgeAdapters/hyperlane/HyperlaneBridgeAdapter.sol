@@ -48,11 +48,11 @@ contract HyperlaneBridgeAdapter is BridgeAdapter, IHyperlaneBridgeAdapter {
 
     /// @inheritdoc IBridgeAdapter
     function sendMessage(
-        uint32 destinationChainId, 
-        uint256 gasLimit, 
-        bytes32 refundAddress, 
+        uint32 destinationChainId,
+        uint256 gasLimit,
+        bytes32 refundAddress,
         bytes memory payload,
-        bytes calldata  /* extraArguments */
+        bytes calldata /* extraArguments */
     ) external payable {
         _revertIfNotPortal();
 

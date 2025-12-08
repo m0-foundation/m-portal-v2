@@ -51,13 +51,7 @@ contract QuoteUnitTest is HubPortalUnitTestBase {
     function test_quote_revertsIfUnsupportedBridgeAdapter() external {
         address unsupportedAdapter = makeAddr("unsupported");
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPortal.UnsupportedBridgeAdapter.selector,
-                SPOKE_CHAIN_ID,
-                unsupportedAdapter
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, SPOKE_CHAIN_ID, unsupportedAdapter));
 
         hubPortal.quote(SPOKE_CHAIN_ID, PayloadType.TokenTransfer, unsupportedAdapter);
     }

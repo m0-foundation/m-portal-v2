@@ -8,7 +8,7 @@ import { HubPortalUnitTestBase } from "./HubPortalUnitTestBase.sol";
 
 contract DisableEarningUnitTest is HubPortalUnitTestBase {
     function test_disableEarning() external {
-        uint128 currentMIndex_ = 1_100000068703;
+        uint128 currentMIndex_ = 1_100_000_068_703;
 
         mToken.setCurrentIndex(currentMIndex_);
 
