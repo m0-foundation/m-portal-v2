@@ -42,7 +42,7 @@ contract SendFillReportUnitTest is HubPortalUnitTestBase {
         vm.expectCall(
             defaultBridgeAdapter,
             abi.encodeCall(
-                IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, TOKEN_TRANSFER_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs)
+                IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, FILL_REPORT_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs)
             )
         );
         vm.expectEmit();
@@ -83,7 +83,7 @@ contract SendFillReportUnitTest is HubPortalUnitTestBase {
         vm.expectCall(
             address(customAdapter),
             abi.encodeCall(
-                IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, TOKEN_TRANSFER_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs)
+                IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, FILL_REPORT_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs)
             )
         );
         vm.expectEmit();
