@@ -4,11 +4,6 @@ pragma solidity 0.8.30;
 
 import { IPortal } from "./IPortal.sol";
 
-struct SpokeChainConfig {
-    uint248 bridgedPrincipal;
-    bool crossSpokeTokenTransferEnabled;
-}
-
 /// @title  HubPortal interface.
 /// @author M0 Labs
 interface IHubPortal is IPortal {
@@ -57,13 +52,13 @@ interface IHubPortal is IPortal {
 
     /// @notice Emitted when cross-Spoke token transfer is enabled for the Spoke chain.
     /// @param  spokeChainId     The chain Id of the Spoke.
-    /// @param  bridgedPrincipal The principal amount of $M tokens bridged to the Spoke chain before transfer was enabled.
+    /// @param  bridgedPrincipal The principal amount of $M tokens bridged to the Spoke chain while it was isolated.
     event CrossSpokeTokenTransferEnabled(uint32 spokeChainId, uint248 bridgedPrincipal);
 
-    /// @notice Emitted when cross-Spoke token transfer is disabled for the Spoke chain.
-    /// @param  spokeChainId     The chain Id of the Spoke.
-    /// @param  bridgedPrincipal The principal amount of $M tokens bridged to the Spoke chain.
-    event CrossSpokeTokenTransferDisabled(uint32 spokeChainId, uint248 bridgedPrincipal);
+    /// @notice Emitted when a Spoke chain is configured as isolated or connected.
+    /// @param  spokeChainId The chain Id of the Spoke.
+    /// @param  isIsolated   Indicates whether the Spoke chain is configured as isolated.
+    event SpokeChainConfigured(uint32 spokeChainId, bool isIsolated);
 
     ///////////////////////////////////////////////////////////////////////////
     //                             CUSTOM ERRORS                             //
@@ -71,6 +66,9 @@ interface IHubPortal is IPortal {
 
     /// @notice Thrown when trying to enable earning after it has been explicitly disabled.
     error EarningCannotBeReenabled();
+
+    /// @notice Thrown when trying to re-enable spoke isolation after it has been explicitly disabled.
+    error SpokeIsolationCannotBeReenabled();
 
     /// @notice Thrown when performing an operation that is not allowed when earning is disabled.
     error EarningIsDisabled();
@@ -92,11 +90,17 @@ interface IHubPortal is IPortal {
     function disableEarningIndex() external view returns (uint128);
 
     /// @notice Returns the principal amount of M tokens bridged to a specified Spoke chain.
-    /// @dev    Only applicable to isolated Spokes (i.e., `crossSpokeTokenTransferEnabled` == false).
+    /// @dev    Only applicable to isolated Spokes (i.e., `crossSpokeToken` == false).
     function bridgedPrincipal(uint32 spokeChainId) external view returns (uint248);
 
-    /// @notice Returns whether cross-Spoke token transfer is enabled for a specified Spoke chain.
-    function crossSpokeTokenTransferEnabled(uint32 spokeChainId) external view returns (bool);
+    /// @notice Indicates whether a Spoke chain is configured (either as isolated or connected).
+    function isConfiguredChain(uint32 spokeChainId) external view returns (bool);
+
+    /// @notice Indicates whether a Spoke chain is isolated.
+    function isIsolatedChain(uint32 spokeChainId) external view returns (bool);
+
+    /// @notice Indicates whether a Spoke chain is connected.
+    function isConnectedChain(uint32 spokeChainId) external view returns (bool);
 
     ///////////////////////////////////////////////////////////////////////////
     //                         INTERACTIVE FUNCTIONS                         //
@@ -173,15 +177,6 @@ interface IHubPortal is IPortal {
     /// @notice Disables earning for the Hub Portal if disallowed by TTG.
     function disableEarning() external;
 
-    /// @notice Enables cross-Spoke token transfer for a specified Spoke chain.
-    /// @dev    Must be called after calling `disableCrossSpokeTokenTransfer` in SpokePortal.
-    /// @param  spokeChainId The chain Id of the Spoke.
-    function enableCrossSpokeTokenTransfer(uint32 spokeChainId) external;
-
-    /// @notice Disables cross-Spoke token transfer for a specified Spoke chain.
-    /// @dev    Should be called if `enableCrossSpokeTokenTransfer` was called by mistake or is not possible/needed.
-    ///         Must be called after calling `disableCrossSpokeTokenTransfer` in SpokePortal.
-    /// @param  spokeChainId The chain Id of the Spoke.
-    /// @param  principal    The principal amount of $M tokens bridged to the Spoke chain.
-    function disableCrossSpokeTokenTransfer(uint32 spokeChainId, uint248 principal) external;
+    /// @notice Configures a Spoke chain as isolated or connected.
+    function configureSpokeChain(uint32 spokeChainId, bool isIsolated) external;
 }

@@ -127,6 +127,7 @@ interface IPortal {
     /// @param  bridgeAdapter      The address of the bridge adapter.
     /// @param  supported          `True` if the bridge adapter is supported, `false` otherwise.
     event SupportedBridgeAdapterSet(uint32 indexed destinationChainId, address indexed bridgeAdapter, bool supported);
+
     ///////////////////////////////////////////////////////////////////////////
     //                             CUSTOM ERRORS                             //
     ///////////////////////////////////////////////////////////////////////////
@@ -190,6 +191,9 @@ interface IPortal {
 
     /// @notice Thrown when the bridge adapter is not supported for the destination chain.
     error UnsupportedBridgeAdapter(uint32 destinationChainId, address bridgeAdapter);
+
+    /// @notice Thrown when calling `sendToken` and cross-Spoke token transfer is disabled(spoke --> spoke) or not configured(hub --> spoke).
+    error TokenTransferToSpokeDisabled(uint32 destinationChainId);
 
     ///////////////////////////////////////////////////////////////////////////
     //                          VIEW/PURE FUNCTIONS                          //

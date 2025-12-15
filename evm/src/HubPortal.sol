@@ -9,13 +9,24 @@ import { IBridgeAdapter } from "./interfaces/IBridgeAdapter.sol";
 import { IMTokenLike } from "./interfaces/IMTokenLike.sol";
 import { IRegistrarLike } from "./interfaces/IRegistrarLike.sol";
 import { IPortal, ChainConfig } from "./interfaces/IPortal.sol";
-import { IHubPortal, SpokeChainConfig } from "./interfaces/IHubPortal.sol";
+import { IHubPortal } from "./interfaces/IHubPortal.sol";
 
 import { Portal } from "./Portal.sol";
 import { PayloadType, PayloadEncoder } from "./libraries/PayloadEncoder.sol";
 import { TypeConverter } from "./libraries/TypeConverter.sol";
 
 abstract contract HubPortalStorageLayout {
+    enum SpokeChainState {
+        NotConfigured,
+        Isolated,
+        Connected
+    }
+
+    struct SpokeChainConfig {
+        SpokeChainState state;
+        uint248 bridgedPrincipal;
+    }
+
     /// @custom:storage-location erc7201:M0.storage.HubPortal
     struct HubPortalStorageStruct {
         bool wasEarningEnabled;
@@ -43,22 +54,21 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
 
     /// @notice Constructs HubPortal Implementation contract
     /// @dev    Sets immutable storage.
-    /// @param  mToken_       The address of M token.
-    /// @param  registrar_    The address of Registrar.
-    /// @param  swapFacility_ The address of Swap Facility.
-    /// @param  orderBook_    The address of Order Book.
+    /// @param  mToken       The address of M token.
+    /// @param  registrar    The address of Registrar.
+    /// @param  swapFacility The address of Swap Facility.
+    /// @param  orderBook    The address of Order Book.
     constructor(
-        address mToken_,
-        address registrar_,
-        address swapFacility_,
-        address orderBook_
-    ) Portal(mToken_, registrar_, swapFacility_, orderBook_) { }
+        address mToken,
+        address registrar,
+        address swapFacility,
+        address orderBook
+    ) Portal(mToken, registrar, swapFacility, orderBook) { }
 
     function initialize(address owner, address pauser, address operator) external initializer {
         _initialize(owner, pauser, operator);
 
-        HubPortalStorageStruct storage $ = _getHubPortalStorageLocation();
-        $.disableEarningIndex = IndexingMath.EXP_SCALED_ONE;
+        _getHubPortalStorageLocation().disableEarningIndex = IndexingMath.EXP_SCALED_ONE;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -167,31 +177,32 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     ///////////////////////////////////////////////////////////////////////////
 
     /// @inheritdoc IHubPortal
-    function enableCrossSpokeTokenTransfer(uint32 spokeChainId) external onlyRole(OPERATOR_ROLE) {
+    function configureSpokeChain(uint32 spokeChainId, bool isIsolated) external onlyRole(OPERATOR_ROLE) {
         SpokeChainConfig storage spokeConfig = _getHubPortalStorageLocation().spokeConfig[spokeChainId];
-        if (spokeConfig.crossSpokeTokenTransferEnabled) return;
 
-        spokeConfig.crossSpokeTokenTransferEnabled = true;
+        // First time configuration
+        if (spokeConfig.state == SpokeChainState.NotConfigured) {
+            spokeConfig.state = isIsolated ? SpokeChainState.Isolated : SpokeChainState.Connected;
 
-        uint248 spokeBridgedPrincipal = spokeConfig.bridgedPrincipal;
+            emit SpokeChainConfigured(spokeChainId, isIsolated);
 
-        // NOTE: Reset bridged principal, as tracking it
-        //       for connected Spokes isn't possible on-chain.
-        spokeConfig.bridgedPrincipal = 0;
+            return;
+        }
 
-        emit CrossSpokeTokenTransferEnabled(spokeChainId, spokeBridgedPrincipal);
-    }
+        // Cannot avoid isolating the connected chain without incurring a heavy reconfiguration burden on the spokes.
+        // Therefore, once a chain has been isolated --> connected, it can never be made isolated again.
+        if (spokeConfig.state == SpokeChainState.Connected && isIsolated) revert SpokeIsolationCannotBeReenabled();
 
-    /// @inheritdoc IHubPortal
-    function disableCrossSpokeTokenTransfer(uint32 spokeChainId, uint248 principal) external onlyRole(OPERATOR_ROLE) {
-        SpokeChainConfig storage spokeConfig = _getHubPortalStorageLocation().spokeConfig[spokeChainId];
-        if (!spokeConfig.crossSpokeTokenTransferEnabled) return;
+        // Connect an isolated chain
+        if (spokeConfig.state == SpokeChainState.Isolated && !isIsolated) {
+            spokeConfig.state = SpokeChainState.Connected;
 
-        spokeConfig.crossSpokeTokenTransferEnabled = false;
-        // Manually override bridged principal amount
-        spokeConfig.bridgedPrincipal = principal;
+            emit CrossSpokeTokenTransferEnabled(spokeChainId, spokeConfig.bridgedPrincipal);
 
-        emit CrossSpokeTokenTransferDisabled(spokeChainId, principal);
+            // Reset bridged principal when making isolated chain connected.
+            // Logically optional, releases some storage.
+            spokeConfig.bridgedPrincipal = 0;
+        }
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -212,14 +223,22 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
 
     /// @inheritdoc IHubPortal
     function bridgedPrincipal(uint32 spokeChainId) external view returns (uint248) {
-        HubPortalStorageStruct storage $ = _getHubPortalStorageLocation();
-        return $.spokeConfig[spokeChainId].bridgedPrincipal;
+        return _getHubPortalStorageLocation().spokeConfig[spokeChainId].bridgedPrincipal;
     }
 
     /// @inheritdoc IHubPortal
-    function crossSpokeTokenTransferEnabled(uint32 spokeChainId) public view returns (bool) {
-        HubPortalStorageStruct storage $ = _getHubPortalStorageLocation();
-        return $.spokeConfig[spokeChainId].crossSpokeTokenTransferEnabled;
+    function isConfiguredChain(uint32 spokeChainId) public view returns (bool) {
+        return _getHubPortalStorageLocation().spokeConfig[spokeChainId].state != SpokeChainState.NotConfigured;
+    }
+
+    /// @inheritdoc IHubPortal
+    function isIsolatedChain(uint32 spokeChainId) public view returns (bool) {
+        return _getHubPortalStorageLocation().spokeConfig[spokeChainId].state == SpokeChainState.Isolated;
+    }
+
+    /// @inheritdoc IHubPortal
+    function isConnectedChain(uint32 spokeChainId) public view returns (bool) {
+        return _getHubPortalStorageLocation().spokeConfig[spokeChainId].state == SpokeChainState.Connected;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -281,10 +300,11 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     /// @param amount             The amount of $M Token to transfer.
     function _burnOrLock(uint32 destinationChainId, uint256 amount) internal override {
         SpokeChainConfig storage spokeConfig = _getHubPortalStorageLocation().spokeConfig[destinationChainId];
-        // Only track bridged principal for isolated Spokes
-        if (spokeConfig.crossSpokeTokenTransferEnabled) return;
 
-        spokeConfig.bridgedPrincipal += IndexingMath.getPrincipalAmountRoundedDown(uint240(amount), _currentIndex());
+        // Only track bridged principal for isolated Spokes.
+        if (spokeConfig.state == SpokeChainState.Isolated) {
+            spokeConfig.bridgedPrincipal += IndexingMath.getPrincipalAmountRoundedDown(uint240(amount), _currentIndex());
+        }
     }
 
     /// @dev Unlocks M tokens to `recipient`.
@@ -292,10 +312,13 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     /// @param recipient     The account to unlock/transfer M tokens to.
     /// @param amount        The amount of $M Token to unlock to the recipient.
     function _mintOrUnlock(uint32 sourceChainId, address recipient, uint256 amount, uint128) internal override {
-        // Only track bridged principal for isolated Spokes
-        if (!crossSpokeTokenTransferEnabled(sourceChainId)) {
-            _decreaseBridgedPrincipal(sourceChainId, amount);
+        SpokeChainConfig storage spokeConfig = _getHubPortalStorageLocation().spokeConfig[sourceChainId];
+
+        // Only track bridged principal for isolated Spokes.
+        if (spokeConfig.state == SpokeChainState.Isolated) {
+            _decreaseBridgedPrincipal(spokeConfig, amount);
         }
+
         if (recipient != address(this)) {
             IERC20(mToken).transfer(recipient, amount);
         }
@@ -303,8 +326,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
 
     /// @dev Decreases the principal amount bridged when receiving transfer from an isolated Spoke chain.
     ///      Reverts when trying to unlock more than was bridged to the Spoke.
-    function _decreaseBridgedPrincipal(uint32 spokeChainId, uint256 amount) private {
-        SpokeChainConfig storage spokeConfig = _getHubPortalStorageLocation().spokeConfig[spokeChainId];
+    function _decreaseBridgedPrincipal(SpokeChainConfig storage spokeConfig, uint256 amount) private {
         uint248 totalBridgedPrincipal = spokeConfig.bridgedPrincipal;
         uint248 principalAmount = IndexingMath.getPrincipalAmountRoundedDown(uint240(amount), _currentIndex());
 
@@ -313,6 +335,14 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
 
         unchecked {
             spokeConfig.bridgedPrincipal = totalBridgedPrincipal - principalAmount;
+        }
+    }
+
+    /// @dev Reverts if spokes are not configured yet.
+    function _revertIfTokenTransferDisabled(uint32 destinationChainId) internal view override {
+        // Allow token transfers onl between explicitly configured chains to avoid delayed in time isolation of spokes.
+        if (_getHubPortalStorageLocation().spokeConfig[destinationChainId].state == SpokeChainState.NotConfigured) {
+            revert TokenTransferToSpokeDisabled(destinationChainId);
         }
     }
 

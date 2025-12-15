@@ -42,9 +42,6 @@ interface ISpokePortal is IPortal {
     /// @notice Thrown when the Hub chain is 0.
     error ZeroHubChain();
 
-    /// @notice Thrown when calling `sendToken` and cross-Spoke token transfer is disabled.
-    error TokenTransferToSpokeDisabled(uint32 destinationChainId);
-
     ///////////////////////////////////////////////////////////////////////////
     //                          VIEW/PURE FUNCTIONS                          //
     ///////////////////////////////////////////////////////////////////////////
@@ -52,8 +49,8 @@ interface ISpokePortal is IPortal {
     /// @notice Returns the Hub chain ID.
     function hubChainId() external view returns (uint32);
 
-    /// @notice Returns whether cross-Spoke token transfer is enabled.
-    function crossSpokeTokenTransferEnabled() external view returns (bool);
+    /// @notice Returns whether the Spoke chain is isolated.
+    function isIsolatedChain() external view returns (bool);
 
     ///////////////////////////////////////////////////////////////////////////
     //                        INTERACTIVE FUNCTIONS                          //
@@ -61,8 +58,4 @@ interface ISpokePortal is IPortal {
 
     /// @notice Enables cross-Spoke token transfer.
     function enableCrossSpokeTokenTransfer() external;
-
-    /// @notice Disables cross-Spoke token transfer.
-    /// @dev    Must be called before calling `disableCrossSpokeTokenTransfer` in HubPortal.
-    function disableCrossSpokeTokenTransfer() external;
 }

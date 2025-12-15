@@ -13,7 +13,7 @@ import { PayloadType, PayloadEncoder } from "./libraries/PayloadEncoder.sol";
 abstract contract SpokePortalStorageLayout {
     /// @custom:storage-location erc7201:M0.storage.SpokePortal
     struct SpokePortalStorageStruct {
-        bool crossSpokeTokenTransferEnabled;
+        bool isIsolatedChain;
     }
 
     // keccak256(abi.encode(uint256(keccak256("M0.storage.SpokePortal")) - 1)) & ~bytes32(uint256(0xff))
@@ -39,24 +39,26 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
 
     /// @notice Constructs SpokePortal Implementation contract
     /// @dev    Sets immutable storage.
-    /// @param  mToken_       The address of M token.
-    /// @param  registrar_    The address of Registrar.
-    /// @param  swapFacility_ The address of Swap Facility.
-    /// @param  orderBook_    The address of Order Book.
-    /// @param  hubChainId_   The chain ID of the Hub.
+    /// @param  mToken       The address of M token.
+    /// @param  registrar    The address of Registrar.
+    /// @param  swapFacility The address of Swap Facility.
+    /// @param  orderBook    The address of Order Book.
+    /// @param  hubChainId_  The chain ID of the Hub.
     constructor(
-        address mToken_,
-        address registrar_,
-        address swapFacility_,
-        address orderBook_,
+        address mToken,
+        address registrar,
+        address swapFacility,
+        address orderBook,
         uint32 hubChainId_
-    ) Portal(mToken_, registrar_, swapFacility_, orderBook_) {
+    ) Portal(mToken, registrar, swapFacility, orderBook) {
         if ((hubChainId = hubChainId_) == 0) revert ZeroHubChain();
     }
 
-    function initialize(address owner, address pauser, address operator, bool crossSpokeTransferEnabled) external initializer {
+    function initialize(address owner, address pauser, address operator, bool isIsolatedChain_) external initializer {
         _initialize(owner, pauser, operator);
-        _getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled = crossSpokeTransferEnabled;
+
+        // Allow setting isolated chain only during initialization
+        _getSpokePortalStorageLocation().isIsolatedChain = isIsolatedChain_;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -65,18 +67,12 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
 
     /// @inheritdoc ISpokePortal
     function enableCrossSpokeTokenTransfer() external onlyRole(OPERATOR_ROLE) {
-        if (_getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled) return;
+        SpokePortalStorageStruct storage $ = _getSpokePortalStorageLocation();
+        if (!$.isIsolatedChain) return;
 
-        _getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled = true;
+        $.isIsolatedChain = false;
+
         emit CrossSpokeTokenTransferEnabled();
-    }
-
-    /// @inheritdoc ISpokePortal
-    function disableCrossSpokeTokenTransfer() external onlyRole(OPERATOR_ROLE) {
-        if (!_getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled) return;
-
-        _getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled = false;
-        emit CrossSpokeTokenTransferDisabled();
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -84,8 +80,8 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
     ///////////////////////////////////////////////////////////////////////////
 
     /// @inheritdoc ISpokePortal
-    function crossSpokeTokenTransferEnabled() external view returns (bool) {
-        return _getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled;
+    function isIsolatedChain() external view returns (bool) {
+        return _getSpokePortalStorageLocation().isIsolatedChain;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -154,12 +150,12 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
         ISpokeMTokenLike(mToken).burn(amount);
     }
 
-    /// @dev Reverts if the destination chain is the Hub chain
+    /// @dev Allows sending tokens only to Hub chain if the Spoke is isolated.
+    /// @param destinationChainId The destination chain ID.
     function _revertIfTokenTransferDisabled(uint32 destinationChainId) internal view override {
-        // If cross-Spoke token transfer is enabled, allow send tokens to any supported chain
-        if (_getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled) return;
-        // Otherwise, allow sending tokens only to the Hub chain
-        if (destinationChainId != hubChainId) revert TokenTransferToSpokeDisabled(destinationChainId);
+        if (destinationChainId != hubChainId && _getSpokePortalStorageLocation().isIsolatedChain) {
+            revert TokenTransferToSpokeDisabled(destinationChainId);
+        }
     }
 
     ///////////////////////////////////////////////////////////////////////////
