@@ -21,4 +21,8 @@ interface ISwapFacilityLike {
     /// @notice Checks if the extension is permissioned.
     /// @param  extension The extension address to check.
     function isPermissionedExtension(address extension) external view returns (bool);
+
+    /// @notice Checks if the extension is approved.
+    /// @param  extension The extension address to check.
+    function isApprovedExtension(address extension) external view returns (bool);
 }

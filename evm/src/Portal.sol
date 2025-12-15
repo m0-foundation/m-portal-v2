@@ -26,8 +26,8 @@ abstract contract PortalStorageLayout {
         uint256 nonce;
         /// @notice Configuration required to sent cross-chain messages to the remote chain.
         mapping(uint32 chainId => ChainConfig) remoteChainConfig;
-        /// @notice Supported source tokens for current chain.
-        mapping(address sourceToken => bool supported) supportedSourceTokens;
+        // /// @notice Supported source tokens for current chain.
+        // mapping(address sourceToken => bool supported) supportedSourceTokens;
         /// @notice Supported destination tokens for cross-chain transfers.
         mapping(uint32 destinationChainId => mapping(bytes32 destinationToken => bool supported)) supportedDestinationTokens;
     }
@@ -208,17 +208,17 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         emit SupportedBridgeAdapterSet(destinationChainId, bridgeAdapter, supported);
     }
 
-    /// @inheritdoc IPortal
-    function setSupportedSourceToken(address sourceToken, bool supported) external onlyRole(OPERATOR_ROLE) {
-        _revertIfZeroSourceToken(sourceToken);
+    // /// @inheritdoc IPortal
+    // function setSupportedSourceToken(address sourceToken, bool supported) external onlyRole(OPERATOR_ROLE) {
+    //     _revertIfZeroSourceToken(sourceToken);
 
-        PortalStorageStruct storage $ = _getPortalStorageLocation();
+    //     PortalStorageStruct storage $ = _getPortalStorageLocation();
 
-        if ($.supportedSourceTokens[sourceToken] == supported) return;
+    //     if ($.supportedSourceTokens[sourceToken] == supported) return;
 
-        $.supportedSourceTokens[sourceToken] = supported;
-        emit SupportedSourceTokenSet(sourceToken, supported);
-    }
+    //     $.supportedSourceTokens[sourceToken] = supported;
+    //     emit SupportedSourceTokenSet(sourceToken, supported);
+    // }
 
     /// @inheritdoc IPortal
     function setSupportedDestinationToken(
@@ -581,7 +581,12 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     function _revertIfUnsupportedBridgingPath(address sourceToken, uint32 destinationChainId, bytes32 destinationToken) internal view {
         PortalStorageStruct storage $ = _getPortalStorageLocation();
 
-        if (!$.supportedSourceTokens[sourceToken]) {
+        // if (!$.supportedSourceTokens[sourceToken]) {
+        //     revert UnsupportedSourceToken(sourceToken);
+        // }
+
+        // Alternatively read status from Swap Facility
+        if (!ISwapFacilityLike(swapFacility).isApprovedExtension(sourceToken)) {
             revert UnsupportedSourceToken(sourceToken);
         }
 

@@ -289,10 +289,10 @@ interface IPortal {
     /// @param  supported          `True` if the bridge adapter is supported, `false` otherwise.
     function setSupportedBridgeAdapter(uint32 destinationChainId, address bridgeAdapter, bool supported) external;
 
-    /// @notice Sets a supported source token for bridging.
-    /// @param  sourceToken The address of the token on the source chain.
-    /// @param  supported   `True` if the token is supported, `false` otherwise.
-    function setSupportedSourceToken(address sourceToken, bool supported) external;
+    // /// @notice Sets a supported source token for bridging.
+    // /// @param  sourceToken The address of the token on the source chain.
+    // /// @param  supported   `True` if the token is supported, `false` otherwise.
+    // function setSupportedSourceToken(address sourceToken, bool supported) external;
 
     /// @notice Sets a supported destination token for bridging.
     /// @param  destinationChainId The ID of the destination chain.
