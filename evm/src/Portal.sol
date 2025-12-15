@@ -26,9 +26,10 @@ abstract contract PortalStorageLayout {
         uint256 nonce;
         /// @notice Configuration required to sent cross-chain messages to the remote chain.
         mapping(uint32 chainId => ChainConfig) remoteChainConfig;
-        /// @notice Supported bridging paths for cross-chain transfers.
-        mapping(address sourceToken => mapping(uint32 destinationChainId => mapping(bytes32 destinationToken => bool supported)))
-            supportedBridgingPath;
+        /// @notice Supported source tokens for current chain.
+        mapping(address sourceToken => bool supported) supportedSourceTokens;
+        /// @notice Supported destination tokens for cross-chain transfers.
+        mapping(uint32 destinationChainId => mapping(bytes32 destinationToken => bool supported)) supportedDestinationTokens;
     }
 
     // keccak256(abi.encode(uint256(keccak256("M0.storage.Portal")) - 1)) & ~bytes32(uint256(0xff))
@@ -208,22 +209,32 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     }
 
     /// @inheritdoc IPortal
-    function setSupportedBridgingPath(
-        address sourceToken,
+    function setSupportedSourceToken(address sourceToken, bool supported) external onlyRole(OPERATOR_ROLE) {
+        _revertIfZeroSourceToken(sourceToken);
+
+        PortalStorageStruct storage $ = _getPortalStorageLocation();
+
+        if ($.supportedSourceTokens[sourceToken] == supported) return;
+
+        $.supportedSourceTokens[sourceToken] = supported;
+        emit SupportedSourceTokenSet(sourceToken, supported);
+    }
+
+    /// @inheritdoc IPortal
+    function setSupportedDestinationToken(
         uint32 destinationChainId,
         bytes32 destinationToken,
         bool supported
     ) external onlyRole(OPERATOR_ROLE) {
-        _revertIfZeroSourceToken(sourceToken);
         _revertIfInvalidDestinationChain(destinationChainId);
         _revertIfZeroDestinationToken(destinationToken);
 
         PortalStorageStruct storage $ = _getPortalStorageLocation();
 
-        if ($.supportedBridgingPath[sourceToken][destinationChainId][destinationToken] == supported) return;
+        if ($.supportedDestinationTokens[destinationChainId][destinationToken] == supported) return;
 
-        $.supportedBridgingPath[sourceToken][destinationChainId][destinationToken] = supported;
-        emit SupportedBridgingPathSet(sourceToken, destinationChainId, destinationToken, supported);
+        $.supportedDestinationTokens[destinationChainId][destinationToken] = supported;
+        emit SupportedDestinationTokenSet(destinationChainId, destinationToken, supported);
     }
 
     /// @inheritdoc IPortal
@@ -236,20 +247,6 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         remoteChainConfig.payloadGasLimit[payloadType] = gasLimit;
         emit PayloadGasLimitSet(destinationChainId, payloadType, gasLimit);
     }
-
-    /// @inheritdoc IPortal
-    function setPermissionedExtension(uint32 destinationChainId, bytes32 extension, bool permissioned) external onlyRole(OPERATOR_ROLE) {
-        _revertIfInvalidDestinationChain(destinationChainId);
-        ChainConfig storage remoteChainConfig = _getPortalStorageLocation().remoteChainConfig[destinationChainId];
-
-        if (remoteChainConfig.permissionedExtensions[extension] == permissioned) return;
-
-        remoteChainConfig.permissionedExtensions[extension] == permissioned;
-        emit PermissionedExtensionSet(destinationChainId, extension, permissioned);
-    }
-
-    /// @dev Reverts if `msg.sender` is not authorized to upgrade the contract
-    function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) { }
 
     /// @inheritdoc IPortal
     function pause() public onlyRole(PAUSER_ROLE) {
@@ -281,12 +278,6 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     function supportedBridgeAdapter(uint32 destinationChainId, address bridgeAdapter) public view returns (bool) {
         PortalStorageStruct storage $ = _getPortalStorageLocation();
         return $.remoteChainConfig[destinationChainId].supportedBridgeAdapter[bridgeAdapter];
-    }
-
-    /// @inheritdoc IPortal
-    function supportedBridgingPath(address sourceToken, uint32 destinationChainId, bytes32 destinationToken) external view returns (bool) {
-        PortalStorageStruct storage $ = _getPortalStorageLocation();
-        return $.supportedBridgingPath[sourceToken][destinationChainId][destinationToken];
     }
 
     /// @inheritdoc IPortal
@@ -323,6 +314,9 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     ///////////////////////////////////////////////////////////////////////////
     //                     INTERNAL INTERACTIVE FUNCTIONS                    //
     ///////////////////////////////////////////////////////////////////////////
+
+    /// @dev Reverts if `msg.sender` is not authorized to upgrade the contract
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) { }
 
     /// @dev Sends the specified payload to the destination chain.
     function _sendMessage(
@@ -583,21 +577,30 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         if (!supportedBridgeAdapter(chainId, bridgeAdapter)) revert UnsupportedBridgeAdapter(chainId, bridgeAdapter);
     }
 
+    /// @dev !!! CHANGE when there is a first non-EVM permissioned extension in the system!!!
     function _revertIfUnsupportedBridgingPath(address sourceToken, uint32 destinationChainId, bytes32 destinationToken) internal view {
         PortalStorageStruct storage $ = _getPortalStorageLocation();
-        bool sourceTokenPermissioned = ISwapFacilityLike(swapFacility).isPermissionedExtension(sourceToken);
-        bool destinationTokenPermissioned = $.remoteChainConfig[destinationChainId].permissionedExtensions[destinationToken];
-        
-        // If both tokens aren't permissioned, no need to check further
-        if (!sourceTokenPermissioned && !destinationTokenPermissioned) return;
-        
-        // If one of the tokens is permissioned, but the other isn't, revert
-        if (sourceTokenPermissioned != destinationTokenPermissioned)
-            revert UnsupportedBridgingPath(sourceToken, destinationChainId, destinationToken);
 
-        // If both tokens are permissioned, check if the bridging path is supported
-        if (!$.supportedBridgingPath[sourceToken][destinationChainId][destinationToken])
+        if (!$.supportedSourceTokens[sourceToken]) {
+            revert UnsupportedSourceToken(sourceToken);
+        }
+
+        if (!$.supportedDestinationTokens[destinationChainId][destinationToken]) {
+            revert UnsupportedDestinationToken(destinationChainId, destinationToken);
+        }
+
+        address destinationTokenAddress = destinationToken.toAddress();
+
+        // Works for both cases: permissioned and permissionless extensions
+        if (sourceToken == destinationTokenAddress) return;
+
+        // Assumptions: swap facilities on all chains MUST has up-to-date information about permissioned extensions
+        bool sourceTokenPermissioned = ISwapFacilityLike(swapFacility).isPermissionedExtension(sourceToken);
+        bool destinationTokenPermissioned = ISwapFacilityLike(swapFacility).isPermissionedExtension(destinationToken.toAddress());
+
+        if (sourceTokenPermissioned || destinationTokenPermissioned) {
             revert UnsupportedBridgingPath(sourceToken, destinationChainId, destinationToken);
+        }
     }
 
     /// @dev Returns the current M token index used by the Portal.

@@ -12,8 +12,6 @@ struct ChainConfig {
     mapping(address bridgeAdapter => bool supported) supportedBridgeAdapter;
     /// @notice Gas limit required to process different types of payload on destination chains.
     mapping(PayloadType payloadType => uint256 gasLimit) payloadGasLimit;
-    /// @notice Defines whether an extension is permissioned.
-    mapping(bytes32 extension => bool permissioned) permissionedExtensions;
 }
 
 /// @title  IPortal interface
@@ -104,14 +102,16 @@ interface IPortal {
     /// @param  amount               The amount of tokens.
     event WrapFailed(address indexed destinationExtension, address indexed recipient, uint256 amount);
 
-    /// @notice Emitted when a bridging path support status is updated.
-    /// @param  sourceToken        The address of the token on the current chain.
+    /// @notice Emitted when supported source token is set.
+    /// @param  sourceToken The address of the token on the source chain.
+    /// @param  supported   `True` if the token is supported, `false` otherwise.
+    event SupportedSourceTokenSet(address indexed sourceToken, bool supported);
+
+    /// @notice Emitted when supported destination token is set.
     /// @param  destinationChainId The ID of the destination chain.
     /// @param  destinationToken   The address of the token on the destination chain.
     /// @param  supported          `True` if the token is supported, `false` otherwise.
-    event SupportedBridgingPathSet(
-        address indexed sourceToken, uint32 indexed destinationChainId, bytes32 indexed destinationToken, bool supported
-    );
+    event SupportedDestinationTokenSet(uint32 indexed destinationChainId, bytes32 indexed destinationToken, bool supported);
 
     /// @notice Emitted when the gas limit for a payload type is updated.
     /// @param  destinationChainId The ID of the destination chain.
@@ -199,6 +199,12 @@ interface IPortal {
     /// @notice Thrown when the bridge adapter is not supported for the destination chain.
     error UnsupportedBridgeAdapter(uint32 destinationChainId, address bridgeAdapter);
 
+    /// @notice Thrown when the extension is not permissioned on the source chain.
+    error UnsupportedSourceToken(address sourceToken);
+
+    /// @notice Thrown when the destination token is not supported for the destination chain.
+    error UnsupportedDestinationToken(uint32 destinationChainId, bytes32 destinationToken);
+
     ///////////////////////////////////////////////////////////////////////////
     //                          VIEW/PURE FUNCTIONS                          //
     ///////////////////////////////////////////////////////////////////////////
@@ -229,12 +235,6 @@ interface IPortal {
     /// @param  destinationChainId The ID of the destination chain.
     /// @param  bridgingAdapter    The address of the bridge adapter.
     function supportedBridgeAdapter(uint32 destinationChainId, address bridgingAdapter) external view returns (bool);
-
-    /// @notice Indicates whether the provided bridging path is supported.
-    /// @param  sourceToken        The address of the token on the current chain.
-    /// @param  destinationChainId The ID of the destination chain.
-    /// @param  destinationToken   The address of the token on the destination chain.
-    function supportedBridgingPath(address sourceToken, uint32 destinationChainId, bytes32 destinationToken) external view returns (bool);
 
     /// @notice Returns the gas limit required to process a message
     ///         with the specified payload type on the destination chain.
@@ -271,25 +271,12 @@ interface IPortal {
     /// @param  initialOperator The address of the operator.
     function initialize(address initialOwner, address initialPauser, address initialOperator) external;
 
-    /// @notice Sets a bridging path support status.
-    /// @param  sourceToken        The address of the token on the current chain.
-    /// @param  destinationChainId The ID of the destination chain.
-    /// @param  destinationToken   The address of the token on the destination chain.
-    /// @param  supported          `True` if the token is supported, `false` otherwise.
-    function setSupportedBridgingPath(address sourceToken, uint32 destinationChainId, bytes32 destinationToken, bool supported) external;
-
     /// @notice Sets the gas limit required to process a message
     ///         with the specified payload type on the destination chain.
     /// @param  destinationChainId The ID of the destination chain.
     /// @param  payloadType        The payload type.
     /// @param  gasLimit           The gas limit required to process the message.
     function setPayloadGasLimit(uint32 destinationChainId, PayloadType payloadType, uint256 gasLimit) external;
-
-    /// @notice Sets whether an extension is permissioned.
-    /// @param  destinationChainId The ID of the destination chain.
-    /// @param  extension          The address of the extension.
-    /// @param  permissioned       `True` if the extension is permissioned, `false` otherwise.
-    function setPermissionedExtension(uint32 destinationChainId, bytes32 extension, bool permissioned) external;
 
     /// @notice Sets the default bridge adapter for a destination chain.
     /// @param  destinationChainId The ID of the destination chain.
@@ -301,6 +288,17 @@ interface IPortal {
     /// @param  bridgeAdapter      The address of the bridge adapter.
     /// @param  supported          `True` if the bridge adapter is supported, `false` otherwise.
     function setSupportedBridgeAdapter(uint32 destinationChainId, address bridgeAdapter, bool supported) external;
+
+    /// @notice Sets a supported source token for bridging.
+    /// @param  sourceToken The address of the token on the source chain.
+    /// @param  supported   `True` if the token is supported, `false` otherwise.
+    function setSupportedSourceToken(address sourceToken, bool supported) external;
+
+    /// @notice Sets a supported destination token for bridging.
+    /// @param  destinationChainId The ID of the destination chain.
+    /// @param  destinationToken   The address of the token on the destination chain.
+    /// @param  supported          `True` if the token is supported, `false`
+    function setSupportedDestinationToken(uint32 destinationChainId, bytes32 destinationToken, bool supported) external;
 
     /// @notice Transfers $M Token or $M Extension to the destination chain using the default bridge adapter.
     /// @dev    If wrapping on the destination fails, the recipient will receive $M token.
