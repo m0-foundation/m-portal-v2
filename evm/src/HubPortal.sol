@@ -235,7 +235,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
 
         uint128 index = _currentIndex();
         messageId = _getMessageId(destinationChainId);
-        bytes memory payload = PayloadEncoder.encodeIndex(index, messageId);
+        bytes memory payload = PayloadEncoder.encodeIndex(index, messageId, destinationChainId);
 
         _sendMessage(destinationChainId, PayloadType.Index, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
 
@@ -254,7 +254,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
 
         bytes32 value = IRegistrarLike(registrar).get(key);
         messageId = _getMessageId(destinationChainId);
-        bytes memory payload = PayloadEncoder.encodeRegistrarKey(key, value, messageId);
+        bytes memory payload = PayloadEncoder.encodeRegistrarKey(key, value, messageId, destinationChainId);
 
         _sendMessage(destinationChainId, PayloadType.RegistrarKey, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
 
@@ -274,7 +274,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
 
         bool status = IRegistrarLike(registrar).listContains(listName, account);
         messageId = _getMessageId(destinationChainId);
-        bytes memory payload = PayloadEncoder.encodeRegistrarList(listName, account, status, messageId);
+        bytes memory payload = PayloadEncoder.encodeRegistrarList(listName, account, status, messageId, destinationChainId);
 
         _sendMessage(destinationChainId, PayloadType.RegistrarList, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
 

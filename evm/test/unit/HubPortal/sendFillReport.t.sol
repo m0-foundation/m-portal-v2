@@ -35,15 +35,14 @@ contract SendFillReportUnitTest is HubPortalUnitTestBase {
             testReport.amountOutFilled,
             testReport.originRecipient,
             testReport.tokenIn,
-            messageId
+            messageId,
+            SPOKE_CHAIN_ID
         );
         address defaultBridgeAdapter = hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID);
 
         vm.expectCall(
             defaultBridgeAdapter,
-            abi.encodeCall(
-                IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, FILL_REPORT_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs)
-            )
+            abi.encodeCall(IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, FILL_REPORT_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs))
         );
         vm.expectEmit();
         emit IPortal.FillReportSent(
@@ -70,7 +69,8 @@ contract SendFillReportUnitTest is HubPortalUnitTestBase {
             testReport.amountOutFilled,
             testReport.originRecipient,
             testReport.tokenIn,
-            messageId
+            messageId,
+            SPOKE_CHAIN_ID
         );
 
         // Deploy a new mock adapter
@@ -82,9 +82,7 @@ contract SendFillReportUnitTest is HubPortalUnitTestBase {
 
         vm.expectCall(
             address(customAdapter),
-            abi.encodeCall(
-                IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, FILL_REPORT_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs)
-            )
+            abi.encodeCall(IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, FILL_REPORT_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs))
         );
         vm.expectEmit();
         emit IPortal.FillReportSent(

@@ -22,7 +22,7 @@ contract SendMTokenIndexUnitTest is HubPortalUnitTestBase {
         uint128 index = 1_100_000_068_703;
         uint256 fee = 1;
         bytes32 messageId = _getMessageId();
-        bytes memory payload = PayloadEncoder.encodeIndex(index, messageId);
+        bytes memory payload = PayloadEncoder.encodeIndex(index, messageId, SPOKE_CHAIN_ID);
         address defaultBridgeAdapter = hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID);
 
         mToken.setCurrentIndex(index);
@@ -44,7 +44,7 @@ contract SendMTokenIndexUnitTest is HubPortalUnitTestBase {
         uint128 index = 1_100_000_068_703;
         uint256 fee = 1;
         bytes32 messageId = _getMessageId();
-        bytes memory payload = PayloadEncoder.encodeIndex(index, messageId);
+        bytes memory payload = PayloadEncoder.encodeIndex(index, messageId, SPOKE_CHAIN_ID);
 
         // Deploy a new mock adapter
         MockBridgeAdapter customAdapter = new MockBridgeAdapter();

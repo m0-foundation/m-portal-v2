@@ -34,7 +34,7 @@ contract SendTokenUnitTest is SpokePortalUnitTestBase {
         uint256 fee = 1;
         uint128 index = 1_100_000_068_703;
         bytes32 messageId = _getMessageId();
-        bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, hubMToken, user, recipient, index, messageId);
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, hubMToken, user, recipient, index, messageId, HUB_CHAIN_ID);
         address defaultBridgeAdapter = spokePortal.defaultBridgeAdapter(HUB_CHAIN_ID);
 
         mToken.setCurrentIndex(index);
@@ -61,7 +61,7 @@ contract SendTokenUnitTest is SpokePortalUnitTestBase {
         uint256 fee = 1;
         uint128 index = 1_100_000_068_703;
         bytes32 messageId = _getMessageId();
-        bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, hubWrappedMToken, user, recipient, index, messageId);
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, hubWrappedMToken, user, recipient, index, messageId, HUB_CHAIN_ID);
         address defaultBridgeAdapter = spokePortal.defaultBridgeAdapter(HUB_CHAIN_ID);
 
         mToken.setCurrentIndex(index);
@@ -92,7 +92,7 @@ contract SendTokenUnitTest is SpokePortalUnitTestBase {
         uint256 fee = 1;
         uint128 index = 1_100_000_068_703;
         bytes32 messageId = _getMessageId();
-        bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, hubMToken, user, recipient, index, messageId);
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, hubMToken, user, recipient, index, messageId, HUB_CHAIN_ID);
 
         // Deploy a new mock adapter
         MockBridgeAdapter customAdapter = new MockBridgeAdapter();
