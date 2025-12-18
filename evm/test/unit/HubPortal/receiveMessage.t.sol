@@ -31,12 +31,12 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
             SPOKE_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
+            messageId,
             amount,
             address(mToken).toBytes32(),
             sender,
             recipient.toBytes32(),
-            index,
-            messageId
+            index
         );
 
         vm.expectEmit();
@@ -52,12 +52,12 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
             SPOKE_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
+            messageId,
             amount,
             address(wrappedMToken).toBytes32(),
             sender,
             recipient.toBytes32(),
-            index,
-            messageId
+            index
         );
 
         vm.expectEmit();
@@ -79,12 +79,12 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
         bytes memory payload = PayloadEncoder.encodeFillReport(
             SPOKE_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
+            messageId,
             orderId,
             amountInToRelease,
             amountOutFilled,
             originRecipient,
-            tokenIn,
-            messageId
+            tokenIn
         );
 
         vm.expectCall(
@@ -119,12 +119,12 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
             SPOKE_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
+            messageId,
             amount,
             invalidWrappedToken.toBytes32(),
             sender,
             recipient.toBytes32(),
-            index,
-            messageId
+            index
         );
 
         vm.expectEmit();
@@ -146,12 +146,12 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
             SPOKE_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
+            messageId,
             amount,
             address(mToken).toBytes32(),
             sender,
             recipient.toBytes32(),
-            index,
-            messageId
+            index
         );
 
         vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, SPOKE_CHAIN_ID, unsupportedAdapter));

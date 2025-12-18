@@ -13,8 +13,11 @@ import { WormholeBridgeAdapterUnitTestBase } from "./WormholeBridgeAdapterUnitTe
 contract ExecuteVAAv1UnitTest is WormholeBridgeAdapterUnitTestBase {
     using TypeConverter for *;
 
+    bytes32 constant MESSAGE_ID = bytes32("message id");
+    uint128 constant INDEX = 1.1e12;
+
     function test_executeVAAv1_forwardsToPortal() external {
-        bytes memory payload = PayloadEncoder.encodeIndex(HUB_CHAIN_ID, address(adapter).toBytes32(), 0, bytes32(0));
+        bytes memory payload = PayloadEncoder.encodeIndex(HUB_CHAIN_ID, address(adapter).toBytes32(), MESSAGE_ID, INDEX);
         bytes memory encodedMessage = "encoded_vaa";
 
         CoreBridgeVM memory mockVM = CoreBridgeVM({
@@ -53,7 +56,7 @@ contract ExecuteVAAv1UnitTest is WormholeBridgeAdapterUnitTestBase {
 
     function test_executeVAAv1_revertsIfUnsupportedSender() external {
         bytes32 unsupportedSender = makeAddr("unsupported").toBytes32();
-        bytes memory payload = PayloadEncoder.encodeIndex(HUB_CHAIN_ID, address(adapter).toBytes32(), 0, bytes32(0));
+        bytes memory payload = PayloadEncoder.encodeIndex(HUB_CHAIN_ID, address(adapter).toBytes32(), MESSAGE_ID, INDEX);
         bytes memory encodedMessage = "encoded_vaa";
 
         CoreBridgeVM memory mockVM = CoreBridgeVM({
@@ -78,7 +81,7 @@ contract ExecuteVAAv1UnitTest is WormholeBridgeAdapterUnitTestBase {
 
     function test_executeVAAv1_revertsIfUnsupportedChain() external {
         uint16 unsupportedChain = 9999;
-        bytes memory payload = PayloadEncoder.encodeIndex(HUB_CHAIN_ID, address(adapter).toBytes32(), 0, bytes32(0));
+        bytes memory payload = PayloadEncoder.encodeIndex(HUB_CHAIN_ID, address(adapter).toBytes32(), MESSAGE_ID, INDEX);
         bytes memory encodedMessage = "encoded_vaa";
 
         CoreBridgeVM memory mockVM = CoreBridgeVM({
@@ -102,7 +105,7 @@ contract ExecuteVAAv1UnitTest is WormholeBridgeAdapterUnitTestBase {
     }
 
     function test_executeVAAv1_revertsOnReplayAttack() external {
-        bytes memory payload = PayloadEncoder.encodeIndex(HUB_CHAIN_ID, address(adapter).toBytes32(), 0, bytes32(0));
+        bytes memory payload = PayloadEncoder.encodeIndex(HUB_CHAIN_ID, address(adapter).toBytes32(), MESSAGE_ID, INDEX);
         bytes memory encodedMessage = "encoded_vaa";
         bytes32 messageHash = keccak256("unique_message_hash");
 
@@ -134,7 +137,7 @@ contract ExecuteVAAv1UnitTest is WormholeBridgeAdapterUnitTestBase {
 
     function test_executeVAAv1_revertsIfInvalidTargetChain() external {
         uint32 wrongTargetChainId = 999;
-        bytes memory payload = PayloadEncoder.encodeIndex(wrongTargetChainId, address(adapter).toBytes32(), 0, bytes32(0));
+        bytes memory payload = PayloadEncoder.encodeIndex(wrongTargetChainId, address(adapter).toBytes32(), MESSAGE_ID, INDEX);
         bytes memory encodedMessage = "encoded_vaa";
 
         CoreBridgeVM memory mockVM = CoreBridgeVM({
@@ -159,7 +162,7 @@ contract ExecuteVAAv1UnitTest is WormholeBridgeAdapterUnitTestBase {
 
     function test_executeVAAv1_revertsIfInvalidTargetBridgeAdapter() external {
         bytes32 wrongTargetAdapter = makeAddr("wrongAdapter").toBytes32();
-        bytes memory payload = PayloadEncoder.encodeIndex(HUB_CHAIN_ID, wrongTargetAdapter, 0, bytes32(0));
+        bytes memory payload = PayloadEncoder.encodeIndex(HUB_CHAIN_ID, wrongTargetAdapter, MESSAGE_ID, INDEX);
         bytes memory encodedMessage = "encoded_vaa";
 
         CoreBridgeVM memory mockVM = CoreBridgeVM({

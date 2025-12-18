@@ -237,7 +237,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         uint128 index = _currentIndex();
         bytes32 destinationPeer = IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId);
         messageId = _getMessageId(destinationChainId);
-        bytes memory payload = PayloadEncoder.encodeIndex(destinationChainId, destinationPeer, index, messageId);
+        bytes memory payload = PayloadEncoder.encodeIndex(destinationChainId, destinationPeer, messageId, index);
 
         _sendMessage(destinationChainId, PayloadType.Index, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
 
@@ -257,7 +257,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         bytes32 value = IRegistrarLike(registrar).get(key);
         bytes32 destinationPeer = IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId);
         messageId = _getMessageId(destinationChainId);
-        bytes memory payload = PayloadEncoder.encodeRegistrarKey(destinationChainId, destinationPeer, key, value, messageId);
+        bytes memory payload = PayloadEncoder.encodeRegistrarKey(destinationChainId, destinationPeer, messageId, key, value);
 
         _sendMessage(destinationChainId, PayloadType.RegistrarKey, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
 
@@ -278,7 +278,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         bool status = IRegistrarLike(registrar).listContains(listName, account);
         bytes32 destinationPeer = IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId);
         messageId = _getMessageId(destinationChainId);
-        bytes memory payload = PayloadEncoder.encodeRegistrarList(destinationChainId, destinationPeer, listName, account, status, messageId);
+        bytes memory payload = PayloadEncoder.encodeRegistrarList(destinationChainId, destinationPeer, messageId, listName, account, status);
 
         _sendMessage(destinationChainId, PayloadType.RegistrarList, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
 

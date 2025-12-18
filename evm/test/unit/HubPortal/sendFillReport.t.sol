@@ -32,12 +32,12 @@ contract SendFillReportUnitTest is HubPortalUnitTestBase {
         bytes memory payload = PayloadEncoder.encodeFillReport(
             SPOKE_CHAIN_ID,
             spokeBridgeAdapter,
+            messageId,
             testReport.orderId,
             testReport.amountInToRelease,
             testReport.amountOutFilled,
             testReport.originRecipient,
-            testReport.tokenIn,
-            messageId
+            testReport.tokenIn
         );
         address defaultBridgeAdapter = hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID);
 
@@ -67,12 +67,12 @@ contract SendFillReportUnitTest is HubPortalUnitTestBase {
         bytes memory payload = PayloadEncoder.encodeFillReport(
             SPOKE_CHAIN_ID,
             spokeBridgeAdapter,
+            messageId,
             testReport.orderId,
             testReport.amountInToRelease,
             testReport.amountOutFilled,
             testReport.originRecipient,
-            testReport.tokenIn,
-            messageId
+            testReport.tokenIn
         );
 
         // Deploy a new mock adapter

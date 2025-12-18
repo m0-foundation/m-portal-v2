@@ -25,7 +25,7 @@ contract SendRegistrarListStatusUnitTest is HubPortalUnitTestBase {
         bytes32 messageId = _getMessageId();
         bool status = true;
         bytes memory payload =
-            PayloadEncoder.encodeRegistrarList(SPOKE_CHAIN_ID, spokeBridgeAdapter, testListName, testAccount, status, messageId);
+            PayloadEncoder.encodeRegistrarList(SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, testListName, testAccount, status);
         address defaultBridgeAdapter = hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID);
 
         registrar.setListContains(testListName, testAccount, status);
@@ -46,7 +46,7 @@ contract SendRegistrarListStatusUnitTest is HubPortalUnitTestBase {
         bytes32 messageId = _getMessageId();
         bool status = false;
         bytes memory payload =
-            PayloadEncoder.encodeRegistrarList(SPOKE_CHAIN_ID, spokeBridgeAdapter, testListName, testAccount, status, messageId);
+            PayloadEncoder.encodeRegistrarList(SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, testListName, testAccount, status);
         address defaultBridgeAdapter = hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID);
 
         registrar.setListContains(testListName, testAccount, status);
@@ -67,7 +67,7 @@ contract SendRegistrarListStatusUnitTest is HubPortalUnitTestBase {
         bytes32 messageId = _getMessageId();
         bool status = true;
         bytes memory payload =
-            PayloadEncoder.encodeRegistrarList(SPOKE_CHAIN_ID, spokeBridgeAdapter, testListName, testAccount, status, messageId);
+            PayloadEncoder.encodeRegistrarList(SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, testListName, testAccount, status);
 
         // Deploy a new mock adapter
         MockBridgeAdapter customAdapter = new MockBridgeAdapter();

@@ -52,7 +52,7 @@ contract SpokePortal is Portal, ISpokePortal {
 
     /// @notice Updates M Token index to the index received from the remote chain.
     function _updateMTokenIndex(bytes memory payload) private {
-        (uint128 index, bytes32 messageId) = payload.decodeIndex();
+        (bytes32 messageId, uint128 index) = payload.decodeIndex();
 
         if (index > _currentIndex()) {
             ISpokeMTokenLike(mToken).updateIndex(index);
@@ -63,7 +63,7 @@ contract SpokePortal is Portal, ISpokePortal {
 
     /// @notice Sets a Registrar key received from the Hub chain.
     function _setRegistrarKey(bytes memory payload_) private {
-        (bytes32 key, bytes32 value, bytes32 messageId) = payload_.decodeRegistrarKey();
+        (bytes32 messageId, bytes32 key, bytes32 value) = payload_.decodeRegistrarKey();
 
         IRegistrarLike(registrar).setKey(key, value);
 
@@ -72,7 +72,7 @@ contract SpokePortal is Portal, ISpokePortal {
 
     /// @notice Adds or removes an account from the Registrar List based on the message from the Hub chain.
     function _updateRegistrarList(bytes memory payload_) private {
-        (bytes32 listName, address account, bool add, bytes32 messageId) = payload_.decodeRegistrarList();
+        (bytes32 messageId, bytes32 listName, address account, bool add) = payload_.decodeRegistrarList();
 
         emit RegistrarListUpdateReceived(listName, account, add, messageId);
 

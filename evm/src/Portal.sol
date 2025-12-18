@@ -402,7 +402,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         index = _currentIndex();
         bytes32 destinationPeer = IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId);
         payload = PayloadEncoder.encodeTokenTransfer(
-            destinationChainId, destinationPeer, transferAmount, destinationToken, sender, recipient, index, messageId
+            destinationChainId, destinationPeer, messageId, transferAmount, destinationToken, sender, recipient, index
         );
     }
 
@@ -422,12 +422,12 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         bytes memory payload = PayloadEncoder.encodeFillReport(
             destinationChainId,
             IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId),
+            messageId,
             report.orderId,
             report.amountInToRelease,
             report.amountOutFilled,
             report.originRecipient,
-            report.tokenIn,
-            messageId
+            report.tokenIn
         );
 
         _sendMessage(destinationChainId, PayloadType.FillReport, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
@@ -448,7 +448,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     /// @param sourceChainId The ID of the source chain.
     /// @param payload       The message payload.
     function _receiveToken(uint32 sourceChainId, bytes memory payload) private {
-        (uint256 amount, address destinationToken, bytes32 sender, address recipient, uint128 index, bytes32 messageId) =
+        (bytes32 messageId, uint256 amount, address destinationToken, bytes32 sender, address recipient, uint128 index) =
             payload.decodeTokenTransfer();
 
         emit TokenReceived(sourceChainId, destinationToken, sender, recipient, amount, index, messageId);
@@ -492,7 +492,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     /// @param sourceChainId The ID of the source chain.
     /// @param payload       The message payload.
     function _receiveFillReport(uint32 sourceChainId, bytes memory payload) private {
-        (bytes32 orderId, uint128 amountInToRelease, uint128 amountOutFilled, bytes32 originRecipient, bytes32 tokenIn, bytes32 messageId) =
+        (bytes32 messageId, bytes32 orderId, uint128 amountInToRelease, uint128 amountOutFilled, bytes32 originRecipient, bytes32 tokenIn) =
             payload.decodeFillReport();
 
         IOrderBookLike(orderBook)
