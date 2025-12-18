@@ -24,14 +24,3 @@ number_underscore = "thousands"
 quote_style = "double"
 tab_width = 4
 wrap_comments = true
-
-[rpc_endpoints]
-ethereum = "${ETHEREUM_RPC_URL}"
-arbitrum = "${ARBITRUM_RPC_URL}"
-optimism = "${OPTIMISM_RPC_URL}"
-base = "${BASE_RPC_URL}"
-
-sepolia = "${SEPOLIA_RPC_URL}"
-arbitrum_sepolia = "${ARBITRUM_SEPOLIA_RPC_URL}"
-optimism_sepolia = "${OPTIMISM_SEPOLIA_RPC_URL}"
-base_sepolia = "${BASE_SEPOLIA_RPC_URL}"
