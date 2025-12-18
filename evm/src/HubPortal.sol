@@ -5,6 +5,7 @@ pragma solidity 0.8.30;
 import { IERC20 } from "../lib/common/src/interfaces/IERC20.sol";
 import { IndexingMath } from "../lib/common/src/libs/IndexingMath.sol";
 
+import { IBridgeAdapter } from "./interfaces/IBridgeAdapter.sol";
 import { IMTokenLike } from "./interfaces/IMTokenLike.sol";
 import { IMerkleTreeBuilderLike } from "./interfaces/IMerkleTreeBuilderLike.sol";
 import { IRegistrarLike } from "./interfaces/IRegistrarLike.sol";
@@ -234,8 +235,9 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         _revertIfZeroRefundAddress(refundAddress);
 
         uint128 index = _currentIndex();
+        bytes32 destinationPeer = IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId);
         messageId = _getMessageId(destinationChainId);
-        bytes memory payload = PayloadEncoder.encodeIndex(index, messageId, destinationChainId);
+        bytes memory payload = PayloadEncoder.encodeIndex(destinationChainId, destinationPeer, index, messageId);
 
         _sendMessage(destinationChainId, PayloadType.Index, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
 
@@ -253,8 +255,9 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         _revertIfZeroRefundAddress(refundAddress);
 
         bytes32 value = IRegistrarLike(registrar).get(key);
+        bytes32 destinationPeer = IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId);
         messageId = _getMessageId(destinationChainId);
-        bytes memory payload = PayloadEncoder.encodeRegistrarKey(key, value, messageId, destinationChainId);
+        bytes memory payload = PayloadEncoder.encodeRegistrarKey(destinationChainId, destinationPeer, key, value, messageId);
 
         _sendMessage(destinationChainId, PayloadType.RegistrarKey, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
 
@@ -273,8 +276,9 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         _revertIfZeroRefundAddress(refundAddress);
 
         bool status = IRegistrarLike(registrar).listContains(listName, account);
+        bytes32 destinationPeer = IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId);
         messageId = _getMessageId(destinationChainId);
-        bytes memory payload = PayloadEncoder.encodeRegistrarList(listName, account, status, messageId, destinationChainId);
+        bytes memory payload = PayloadEncoder.encodeRegistrarList(destinationChainId, destinationPeer, listName, account, status, messageId);
 
         _sendMessage(destinationChainId, PayloadType.RegistrarList, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
 

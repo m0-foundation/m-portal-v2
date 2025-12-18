@@ -34,7 +34,8 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
         uint256 fee = 1;
         uint128 index = 1_100_000_068_703;
         bytes32 messageId = _getMessageId();
-        bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, spokeMToken, user, recipient, index, messageId, SPOKE_CHAIN_ID);
+        bytes memory payload =
+            PayloadEncoder.encodeTokenTransfer(SPOKE_CHAIN_ID, spokeBridgeAdapter, amount, spokeMToken, user, recipient, index, messageId);
         address defaultBridgeAdapter = hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID);
 
         mToken.setCurrentIndex(index);
@@ -63,8 +64,9 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
         uint256 fee = 1;
         uint128 index = 1_100_000_068_703;
         bytes32 messageId = _getMessageId();
-        bytes memory payload =
-            PayloadEncoder.encodeTokenTransfer(amount, spokeWrappedMToken, user, recipient, index, messageId, SPOKE_CHAIN_ID);
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            SPOKE_CHAIN_ID, spokeBridgeAdapter, amount, spokeWrappedMToken, user, recipient, index, messageId
+        );
         address defaultBridgeAdapter = hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID);
 
         mToken.setCurrentIndex(index);
@@ -95,11 +97,15 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
         uint256 fee = 1;
         uint128 index = 1_100_000_068_703;
         bytes32 messageId = _getMessageId();
-        bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, spokeMToken, user, recipient, index, messageId, SPOKE_CHAIN_ID);
+        bytes memory payload =
+            PayloadEncoder.encodeTokenTransfer(SPOKE_CHAIN_ID, spokeBridgeAdapter, amount, spokeMToken, user, recipient, index, messageId);
 
         // Deploy a new mock adapter
         MockBridgeAdapter customAdapter = new MockBridgeAdapter();
         customAdapter.setPortal(address(hubPortal));
+
+        // Mock fetching peer bridge adapter
+        vm.mockCall(address(customAdapter), abi.encodeCall(MockBridgeAdapter.getPeer, (SPOKE_CHAIN_ID)), abi.encode(spokeBridgeAdapter));
 
         mToken.setCurrentIndex(index);
         registrar.setListContains(EARNERS_LIST, address(hubPortal), true);

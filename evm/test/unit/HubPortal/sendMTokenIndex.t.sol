@@ -22,7 +22,7 @@ contract SendMTokenIndexUnitTest is HubPortalUnitTestBase {
         uint128 index = 1_100_000_068_703;
         uint256 fee = 1;
         bytes32 messageId = _getMessageId();
-        bytes memory payload = PayloadEncoder.encodeIndex(index, messageId, SPOKE_CHAIN_ID);
+        bytes memory payload = PayloadEncoder.encodeIndex(SPOKE_CHAIN_ID, spokeBridgeAdapter, index, messageId);
         address defaultBridgeAdapter = hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID);
 
         mToken.setCurrentIndex(index);
@@ -44,11 +44,14 @@ contract SendMTokenIndexUnitTest is HubPortalUnitTestBase {
         uint128 index = 1_100_000_068_703;
         uint256 fee = 1;
         bytes32 messageId = _getMessageId();
-        bytes memory payload = PayloadEncoder.encodeIndex(index, messageId, SPOKE_CHAIN_ID);
+        bytes memory payload = PayloadEncoder.encodeIndex(SPOKE_CHAIN_ID, spokeBridgeAdapter, index, messageId);
 
         // Deploy a new mock adapter
         MockBridgeAdapter customAdapter = new MockBridgeAdapter();
         customAdapter.setPortal(address(hubPortal));
+
+        // Mock fetching peer bridge adapter
+        vm.mockCall(address(customAdapter), abi.encodeCall(MockBridgeAdapter.getPeer, (SPOKE_CHAIN_ID)), abi.encode(spokeBridgeAdapter));
 
         mToken.setCurrentIndex(index);
         registrar.setListContains(EARNERS_LIST, address(hubPortal), true);

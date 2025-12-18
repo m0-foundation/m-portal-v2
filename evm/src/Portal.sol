@@ -165,7 +165,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     function receiveMessage(uint32 sourceChainId, bytes calldata payload) external {
         _revertIfUnsupportedBridgeAdapter(sourceChainId, msg.sender);
 
-        PayloadType payloadType = payload.getPayloadType();
+        PayloadType payloadType = payload.decodePayloadType();
 
         if (payloadType == PayloadType.TokenTransfer) {
             _receiveToken(sourceChainId, payload);
@@ -377,7 +377,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         uint128 index;
         // Extracted to prevent stack too deep error
         (payload, messageId, index) =
-            _createTokenTransferPayload(transferAmount, destinationChainId, destinationToken, msg.sender, recipient);
+            _createTokenTransferPayload(transferAmount, destinationChainId, destinationToken, msg.sender, recipient, bridgeAdapter);
 
         _sendMessage(destinationChainId, PayloadType.TokenTransfer, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
 
@@ -395,12 +395,15 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         uint32 destinationChainId,
         bytes32 destinationToken,
         address sender,
-        bytes32 recipient
+        bytes32 recipient,
+        address bridgeAdapter
     ) internal returns (bytes memory payload, bytes32 messageId, uint128 index) {
         messageId = _getMessageId(destinationChainId);
         index = _currentIndex();
-        payload =
-            PayloadEncoder.encodeTokenTransfer(transferAmount, destinationToken, sender, recipient, index, messageId, destinationChainId);
+        bytes32 destinationPeer = IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId);
+        payload = PayloadEncoder.encodeTokenTransfer(
+            destinationChainId, destinationPeer, transferAmount, destinationToken, sender, recipient, index, messageId
+        );
     }
 
     /// @dev Sends the fill report to the destination chain.
@@ -417,13 +420,14 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
 
         messageId = _getMessageId(destinationChainId);
         bytes memory payload = PayloadEncoder.encodeFillReport(
+            destinationChainId,
+            IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId),
             report.orderId,
             report.amountInToRelease,
             report.amountOutFilled,
             report.originRecipient,
             report.tokenIn,
-            messageId,
-            destinationChainId
+            messageId
         );
 
         _sendMessage(destinationChainId, PayloadType.FillReport, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
@@ -444,7 +448,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     /// @param sourceChainId The ID of the source chain.
     /// @param payload       The message payload.
     function _receiveToken(uint32 sourceChainId, bytes memory payload) private {
-        (uint256 amount, address destinationToken, bytes32 sender, address recipient, uint128 index, bytes32 messageId,) =
+        (uint256 amount, address destinationToken, bytes32 sender, address recipient, uint128 index, bytes32 messageId) =
             payload.decodeTokenTransfer();
 
         emit TokenReceived(sourceChainId, destinationToken, sender, recipient, amount, index, messageId);
@@ -488,14 +492,8 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     /// @param sourceChainId The ID of the source chain.
     /// @param payload       The message payload.
     function _receiveFillReport(uint32 sourceChainId, bytes memory payload) private {
-        (
-            bytes32 orderId,
-            uint128 amountInToRelease,
-            uint128 amountOutFilled,
-            bytes32 originRecipient,
-            bytes32 tokenIn,
-            bytes32 messageId,
-        ) = payload.decodeFillReport();
+        (bytes32 orderId, uint128 amountInToRelease, uint128 amountOutFilled, bytes32 originRecipient, bytes32 tokenIn, bytes32 messageId) =
+            payload.decodeFillReport();
 
         IOrderBookLike(orderBook)
             .reportFill(
