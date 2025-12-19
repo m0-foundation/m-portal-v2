@@ -6,6 +6,7 @@ import { IERC20 } from "../lib/common/src/interfaces/IERC20.sol";
 import { IndexingMath } from "../lib/common/src/libs/IndexingMath.sol";
 
 import { IMTokenLike } from "./interfaces/IMTokenLike.sol";
+import { IMerkleTreeBuilderLike } from "./interfaces/IMerkleTreeBuilderLike.sol";
 import { IRegistrarLike } from "./interfaces/IRegistrarLike.sol";
 import { IPortal } from "./interfaces/IPortal.sol";
 import { IHubPortal } from "./interfaces/IHubPortal.sol";
@@ -39,18 +40,27 @@ abstract contract HubPortalStorageLayout {
 contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     using TypeConverter for uint256;
 
+    bytes32 public constant SVM_EARNER_LIST = bytes32("solana-earners");
+
+    /// @inheritdoc IHubPortal
+    address public immutable merkleTreeBuilder;
+
     /// @notice Constructs HubPortal Implementation contract
     /// @dev    Sets immutable storage.
-    /// @param  mToken_       The address of M token.
-    /// @param  registrar_    The address of Registrar.
-    /// @param  swapFacility_ The address of Swap Facility.
-    /// @param  orderBook_    The address of Order Book.
+    /// @param  mToken_            The address of M token.
+    /// @param  registrar_         The address of Registrar.
+    /// @param  swapFacility_      The address of Swap Facility.
+    /// @param  orderBook_         The address of Order Book.
+    /// @param  merkleTreeBuilder_ The address of Merkle Tree Builder.
     constructor(
         address mToken_,
         address registrar_,
         address swapFacility_,
-        address orderBook_
-    ) Portal(mToken_, registrar_, swapFacility_, orderBook_) { }
+        address orderBook_,
+        address merkleTreeBuilder_
+    ) Portal(mToken_, registrar_, swapFacility_, orderBook_) {
+        if ((merkleTreeBuilder = merkleTreeBuilder_) == address(0)) revert ZeroMerkleTreeBuilder();
+    }
 
     /// @inheritdoc IPortal
     function initialize(address owner, address pauser, address operator) external initializer {
@@ -140,6 +150,30 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
         return _sendRegistrarListStatus(destinationChainId, listName, account, refundAddress, bridgeAdapter, bridgeAdapterArgs);
+    }
+
+    /// @inheritdoc IHubPortal
+    function sendEarnersMerkleRoot(
+        uint32 destinationChainId,
+        bytes32 refundAddress,
+        bytes calldata bridgeAdapterArgs
+    ) external payable returns (bytes32 messageId) {
+        address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
+        _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
+
+        return _sendEarnersMerkleRoot(destinationChainId, refundAddress, bridgeAdapter, bridgeAdapterArgs);
+    }
+
+    /// @inheritdoc IHubPortal
+    function sendEarnersMerkleRoot(
+        uint32 destinationChainId,
+        bytes32 refundAddress,
+        address bridgeAdapter,
+        bytes calldata bridgeAdapterArgs
+    ) external payable returns (bytes32 messageId) {
+        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
+
+        return _sendEarnersMerkleRoot(destinationChainId, refundAddress, bridgeAdapter, bridgeAdapterArgs);
     }
 
     /// @inheritdoc IHubPortal
@@ -245,6 +279,25 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         _sendMessage(destinationChainId, PayloadType.RegistrarList, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
 
         emit RegistrarListStatusSent(destinationChainId, listName, account, status, bridgeAdapter, messageId);
+    }
+
+    /// @dev Sends the Earner Merkle Root to the destination chain.
+    function _sendEarnersMerkleRoot(
+        uint32 destinationChainId,
+        bytes32 refundAddress,
+        address bridgeAdapter,
+        bytes calldata bridgeAdapterArgs
+    ) private returns (bytes32 messageId) {
+        _revertIfZeroRefundAddress(refundAddress);
+
+        uint128 index = _currentIndex();
+        messageId = _getMessageId(destinationChainId);
+        bytes32 earnerMerkleRoot = IMerkleTreeBuilderLike(merkleTreeBuilder).getRoot(SVM_EARNER_LIST);
+        bytes memory payload = PayloadEncoder.encodeEarnerMerkleRoot(index, earnerMerkleRoot, messageId);
+
+        _sendMessage(destinationChainId, PayloadType.EarnerMerkleRoot, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
+
+        emit EarnerMerkleRootSent(destinationChainId, index, earnerMerkleRoot, bridgeAdapter, messageId);
     }
 
     /// @dev Unlocks M tokens to `recipient_`.

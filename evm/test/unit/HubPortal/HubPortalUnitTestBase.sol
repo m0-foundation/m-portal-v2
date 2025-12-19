@@ -17,6 +17,7 @@ import { MockHubRegistrar } from "../../mocks/MockHubRegistrar.sol";
 import { MockSwapFacility } from "../../mocks/MockSwapFacility.sol";
 import { MockOrderBook } from "../../mocks/MockOrderBook.sol";
 import { MockBridgeAdapter } from "../../mocks/MockBridgeAdapter.sol";
+import { MockMerkleTreeBuilder } from "../../mocks/MockMerkleTreeBuilder.sol";
 
 abstract contract HubPortalUnitTestBase is Test {
     using TypeConverter for *;
@@ -29,6 +30,7 @@ abstract contract HubPortalUnitTestBase is Test {
     uint256 internal constant LIST_UPDATE_GAS_LIMIT = 100_000;
     uint256 internal constant FILL_REPORT_GAS_LIMIT = 150_000;
     uint256 internal constant TOKEN_TRANSFER_GAS_LIMIT = 250_000;
+    uint256 internal constant EARNER_MERKLE_ROOT_GAS_LIMIT = 100_000;
 
     /// @dev Registrar key of earners list.
     bytes32 internal constant EARNERS_LIST = "earners";
@@ -44,6 +46,7 @@ abstract contract HubPortalUnitTestBase is Test {
     MockSwapFacility internal swapFacility;
     MockOrderBook internal mockOrderBook;
     MockBridgeAdapter internal bridgeAdapter;
+    MockMerkleTreeBuilder internal merkleTreeBuilder;
 
     bytes32 internal spokeMToken = makeAddr("spokeMToken").toBytes32();
     bytes32 internal spokeWrappedMToken = makeAddr("spokeWrappedMToken").toBytes32();
@@ -64,9 +67,11 @@ abstract contract HubPortalUnitTestBase is Test {
         swapFacility = new MockSwapFacility(address(mToken));
         mockOrderBook = new MockOrderBook();
         bridgeAdapter = new MockBridgeAdapter();
+        merkleTreeBuilder = new MockMerkleTreeBuilder();
 
         // Deploy implementation
-        implementation = new HubPortal(address(mToken), address(registrar), address(swapFacility), address(mockOrderBook));
+        implementation =
+            new HubPortal(address(mToken), address(registrar), address(swapFacility), address(mockOrderBook), address(merkleTreeBuilder));
 
         // Deploy UUPS proxy
         bytes memory initializeData = abi.encodeCall(HubPortal.initialize, (admin, pauser, operator));
@@ -88,6 +93,7 @@ abstract contract HubPortalUnitTestBase is Test {
         hubPortal.setPayloadGasLimit(SPOKE_CHAIN_ID, PayloadType.RegistrarKey, KEY_UPDATE_GAS_LIMIT);
         hubPortal.setPayloadGasLimit(SPOKE_CHAIN_ID, PayloadType.RegistrarList, LIST_UPDATE_GAS_LIMIT);
         hubPortal.setPayloadGasLimit(SPOKE_CHAIN_ID, PayloadType.FillReport, FILL_REPORT_GAS_LIMIT);
+        hubPortal.setPayloadGasLimit(SPOKE_CHAIN_ID, PayloadType.EarnerMerkleRoot, EARNER_MERKLE_ROOT_GAS_LIMIT);
 
         vm.stopPrank();
 
