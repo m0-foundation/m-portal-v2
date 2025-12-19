@@ -50,9 +50,22 @@ interface IHubPortal is IPortal {
         bytes32 messageId
     );
 
+    /// @notice Emitted when the SVM Earners Merkle Root is sent to a destination chain.
+    /// @param  destinationChainId The chain Id of the destination chain.
+    /// @param  index              The $M token index.
+    /// @param  earnerMerkleRoot   The Earner Merkle Root.
+    /// @param  bridgeAdapter      The address of the bridge adapter used to send the message.
+    /// @param  messageId          The unique ID of the sent message.
+    event EarnerMerkleRootSent(
+        uint32 indexed destinationChainId, uint128 index, bytes32 earnerMerkleRoot, address bridgeAdapter, bytes32 messageId
+    );
+
     ///////////////////////////////////////////////////////////////////////////
     //                             CUSTOM ERRORS                             //
     ///////////////////////////////////////////////////////////////////////////
+
+    /// @notice Thrown when the Merkle Tree Builder address is zero.
+    error ZeroMerkleTreeBuilder();
 
     /// @notice Thrown when trying to enable earning after it has been explicitly disabled.
     error EarningCannotBeReenabled();
@@ -75,6 +88,9 @@ interface IHubPortal is IPortal {
 
     /// @notice Returns the value of M token index when earning for HubPortal was disabled.
     function disableEarningIndex() external view returns (uint128);
+
+    /// @notice Returns the address of the Merkle Tree Builder.
+    function merkleTreeBuilder() external view returns (address);
 
     ///////////////////////////////////////////////////////////////////////////
     //                         INTERACTIVE FUNCTIONS                         //
@@ -133,6 +149,7 @@ interface IHubPortal is IPortal {
     ) external payable returns (bytes32 messageId);
 
     /// @notice Sends the Registrar list status for an account to the destination chain using the default bridge adapter.
+    /// @dev    Must be used for EVM Spoke chains only.
     /// @param  destinationChainId The chain Id of the destination chain.
     /// @param  listName           The name of the list.
     /// @param  account            The account.
@@ -148,6 +165,7 @@ interface IHubPortal is IPortal {
     ) external payable returns (bytes32 messageId);
 
     /// @notice Sends the Registrar list status for an account to the destination chain using the default specified adapter.
+    /// @dev    Must be used for EVM Spoke chains only.
     /// @param  destinationChainId The chain Id of the destination chain.
     /// @param  listName           The name of the list.
     /// @param  account            The account.
@@ -159,6 +177,32 @@ interface IHubPortal is IPortal {
         uint32 destinationChainId,
         bytes32 listName,
         address account,
+        bytes32 refundAddress,
+        address bridgeAdapter,
+        bytes calldata bridgeAdapterArgs
+    ) external payable returns (bytes32 messageId);
+
+    /// @notice Sends the SVM Earners Merkle Root to the destination chain using the default bridge adapter.
+    /// @dev    Must be used for SVM Spoke chains only, will revert on destination if used for EVM Spoke chains.
+    /// @param  destinationChainId The chain Id of the destination chain.
+    /// @param  refundAddress      The refund address to receive excess native gas.
+    /// @param  bridgeAdapterArgs  The optional bridge adapter arguments, could be empty.
+    /// @return messageId          The ID uniquely identifying the message.
+    function sendEarnersMerkleRoot(
+        uint32 destinationChainId,
+        bytes32 refundAddress,
+        bytes calldata bridgeAdapterArgs
+    ) external payable returns (bytes32 messageId);
+
+    /// @notice Sends the SVM Earners Merkle Root to the destination chain using the specified bridge adapter.
+    /// @dev    Must be used for SVM Spoke chains only, will revert on destination if used for EVM Spoke chains.
+    /// @param  destinationChainId The chain Id of the destination chain.
+    /// @param  refundAddress      The refund address to receive excess native gas.
+    /// @param  bridgeAdapter      The address of the bridge adapter used to send the message.
+    /// @param  bridgeAdapterArgs  The optional bridge adapter arguments, could be empty.
+    /// @return messageId          The ID uniquely identifying the message.
+    function sendEarnersMerkleRoot(
+        uint32 destinationChainId,
         bytes32 refundAddress,
         address bridgeAdapter,
         bytes calldata bridgeAdapterArgs

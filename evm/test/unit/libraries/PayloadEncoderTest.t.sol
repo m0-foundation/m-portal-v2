@@ -19,9 +19,9 @@ contract PayloadEncoderTest is Test {
 
     /// forge-config: default.allow_internal_expect_revert = true
     function test_getPayloadType_invalidPayloadType() external {
-        bytes memory payload = abi.encodePacked(uint8(5));
+        bytes memory payload = abi.encodePacked(uint8(6));
 
-        vm.expectRevert(abi.encodeWithSelector(PayloadEncoder.InvalidPayloadType.selector, 5));
+        vm.expectRevert(abi.encodeWithSelector(PayloadEncoder.InvalidPayloadType.selector, 6));
         PayloadEncoder.getPayloadType(payload);
     }
 
@@ -40,6 +40,9 @@ contract PayloadEncoderTest is Test {
 
         payload = abi.encodePacked(PayloadType.FillReport);
         assertEq(uint8(PayloadEncoder.getPayloadType(payload)), uint8(PayloadType.FillReport));
+
+        payload = abi.encodePacked(PayloadType.EarnerMerkleRoot);
+        assertEq(uint8(PayloadEncoder.getPayloadType(payload)), uint8(PayloadType.EarnerMerkleRoot));
     }
 
     function test_encodeTokenTransfer() external {
@@ -307,6 +310,45 @@ contract PayloadEncoderTest is Test {
         assertEq(decodedAmountOutFilled, amountOutFilled);
         assertEq(decodedOriginRecipient, originRecipient);
         assertEq(decodedTokenIn, tokenIn);
+        assertEq(decodedMessageId, messageId);
+    }
+
+    function test_encodeEarnerMerkleRoot() external pure {
+        uint128 index = 1.2e12;
+        bytes32 earnerMerkleRoot = "merkleRoot";
+        bytes32 messageId = "messageId";
+
+        bytes memory payload = PayloadEncoder.encodeEarnerMerkleRoot(index, earnerMerkleRoot, messageId);
+
+        assertEq(payload, abi.encodePacked(PayloadType.EarnerMerkleRoot, index, earnerMerkleRoot, messageId));
+    }
+
+    function testFuzz_encodeEarnerMerkleRoot(uint128 index, bytes32 earnerMerkleRoot, bytes32 messageId) external pure {
+        vm.assume(index < type(uint128).max);
+
+        bytes memory payload = PayloadEncoder.encodeEarnerMerkleRoot(index, earnerMerkleRoot, messageId);
+        assertEq(payload, abi.encodePacked(PayloadType.EarnerMerkleRoot, index, earnerMerkleRoot, messageId));
+    }
+
+    function test_decodeEarnerMerkleRoot() external pure {
+        uint128 index = 1.2e12;
+        bytes32 earnerMerkleRoot = "merkleRoot";
+        bytes32 messageId = "messageId";
+        bytes memory payload = PayloadEncoder.encodeEarnerMerkleRoot(index, earnerMerkleRoot, messageId);
+
+        (uint128 decodedIndex, bytes32 decodedEarnerMerkleRoot, bytes32 decodedMessageId) = PayloadEncoder.decodeEarnerMerkleRoot(payload);
+        assertEq(decodedIndex, index);
+        assertEq(decodedEarnerMerkleRoot, earnerMerkleRoot);
+        assertEq(decodedMessageId, messageId);
+    }
+
+    function testFuzz_decodeEarnerMerkleRoot(uint128 index, bytes32 earnerMerkleRoot, bytes32 messageId) external pure {
+        vm.assume(index < type(uint128).max);
+        bytes memory payload = PayloadEncoder.encodeEarnerMerkleRoot(index, earnerMerkleRoot, messageId);
+
+        (uint128 decodedIndex, bytes32 decodedEarnerMerkleRoot, bytes32 decodedMessageId) = PayloadEncoder.decodeEarnerMerkleRoot(payload);
+        assertEq(decodedIndex, index);
+        assertEq(decodedEarnerMerkleRoot, earnerMerkleRoot);
         assertEq(decodedMessageId, messageId);
     }
 }

@@ -10,7 +10,8 @@ enum PayloadType {
     Index,
     RegistrarKey,
     RegistrarList,
-    FillReport
+    FillReport,
+    EarnerMerkleRoot
 }
 
 /// @title  PayloadEncoder
@@ -21,13 +22,6 @@ library PayloadEncoder {
     using TypeConverter for *;
 
     uint256 internal constant PAYLOAD_TYPE_LENGTH = 1;
-
-    /// @dev PayloadType.TokenTransfer = 0,
-    ///      PayloadType.Index = 1,
-    ///      PayloadType.RegistrarKey = 2,
-    ///      PayloadType.RegistrarList = 3,
-    ///      PayloadType.FillReport = 4
-    uint256 internal constant MAX_PAYLOAD_TYPE = 4;
 
     error InvalidPayloadLength(uint256 length);
     error InvalidPayloadType(uint8 value);
@@ -41,7 +35,7 @@ library PayloadEncoder {
         uint8 type_;
         (type_,) = payload.asUint8Unchecked(0);
 
-        if (type_ > MAX_PAYLOAD_TYPE) revert InvalidPayloadType(type_);
+        if (type_ > uint8(type(PayloadType).max)) revert InvalidPayloadType(type_);
         return PayloadType(type_);
     }
 
@@ -225,6 +219,33 @@ library PayloadEncoder {
         payload.checkLength(offset);
     }
 
+    /// @notice Encodes Earner Merkle Root payload.
+    /// @param  index            $M token index.
+    /// @param  earnerMerkleRoot The Earner Merkle Root.
+    /// @param  messageId        The message ID.
+    function encodeEarnerMerkleRoot(uint128 index, bytes32 earnerMerkleRoot, bytes32 messageId) internal pure returns (bytes memory) {
+        return abi.encodePacked(PayloadType.EarnerMerkleRoot, index, earnerMerkleRoot, messageId);
+    }
+
+    /// @notice Decodes Earner Merkle Root payload.
+    /// @param  payload          The payload to decode.
+    /// @return index            $M token index.
+    /// @return earnerMerkleRoot The Earner Merkle Root.
+    /// @return messageId        The message ID.
+    function decodeEarnerMerkleRoot(bytes memory payload)
+        internal
+        pure
+        returns (uint128 index, bytes32 earnerMerkleRoot, bytes32 messageId)
+    {
+        uint256 offset = PAYLOAD_TYPE_LENGTH;
+
+        (index, offset) = payload.asUint128Unchecked(offset);
+        (earnerMerkleRoot, offset) = payload.asBytes32Unchecked(offset);
+        (messageId, offset) = payload.asBytes32Unchecked(offset);
+
+        payload.checkLength(offset);
+    }
+
     /// @notice Generates a payload with empty data for the given payload type.
     /// @dev    Used for estimating gas costs for different payload types.
     function generateEmptyPayload(PayloadType payloadType) internal pure returns (bytes memory) {
@@ -238,6 +259,8 @@ library PayloadEncoder {
             return encodeRegistrarList(bytes32(0), address(0), false, bytes32(0));
         } else if (payloadType == PayloadType.FillReport) {
             return encodeFillReport(bytes32(0), 0, 0, bytes32(0), bytes32(0), bytes32(0));
+        } else if (payloadType == PayloadType.EarnerMerkleRoot) {
+            return encodeEarnerMerkleRoot(0, bytes32(0), bytes32(0));
         }
 
         revert InvalidPayloadType(uint8(payloadType));
