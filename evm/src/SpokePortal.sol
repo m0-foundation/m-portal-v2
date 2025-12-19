@@ -71,14 +71,6 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
         emit CrossSpokeTokenTransferEnabled();
     }
 
-    /// @inheritdoc ISpokePortal
-    function disableCrossSpokeTokenTransfer() external onlyRole(OPERATOR_ROLE) {
-        if (!_getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled) return;
-
-        _getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled = false;
-        emit CrossSpokeTokenTransferDisabled();
-    }
-
     ///////////////////////////////////////////////////////////////////////////
     //                      EXTERNAL VIEW/PURE FUNCTIONS                     //
     ///////////////////////////////////////////////////////////////////////////

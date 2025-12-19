@@ -61,8 +61,4 @@ interface ISpokePortal is IPortal {
 
     /// @notice Enables cross-Spoke token transfer.
     function enableCrossSpokeTokenTransfer() external;
-
-    /// @notice Disables cross-Spoke token transfer.
-    /// @dev    Must be called before calling `disableCrossSpokeTokenTransfer` in HubPortal.
-    function disableCrossSpokeTokenTransfer() external;
 }
