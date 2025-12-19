@@ -295,9 +295,11 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         _revertIfZeroRefundAddress(refundAddress);
 
         uint128 index = _currentIndex();
+        bytes32 destinationPeer = IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId);
         messageId = _getMessageId(destinationChainId);
         bytes32 earnerMerkleRoot = IMerkleTreeBuilderLike(merkleTreeBuilder).getRoot(SVM_EARNER_LIST);
-        bytes memory payload = PayloadEncoder.encodeEarnerMerkleRoot(index, earnerMerkleRoot, messageId);
+        bytes memory payload =
+            PayloadEncoder.encodeEarnerMerkleRoot(destinationChainId, destinationPeer, messageId, index, earnerMerkleRoot);
 
         _sendMessage(destinationChainId, PayloadType.EarnerMerkleRoot, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
 

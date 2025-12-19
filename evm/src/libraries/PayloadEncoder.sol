@@ -145,7 +145,7 @@ library PayloadEncoder {
     }
 
     /// @notice Decodes $M token index payload.
-    /// @param payload    The payload to decode.
+    /// @param  payload   The payload to decode.
     /// @return messageId The message ID.
     /// @return index     $M token index.
     function decodeIndex(bytes memory payload) internal pure returns (bytes32 messageId, uint128 index) {
@@ -292,28 +292,36 @@ library PayloadEncoder {
     }
 
     /// @notice Encodes Earner Merkle Root payload.
-    /// @param  index            $M token index.
-    /// @param  earnerMerkleRoot The Earner Merkle Root.
-    /// @param  messageId        The message ID.
-    function encodeEarnerMerkleRoot(uint128 index, bytes32 earnerMerkleRoot, bytes32 messageId) internal pure returns (bytes memory) {
-        return abi.encodePacked(PayloadType.EarnerMerkleRoot, index, earnerMerkleRoot, messageId);
+    /// @param destinationChainId The destination chain ID.
+    /// @param destinationPeer    The address of the peer bridge adapter on the destination chain.
+    /// @param messageId          The message ID.
+    /// @param index              $M token index.
+    /// @param earnerMerkleRoot   The Earner Merkle Root.
+    function encodeEarnerMerkleRoot(
+        uint32 destinationChainId,
+        bytes32 destinationPeer,
+        bytes32 messageId,
+        uint128 index,
+        bytes32 earnerMerkleRoot
+    ) internal pure returns (bytes memory) {
+        return abi.encodePacked(PayloadType.EarnerMerkleRoot, destinationChainId, destinationPeer, messageId, index, earnerMerkleRoot);
     }
 
     /// @notice Decodes Earner Merkle Root payload.
     /// @param  payload          The payload to decode.
+    /// @return messageId        The message ID.
     /// @return index            $M token index.
     /// @return earnerMerkleRoot The Earner Merkle Root.
-    /// @return messageId        The message ID.
     function decodeEarnerMerkleRoot(bytes memory payload)
         internal
         pure
-        returns (uint128 index, bytes32 earnerMerkleRoot, bytes32 messageId)
+        returns (bytes32 messageId, uint128 index, bytes32 earnerMerkleRoot)
     {
-        uint256 offset = PAYLOAD_TYPE_LENGTH;
+        uint256 offset = HEADER_LENGTH - MESSAGE_ID_LENGTH;
 
+        (messageId, offset) = payload.asBytes32Unchecked(offset);
         (index, offset) = payload.asUint128Unchecked(offset);
         (earnerMerkleRoot, offset) = payload.asBytes32Unchecked(offset);
-        (messageId, offset) = payload.asBytes32Unchecked(offset);
 
         payload.checkLength(offset);
     }
@@ -335,7 +343,7 @@ library PayloadEncoder {
         } else if (payloadType == PayloadType.FillReport) {
             return encodeFillReport(destinationChainId, destinationPeer, messageId, bytes32(0), 0, 0, bytes32(0), bytes32(0));
         } else if (payloadType == PayloadType.EarnerMerkleRoot) {
-            return encodeEarnerMerkleRoot(0, bytes32(0), bytes32(0));
+            return encodeEarnerMerkleRoot(destinationChainId, destinationPeer, messageId, 0, bytes32(0));
         }
 
         revert InvalidPayloadType(uint8(payloadType));

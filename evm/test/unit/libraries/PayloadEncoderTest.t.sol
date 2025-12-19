@@ -382,42 +382,55 @@ contract PayloadEncoderTest is Test {
         assertEq(decodedTokenIn, tokenIn);
     }
 
-    function test_encodeEarnerMerkleRoot() external pure {
+    function test_encodeEarnerMerkleRoot() external view {
         uint128 index = 1.2e12;
         bytes32 earnerMerkleRoot = "merkleRoot";
         bytes32 messageId = "messageId";
 
-        bytes memory payload = PayloadEncoder.encodeEarnerMerkleRoot(index, earnerMerkleRoot, messageId);
+        bytes memory payload =
+            PayloadEncoder.encodeEarnerMerkleRoot(DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, index, earnerMerkleRoot);
 
-        assertEq(payload, abi.encodePacked(PayloadType.EarnerMerkleRoot, index, earnerMerkleRoot, messageId));
+        assertEq(
+            payload,
+            abi.encodePacked(PayloadType.EarnerMerkleRoot, DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, index, earnerMerkleRoot)
+        );
     }
 
-    function testFuzz_encodeEarnerMerkleRoot(uint128 index, bytes32 earnerMerkleRoot, bytes32 messageId) external pure {
+    function testFuzz_encodeEarnerMerkleRoot(bytes32 messageId, uint128 index, bytes32 earnerMerkleRoot) external view {
         vm.assume(index < type(uint128).max);
 
-        bytes memory payload = PayloadEncoder.encodeEarnerMerkleRoot(index, earnerMerkleRoot, messageId);
-        assertEq(payload, abi.encodePacked(PayloadType.EarnerMerkleRoot, index, earnerMerkleRoot, messageId));
+        bytes memory payload =
+            PayloadEncoder.encodeEarnerMerkleRoot(DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, index, earnerMerkleRoot);
+
+        assertEq(
+            payload,
+            abi.encodePacked(PayloadType.EarnerMerkleRoot, DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, index, earnerMerkleRoot)
+        );
     }
 
-    function test_decodeEarnerMerkleRoot() external pure {
+    function test_decodeEarnerMerkleRoot() external view {
+        bytes32 messageId = "messageId";
         uint128 index = 1.2e12;
         bytes32 earnerMerkleRoot = "merkleRoot";
-        bytes32 messageId = "messageId";
-        bytes memory payload = PayloadEncoder.encodeEarnerMerkleRoot(index, earnerMerkleRoot, messageId);
+        bytes memory payload =
+            PayloadEncoder.encodeEarnerMerkleRoot(DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, index, earnerMerkleRoot);
 
-        (uint128 decodedIndex, bytes32 decodedEarnerMerkleRoot, bytes32 decodedMessageId) = PayloadEncoder.decodeEarnerMerkleRoot(payload);
+        (bytes32 decodedMessageId, uint128 decodedIndex, bytes32 decodedEarnerMerkleRoot) = PayloadEncoder.decodeEarnerMerkleRoot(payload);
+
+        assertEq(decodedMessageId, messageId);
         assertEq(decodedIndex, index);
         assertEq(decodedEarnerMerkleRoot, earnerMerkleRoot);
-        assertEq(decodedMessageId, messageId);
     }
 
-    function testFuzz_decodeEarnerMerkleRoot(uint128 index, bytes32 earnerMerkleRoot, bytes32 messageId) external pure {
+    function testFuzz_decodeEarnerMerkleRoot(bytes32 messageId, uint128 index, bytes32 earnerMerkleRoot) external view {
         vm.assume(index < type(uint128).max);
-        bytes memory payload = PayloadEncoder.encodeEarnerMerkleRoot(index, earnerMerkleRoot, messageId);
+        bytes memory payload =
+            PayloadEncoder.encodeEarnerMerkleRoot(DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, index, earnerMerkleRoot);
 
-        (uint128 decodedIndex, bytes32 decodedEarnerMerkleRoot, bytes32 decodedMessageId) = PayloadEncoder.decodeEarnerMerkleRoot(payload);
+        (bytes32 decodedMessageId, uint128 decodedIndex, bytes32 decodedEarnerMerkleRoot) = PayloadEncoder.decodeEarnerMerkleRoot(payload);
+
+        assertEq(decodedMessageId, messageId);
         assertEq(decodedIndex, index);
         assertEq(decodedEarnerMerkleRoot, earnerMerkleRoot);
-        assertEq(decodedMessageId, messageId);
     }
 }
