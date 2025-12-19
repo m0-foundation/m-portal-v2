@@ -181,36 +181,49 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     function configureSpokeChain(uint32 spokeChainId, bool isIsolated, address bridgeAdapter) external payable onlyRole(OPERATOR_ROLE) returns (bytes32 messageId) {
         SpokeChainConfig storage spokeConfig = _getHubPortalStorageLocation().spokeConfig[spokeChainId];
 
-        // First time configuration
-        if (spokeConfig.state == SpokeChainState.NotConfigured) {
-            spokeConfig.state = isIsolated ? SpokeChainState.Isolated : SpokeChainState.Connected;
+        // Handle Isolated configuration
+        if (isIsolated) {
+            // Cannot avoid isolating the connected chain without incurring a heavy reconfiguration burden on the spokes.
+            // Therefore, once a chain has been isolated --> connected, it can never be made isolated again.
+            if (spokeConfig.state == SpokeChainState.Connected) revert SpokeIsolationCannotBeReenabled();
 
-            emit SpokeChainConfigured(spokeChainId, isIsolated);
+            // Set state if configuring for the first time.
+            if (spokeConfig.state == SpokeChainState.NotConfigured) {
+                spokeConfig.state = SpokeChainState.Isolated;
+
+                emit SpokeChainConfigured(spokeChainId, isIsolated);
+            }
+            // If already isolated, then the function call is a no-op.
+
+            // No message is sent when isolated.
+            return bytes32(0);
         }
 
-        // Cannot avoid isolating the connected chain without incurring a heavy reconfiguration burden on the spokes.
-        // Therefore, once a chain has been isolated --> connected, it can never be made isolated again.
-        if (spokeConfig.state == SpokeChainState.Connected && isIsolated) revert SpokeIsolationCannotBeReenabled();
-
+        // Handle Connected configuration
         // If connecting a chain, then we send a message to the spoke to set the state there.
-        // We do this regardless of the current state to allow re-sending the connect message (i.e. in the case of upgrades of already connected chains or message failures).
-        if (!isIsolated) {
-            spokeConfig.state = SpokeChainState.Connected;
+        // We do this regardless of the current state to allow re-sending the connect message 
+        // (i.e. in the case of upgrades of already connected chains or message failures).
+        spokeConfig.state = SpokeChainState.Connected;
 
-            emit CrossSpokeTokenTransferEnabled(spokeChainId, spokeConfig.bridgedPrincipal);
-
+        // Emit events for state transitions
+        if (spokeConfig.state == SpokeChainState.NotConfigured) {
+            emit SpokeChainConfigured(spokeChainId, isIsolated);
+        }
+        if (spokeConfig.state == SpokeChainState.Isolated) {
             // Reset bridged principal when making isolated chain connected.
             // Logically optional, releases some storage.
             spokeConfig.bridgedPrincipal = 0;
 
-            // Send message to the spoke to enable cross-spoke transfers.
-            address bridgeAdapter_ = bridgeAdapter == address(0)
-                ? defaultBridgeAdapter(spokeChainId)
-                : bridgeAdapter;
-            _revertIfZeroBridgeAdapter(spokeChainId, bridgeAdapter_);
-
-            messageId = _sendConnectSpokeMessage(spokeChainId, msg.sender.toBytes32(), bridgeAdapter_);
+            emit CrossSpokeTokenTransferEnabled(spokeChainId, spokeConfig.bridgedPrincipal);
         }
+
+        // Send message to the spoke to enable cross-spoke transfers.
+        address bridgeAdapter_ = bridgeAdapter == address(0)
+            ? defaultBridgeAdapter(spokeChainId)
+            : bridgeAdapter;
+        _revertIfZeroBridgeAdapter(spokeChainId, bridgeAdapter_);
+
+        return _sendConnectSpokeMessage(spokeChainId, msg.sender.toBytes32(), bridgeAdapter_);
     }
 
     ///////////////////////////////////////////////////////////////////////////
