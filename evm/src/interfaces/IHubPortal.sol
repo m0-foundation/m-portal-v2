@@ -178,5 +178,9 @@ interface IHubPortal is IPortal {
     function disableEarning() external;
 
     /// @notice Configures a Spoke chain as isolated or connected.
-    function configureSpokeChain(uint32 spokeChainId, bool isIsolated) external;
+    /// @param  spokeChainId The internal (m0) chain id of the Spoke.
+    /// @param  isIsolated   Indicates whether the Spoke chain is to be configured as isolated or connected.
+    /// @param  bridgeAdapter The address of the bridge adapter to be used to send the configuration message if connecting the spoke chain.
+    /// @return messageId    The ID uniquely identifying the message. If the spoke is being configured as isolated, no message is sent and messageId is zero.
+    function configureSpokeChain(uint32 spokeChainId, bool isIsolated, address bridgeAdapter) external payable returns (bytes32 messageId);
 }

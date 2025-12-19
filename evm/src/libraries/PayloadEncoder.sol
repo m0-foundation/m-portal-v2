@@ -10,7 +10,8 @@ enum PayloadType {
     Index,
     RegistrarKey,
     RegistrarList,
-    FillReport
+    FillReport,
+    ConnectSpoke
 }
 
 /// @title  PayloadEncoder
@@ -26,8 +27,9 @@ library PayloadEncoder {
     ///      PayloadType.Index = 1,
     ///      PayloadType.RegistrarKey = 2,
     ///      PayloadType.RegistrarList = 3,
-    ///      PayloadType.FillReport = 4
-    uint256 internal constant MAX_PAYLOAD_TYPE = 4;
+    ///      PayloadType.FillReport = 4,
+    ///      PayloadType.ConnectSpoke = 5
+    uint256 internal constant MAX_PAYLOAD_TYPE = 5;
 
     error InvalidPayloadLength(uint256 length);
     error InvalidPayloadType(uint8 value);
@@ -214,6 +216,12 @@ library PayloadEncoder {
         payload.checkLength(offset);
     }
 
+    /// @notice Encodes a connect spoke payload. This payload has no additional data.
+    /// @return The encoded payload.
+    function encodeConnectSpoke() internal pure returns (bytes memory) {
+        return abi.encodePacked(PayloadType.ConnectSpoke); // payload is empty except for type
+    }
+
     /// @notice Generates a payload with empty data for the given payload type.
     /// @dev    Used for estimating gas costs for different payload types.
     function generateEmptyPayload(PayloadType payloadType) internal pure returns (bytes memory) {
@@ -227,6 +235,8 @@ library PayloadEncoder {
             return encodeRegistrarList(bytes32(0), address(0), false, bytes32(0));
         } else if (payloadType == PayloadType.FillReport) {
             return encodeFillReport(bytes32(0), 0, 0, bytes32(0), bytes32(0));
+        } else if (payloadType == PayloadType.ConnectSpoke) {
+            return encodeConnectSpoke();
         }
 
         revert InvalidPayloadType(uint8(payloadType));

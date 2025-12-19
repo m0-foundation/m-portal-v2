@@ -62,20 +62,6 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    //                          PRIVILEGED FUNCTIONS                         //
-    ///////////////////////////////////////////////////////////////////////////
-
-    /// @inheritdoc ISpokePortal
-    function enableCrossSpokeTokenTransfer() external onlyRole(OPERATOR_ROLE) {
-        SpokePortalStorageStruct storage $ = _getSpokePortalStorageLocation();
-        if (!$.isIsolatedChain) return;
-
-        $.isIsolatedChain = false;
-
-        emit CrossSpokeTokenTransferEnabled();
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
     //                      EXTERNAL VIEW/PURE FUNCTIONS                     //
     ///////////////////////////////////////////////////////////////////////////
 
@@ -95,6 +81,8 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
             _setRegistrarKey(payload);
         } else if (payloadType == PayloadType.RegistrarList) {
             _updateRegistrarList(payload);
+        } else if (payloadType == PayloadType.ConnectSpoke) {
+            _enableCrossSpokeTokenTransfer();
         }
     }
 
@@ -129,6 +117,16 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
         } else {
             IRegistrarLike(registrar).removeFromList(listName, account);
         }
+    }
+
+    /// @notice Enables token transfers to other Spoke chains.
+    function _enableCrossSpokeTokenTransfer() internal {
+        SpokePortalStorageStruct storage $ = _getSpokePortalStorageLocation();
+        if (!$.isIsolatedChain) return;
+
+        $.isIsolatedChain = false;
+
+        emit CrossSpokeTokenTransferEnabled();
     }
 
     /// @dev Mints $M Token to the `recipient`.

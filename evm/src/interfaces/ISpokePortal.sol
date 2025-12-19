@@ -51,11 +51,4 @@ interface ISpokePortal is IPortal {
 
     /// @notice Returns whether the Spoke chain is isolated.
     function isIsolatedChain() external view returns (bool);
-
-    ///////////////////////////////////////////////////////////////////////////
-    //                        INTERACTIVE FUNCTIONS                          //
-    ///////////////////////////////////////////////////////////////////////////
-
-    /// @notice Enables cross-Spoke token transfer.
-    function enableCrossSpokeTokenTransfer() external;
 }

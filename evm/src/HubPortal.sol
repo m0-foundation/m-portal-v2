@@ -51,6 +51,7 @@ abstract contract HubPortalStorageLayout {
 /// @dev    Tokens are bridged using lock-release mechanism.
 contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     using TypeConverter for uint256;
+    using TypeConverter for address;
 
     /// @notice Constructs HubPortal Implementation contract
     /// @dev    Sets immutable storage.
@@ -177,7 +178,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     ///////////////////////////////////////////////////////////////////////////
 
     /// @inheritdoc IHubPortal
-    function configureSpokeChain(uint32 spokeChainId, bool isIsolated) external onlyRole(OPERATOR_ROLE) {
+    function configureSpokeChain(uint32 spokeChainId, bool isIsolated, address bridgeAdapter) external payable onlyRole(OPERATOR_ROLE) returns (bytes32 messageId) {
         SpokeChainConfig storage spokeConfig = _getHubPortalStorageLocation().spokeConfig[spokeChainId];
 
         // First time configuration
@@ -185,16 +186,15 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
             spokeConfig.state = isIsolated ? SpokeChainState.Isolated : SpokeChainState.Connected;
 
             emit SpokeChainConfigured(spokeChainId, isIsolated);
-
-            return;
         }
 
         // Cannot avoid isolating the connected chain without incurring a heavy reconfiguration burden on the spokes.
         // Therefore, once a chain has been isolated --> connected, it can never be made isolated again.
         if (spokeConfig.state == SpokeChainState.Connected && isIsolated) revert SpokeIsolationCannotBeReenabled();
 
-        // Connect an isolated chain
-        if (spokeConfig.state == SpokeChainState.Isolated && !isIsolated) {
+        // If connecting a chain, then we send a message to the spoke to set the state there.
+        // We do this regardless of the current state to allow re-sending the connect message (i.e. in the case of upgrades of already connected chains or message failures).
+        if (!isIsolated) {
             spokeConfig.state = SpokeChainState.Connected;
 
             emit CrossSpokeTokenTransferEnabled(spokeChainId, spokeConfig.bridgedPrincipal);
@@ -202,6 +202,14 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
             // Reset bridged principal when making isolated chain connected.
             // Logically optional, releases some storage.
             spokeConfig.bridgedPrincipal = 0;
+
+            // Send message to the spoke to enable cross-spoke transfers.
+            address bridgeAdapter_ = bridgeAdapter == address(0)
+                ? defaultBridgeAdapter(spokeChainId)
+                : bridgeAdapter;
+            _revertIfZeroBridgeAdapter(spokeChainId, bridgeAdapter_);
+
+            messageId = _sendConnectSpokeMessage(spokeChainId, msg.sender.toBytes32(), bridgeAdapter_);
         }
     }
 
@@ -293,6 +301,21 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         _sendMessage(destinationChainId, PayloadType.RegistrarList, refundAddress, payload, bridgeAdapter);
 
         emit RegistrarListStatusSent(destinationChainId, listName, account, status, bridgeAdapter, messageId);
+    }
+
+    /// @dev Sends a message to the destination chain to enable cross-spoke token transfers.
+    /// @dev If the spoke is already connected, the message is ignored on the destination.
+    function _sendConnectSpokeMessage(
+        uint32 destinationChainId,
+        bytes32 refundAddress,
+        address bridgeAdapter
+    ) internal returns (bytes32 messageId) {
+        _revertIfZeroRefundAddress(refundAddress);
+
+        messageId = _getMessageId(destinationChainId);
+        bytes memory payload = PayloadEncoder.encodeConnectSpoke();
+
+        _sendMessage(destinationChainId, PayloadType.ConnectSpoke, refundAddress, payload, bridgeAdapter);
     }
 
     /// @dev Updates principal amount bridged to the destination chain.
