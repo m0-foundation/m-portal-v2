@@ -60,7 +60,7 @@ enum Mode {
 
 /// @dev View and pure functions common to HubPortalV1 and SpokePortalV1
 interface IPortalV1 {
-    // CONSTANTS/IMMUTABLES
+    // Constants/Immutables
     function NTT_MANAGER_VERSION() external view returns (string memory);
     function chainId() external view returns (uint16);
     function getMode() external view returns (uint8);
@@ -104,6 +104,13 @@ interface IPortalV1 {
     function getPeer(uint16 chainId) external view returns (NttManagerPeer memory);
 
     // Portal
+    event SupportedBridgingPathSet(
+        address indexed sourceToken,
+        uint16 indexed destinationChainId,
+        bytes32 indexed destinationToken,
+        bool supported
+    );
+
     function currentIndex() external view returns (uint128);
     function destinationMToken(uint16 destinationChainId) external view returns (bytes32 mToken);
     function mToken() external view returns (address);

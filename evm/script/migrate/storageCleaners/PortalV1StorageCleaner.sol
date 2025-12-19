@@ -2,9 +2,9 @@
 
 pragma solidity 0.8.30;
 
-import { UUPSUpgradeable } from "../../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { UUPSUpgradeable } from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 
-import { NttManagerPeer, AttestationInfo, Mode, Sequence, Threshold } from "./portalV1/IPortalV1.sol";
+import { NttManagerPeer, AttestationInfo, Mode, Sequence, Threshold } from "../portalV1/IPortalV1.sol";
 
 struct BridgingPath {
     address sourceToken;
