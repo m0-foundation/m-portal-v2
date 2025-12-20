@@ -24,7 +24,8 @@ contract SendRegistrarListStatusUnitTest is HubPortalUnitTestBase {
         uint256 fee = 1;
         bytes32 messageId = _getMessageId();
         bool status = true;
-        bytes memory payload = PayloadEncoder.encodeRegistrarList(testListName, testAccount, status, messageId);
+        bytes memory payload =
+            PayloadEncoder.encodeRegistrarList(SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, testListName, testAccount, status);
         address defaultBridgeAdapter = hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID);
 
         registrar.setListContains(testListName, testAccount, status);
@@ -44,7 +45,8 @@ contract SendRegistrarListStatusUnitTest is HubPortalUnitTestBase {
         uint256 fee = 1;
         bytes32 messageId = _getMessageId();
         bool status = false;
-        bytes memory payload = PayloadEncoder.encodeRegistrarList(testListName, testAccount, status, messageId);
+        bytes memory payload =
+            PayloadEncoder.encodeRegistrarList(SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, testListName, testAccount, status);
         address defaultBridgeAdapter = hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID);
 
         registrar.setListContains(testListName, testAccount, status);
@@ -64,11 +66,15 @@ contract SendRegistrarListStatusUnitTest is HubPortalUnitTestBase {
         uint256 fee = 1;
         bytes32 messageId = _getMessageId();
         bool status = true;
-        bytes memory payload = PayloadEncoder.encodeRegistrarList(testListName, testAccount, status, messageId);
+        bytes memory payload =
+            PayloadEncoder.encodeRegistrarList(SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, testListName, testAccount, status);
 
         // Deploy a new mock adapter
         MockBridgeAdapter customAdapter = new MockBridgeAdapter();
         customAdapter.setPortal(address(hubPortal));
+
+        // Mock fetching peer bridge adapter
+        vm.mockCall(address(customAdapter), abi.encodeCall(MockBridgeAdapter.getPeer, (SPOKE_CHAIN_ID)), abi.encode(spokeBridgeAdapter));
 
         registrar.setListContains(testListName, testAccount, status);
 

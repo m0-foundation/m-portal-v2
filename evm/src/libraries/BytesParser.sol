@@ -49,6 +49,13 @@ library BytesParser {
         }
     }
 
+    function asUint32Unchecked(bytes memory encoded, uint256 offset) internal pure returns (uint32 value, uint256 nextOffset) {
+        assembly ("memory-safe") {
+            nextOffset := add(offset, 4)
+            value := mload(add(encoded, nextOffset))
+        }
+    }
+
     function asBytes32Unchecked(bytes memory encoded, uint256 offset) internal pure returns (bytes32 value, uint256 nextOffset) {
         uint256 uint256Value;
         (uint256Value, nextOffset) = asUint256Unchecked(encoded, offset);

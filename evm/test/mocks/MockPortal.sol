@@ -15,6 +15,10 @@ contract MockPortal {
         mToken = mToken_;
     }
 
+    function currentChainId() external view returns (uint32) {
+        return 0;
+    }
+
     function receiveMessage(uint32 sourceChainId, bytes memory payload) external {
         receiveMessageCalls.push(ReceiveMessageCall({ sourceChainId: sourceChainId, payload: payload }));
     }

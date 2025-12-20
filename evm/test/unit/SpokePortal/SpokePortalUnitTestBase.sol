@@ -45,6 +45,7 @@ abstract contract SpokePortalUnitTestBase is Test {
 
     bytes32 internal hubMToken = makeAddr("hubMToken").toBytes32();
     bytes32 internal hubWrappedMToken = makeAddr("hubWrappedMToken").toBytes32();
+    bytes32 internal hubBridgeAdapter = makeAddr("hubBridgeAdapter").toBytes32();
 
     address internal admin = makeAddr("admin");
     address internal operator = makeAddr("operator");
@@ -92,6 +93,9 @@ abstract contract SpokePortalUnitTestBase is Test {
         vm.deal(pauser, 1 ether);
         vm.deal(user, 1 ether);
         vm.deal(address(mockOrderBook), 1 ether);
+
+        // Mock fetching peer bridge adapter
+        vm.mockCall(address(bridgeAdapter), abi.encodeCall(MockBridgeAdapter.getPeer, (HUB_CHAIN_ID)), abi.encode(hubBridgeAdapter));
     }
 
     function _getMessageId() internal returns (bytes32) {

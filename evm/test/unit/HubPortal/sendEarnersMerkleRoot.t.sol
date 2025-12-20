@@ -24,7 +24,7 @@ contract SendEarnersMerkleRootUnitTest is HubPortalUnitTestBase {
         uint256 fee = 1;
         bytes32 messageId = _getMessageId();
         bytes32 earnerMerkleRoot = bytes32(uint256(0x123456));
-        bytes memory payload = PayloadEncoder.encodeEarnerMerkleRoot(index, earnerMerkleRoot, messageId);
+        bytes memory payload = PayloadEncoder.encodeEarnerMerkleRoot(SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, index, earnerMerkleRoot);
         address defaultBridgeAdapter = hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID);
 
         mToken.setCurrentIndex(index);
@@ -56,11 +56,14 @@ contract SendEarnersMerkleRootUnitTest is HubPortalUnitTestBase {
         uint256 fee = 1;
         bytes32 messageId = _getMessageId();
         bytes32 earnerMerkleRoot = bytes32(uint256(0x789abc));
-        bytes memory payload = PayloadEncoder.encodeEarnerMerkleRoot(index, earnerMerkleRoot, messageId);
+        bytes memory payload = PayloadEncoder.encodeEarnerMerkleRoot(SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, index, earnerMerkleRoot);
 
         // Deploy a new mock adapter
         MockBridgeAdapter customAdapter = new MockBridgeAdapter();
         customAdapter.setPortal(address(hubPortal));
+
+        // Mock fetching peer bridge adapter
+        vm.mockCall(address(customAdapter), abi.encodeCall(MockBridgeAdapter.getPeer, (SPOKE_CHAIN_ID)), abi.encode(spokeBridgeAdapter));
 
         mToken.setCurrentIndex(index);
         registrar.setListContains(EARNERS_LIST, address(hubPortal), true);

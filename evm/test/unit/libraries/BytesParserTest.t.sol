@@ -79,6 +79,22 @@ contract BytesParserTest is Test {
         assertEq(nextOffset, 16);
     }
 
+    function test_asUint32Unchecked() external pure {
+        bytes memory data = abi.encodePacked(uint32(1));
+
+        (uint32 value, uint256 nextOffset) = data.asUint32Unchecked(0);
+        assertEq(value, 1);
+        assertEq(nextOffset, 4);
+    }
+
+    function testFuzz_asUint32Unchecked(uint32 inputValue) external pure {
+        bytes memory data = abi.encodePacked(inputValue);
+
+        (uint32 value, uint256 nextOffset) = data.asUint32Unchecked(0);
+        assertEq(value, inputValue);
+        assertEq(nextOffset, 4);
+    }
+
     function test_asBytes32Unchecked() external pure {
         bytes memory data = abi.encodePacked(bytes32(uint256(1)));
 

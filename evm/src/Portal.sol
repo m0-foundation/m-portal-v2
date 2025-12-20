@@ -165,7 +165,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     function receiveMessage(uint32 sourceChainId, bytes calldata payload) external {
         _revertIfUnsupportedBridgeAdapter(sourceChainId, msg.sender);
 
-        PayloadType payloadType = payload.getPayloadType();
+        PayloadType payloadType = payload.decodePayloadType();
 
         if (payloadType == PayloadType.TokenTransfer) {
             _receiveToken(sourceChainId, payload);
@@ -355,7 +355,6 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         _revertIfInvalidDestinationChain(destinationChainId);
         _revertIfUnsupportedBridgingPath(sourceToken, destinationChainId, destinationToken);
 
-        uint128 index = _currentIndex();
         uint256 startingBalance = _mBalanceOf(address(this));
 
         // Transfer source token from the sender
@@ -374,13 +373,36 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         // In case of Hub, only update the bridged principal amount as tokens already transferred.
         _burnOrLock(transferAmount);
 
-        messageId = _getMessageId(destinationChainId);
-        bytes memory payload = PayloadEncoder.encodeTokenTransfer(transferAmount, destinationToken, msg.sender, recipient, index, messageId);
+        bytes memory payload;
+        uint128 index;
+        // Extracted to prevent stack too deep error
+        (payload, messageId, index) =
+            _createTokenTransferPayload(transferAmount, destinationChainId, destinationToken, msg.sender, recipient, bridgeAdapter);
 
         _sendMessage(destinationChainId, PayloadType.TokenTransfer, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
 
         emit TokenSent(
             sourceToken, destinationChainId, destinationToken, msg.sender, recipient, transferAmount, index, bridgeAdapter, messageId
+        );
+    }
+
+    /// @dev Creates token transfer payload.
+    /// @return payload   The encoded payload.
+    /// @return messageId The message ID for the cross-chain transfer.
+    /// @return index     The current M token index.
+    function _createTokenTransferPayload(
+        uint256 transferAmount,
+        uint32 destinationChainId,
+        bytes32 destinationToken,
+        address sender,
+        bytes32 recipient,
+        address bridgeAdapter
+    ) internal returns (bytes memory payload, bytes32 messageId, uint128 index) {
+        messageId = _getMessageId(destinationChainId);
+        index = _currentIndex();
+        bytes32 destinationPeer = IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId);
+        payload = PayloadEncoder.encodeTokenTransfer(
+            destinationChainId, destinationPeer, messageId, transferAmount, destinationToken, sender, recipient, index
         );
     }
 
@@ -398,7 +420,14 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
 
         messageId = _getMessageId(destinationChainId);
         bytes memory payload = PayloadEncoder.encodeFillReport(
-            report.orderId, report.amountInToRelease, report.amountOutFilled, report.originRecipient, report.tokenIn, messageId
+            destinationChainId,
+            IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId),
+            messageId,
+            report.orderId,
+            report.amountInToRelease,
+            report.amountOutFilled,
+            report.originRecipient,
+            report.tokenIn
         );
 
         _sendMessage(destinationChainId, PayloadType.FillReport, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
@@ -419,7 +448,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     /// @param sourceChainId The ID of the source chain.
     /// @param payload       The message payload.
     function _receiveToken(uint32 sourceChainId, bytes memory payload) private {
-        (uint256 amount, address destinationToken, bytes32 sender, address recipient, uint128 index, bytes32 messageId) =
+        (bytes32 messageId, uint256 amount, address destinationToken, bytes32 sender, address recipient, uint128 index) =
             payload.decodeTokenTransfer();
 
         emit TokenReceived(sourceChainId, destinationToken, sender, recipient, amount, index, messageId);
@@ -463,7 +492,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     /// @param sourceChainId The ID of the source chain.
     /// @param payload       The message payload.
     function _receiveFillReport(uint32 sourceChainId, bytes memory payload) private {
-        (bytes32 orderId, uint128 amountInToRelease, uint128 amountOutFilled, bytes32 originRecipient, bytes32 tokenIn, bytes32 messageId) =
+        (bytes32 messageId, bytes32 orderId, uint128 amountInToRelease, uint128 amountOutFilled, bytes32 originRecipient, bytes32 tokenIn) =
             payload.decodeFillReport();
 
         IOrderBookLike(orderBook)
