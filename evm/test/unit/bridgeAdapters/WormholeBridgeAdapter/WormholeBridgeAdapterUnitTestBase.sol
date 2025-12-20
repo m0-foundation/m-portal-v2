@@ -65,5 +65,7 @@ abstract contract WormholeBridgeAdapterUnitTestBase is Test {
         vm.deal(address(portal), 1 ether);
         vm.deal(address(coreBridge), 1 ether);
         vm.deal(address(executor), 1 ether);
+
+        vm.mockCall(address(portal), abi.encodeCall(MockPortal.currentChainId, ()), abi.encode(HUB_CHAIN_ID));
     }
 }

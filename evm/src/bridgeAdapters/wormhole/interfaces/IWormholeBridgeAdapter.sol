@@ -34,6 +34,12 @@ interface IWormholeBridgeAdapter is IBridgeAdapter, IVaaV1Receiver {
     /// @notice Thrown when a message with a given hash has already been consumed.
     error MessageAlreadyConsumed(bytes32 hash);
 
+    /// @notice Thrown when the target chain ID does not match the current chain ID.
+    error InvalidTargetChain(uint32 targetChainId);
+
+    /// @notice Thrown when the target bridge adapter does not match the current adapter.
+    error InvalidTargetBridgeAdapter(bytes32 targetBridgeAdapter);
+
     ///////////////////////////////////////////////////////////////////////////
     //                          VIEW/PURE FUNCTIONS                          //
     ///////////////////////////////////////////////////////////////////////////

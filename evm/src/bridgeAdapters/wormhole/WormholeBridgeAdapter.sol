@@ -10,6 +10,7 @@ import { ICoreBridge, CoreBridgeVM } from "./interfaces/ICoreBridge.sol";
 import { IWormholeBridgeAdapter } from "./interfaces/IWormholeBridgeAdapter.sol";
 import { IVaaV1Receiver } from "./interfaces/IVaaV1Receiver.sol";
 import { TypeConverter } from "../../libraries/TypeConverter.sol";
+import { PayloadEncoder } from "../../libraries/PayloadEncoder.sol";
 import { RelayInstructions } from "./libraries/RelayInstructions.sol";
 import { ExecutorMessages } from "./libraries/ExecutorMessages.sol";
 
@@ -35,6 +36,7 @@ abstract contract WormholeBridgeAdapterStorageLayout {
 /// @notice Sends and receives messages to and from remote chains using Wormhole protocol
 contract WormholeBridgeAdapter is WormholeBridgeAdapterStorageLayout, BridgeAdapter, IWormholeBridgeAdapter {
     using TypeConverter for *;
+    using PayloadEncoder for bytes;
 
     /// @inheritdoc IWormholeBridgeAdapter
     address public immutable coreBridge;
@@ -121,6 +123,12 @@ contract WormholeBridgeAdapter is WormholeBridgeAdapterStorageLayout, BridgeAdap
 
         // Ensure that the VAA is valid
         if (!valid) revert InvalidVaa(reason);
+
+        // Wormhole VAAs are multicast by default. There is no default target chain for a given message.
+        // Ensure that payload is intended for this chain and Bridge Adapter
+        (uint32 targetChainId, bytes32 targetBridgeAdapter) = vm.payload.decodeDestinationChainIdAndPeer();
+        if (targetChainId != IPortal(portal).currentChainId()) revert InvalidTargetChain(targetChainId);
+        if (targetBridgeAdapter.toAddress() != address(this)) revert InvalidTargetBridgeAdapter(targetBridgeAdapter);
 
         // Replay protection: ensure the message hasn't been consumed yet
         WormholeBridgeAdapterStorageStruct storage $ = _getWormholeBridgeAdapterStorageLocation();

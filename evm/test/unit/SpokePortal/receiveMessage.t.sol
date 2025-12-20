@@ -20,8 +20,16 @@ contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {
     bytes32 internal messageId = bytes32(uint256(1));
 
     function test_receiveMessage_tokenTransfer_mToken() external {
-        bytes memory payload =
-            PayloadEncoder.encodeTokenTransfer(amount, address(mToken).toBytes32(), sender, recipient.toBytes32(), index, messageId);
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            HUB_CHAIN_ID,
+            address(bridgeAdapter).toBytes32(),
+            messageId,
+            amount,
+            address(mToken).toBytes32(),
+            sender,
+            recipient.toBytes32(),
+            index
+        );
 
         vm.expectEmit();
         emit IPortal.TokenReceived(HUB_CHAIN_ID, address(mToken), sender.toBytes32(), recipient, amount, index, messageId);
@@ -35,7 +43,14 @@ contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {
 
     function test_receiveMessage_tokenTransfer_wrappedMToken() external {
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
-            amount, address(wrappedMToken).toBytes32(), sender, recipient.toBytes32(), index, messageId
+            HUB_CHAIN_ID,
+            address(bridgeAdapter).toBytes32(),
+            messageId,
+            amount,
+            address(wrappedMToken).toBytes32(),
+            sender,
+            recipient.toBytes32(),
+            index
         );
 
         vm.expectEmit();
@@ -55,8 +70,16 @@ contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {
 
         // Receive tokens with a lower index
         uint128 lowerIndex = 1_100_000_000_000;
-        bytes memory payload =
-            PayloadEncoder.encodeTokenTransfer(amount, address(mToken).toBytes32(), sender, recipient.toBytes32(), lowerIndex, messageId);
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            HUB_CHAIN_ID,
+            address(bridgeAdapter).toBytes32(),
+            messageId,
+            amount,
+            address(mToken).toBytes32(),
+            sender,
+            recipient.toBytes32(),
+            lowerIndex
+        );
 
         vm.expectEmit();
         emit IPortal.TokenReceived(HUB_CHAIN_ID, address(mToken), sender.toBytes32(), recipient, amount, lowerIndex, messageId);
@@ -72,7 +95,7 @@ contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {
 
     function test_receiveMessage_index() external {
         uint128 newIndex = 1_200_000_000_000;
-        bytes memory payload = PayloadEncoder.encodeIndex(newIndex, messageId);
+        bytes memory payload = PayloadEncoder.encodeIndex(HUB_CHAIN_ID, address(bridgeAdapter).toBytes32(), messageId, newIndex);
 
         vm.expectEmit();
         emit ISpokePortal.MTokenIndexReceived(newIndex, messageId);
@@ -90,7 +113,7 @@ contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {
 
         // Try to update with a lower index
         uint128 lowerIndex = 1_100_000_000_000;
-        bytes memory payload = PayloadEncoder.encodeIndex(lowerIndex, messageId);
+        bytes memory payload = PayloadEncoder.encodeIndex(HUB_CHAIN_ID, address(bridgeAdapter).toBytes32(), messageId, lowerIndex);
 
         vm.expectEmit();
         emit ISpokePortal.MTokenIndexReceived(lowerIndex, messageId);
@@ -105,7 +128,7 @@ contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {
     function test_receiveMessage_registrarKey() external {
         bytes32 key = bytes32("test_key");
         bytes32 value = bytes32("test_value");
-        bytes memory payload = PayloadEncoder.encodeRegistrarKey(key, value, messageId);
+        bytes memory payload = PayloadEncoder.encodeRegistrarKey(HUB_CHAIN_ID, address(bridgeAdapter).toBytes32(), messageId, key, value);
 
         vm.expectEmit();
         emit ISpokePortal.RegistrarKeyReceived(key, value, messageId);
@@ -121,7 +144,8 @@ contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {
         bytes32 listName = EARNERS_LIST;
         address account = makeAddr("earner");
         bool add = true;
-        bytes memory payload = PayloadEncoder.encodeRegistrarList(listName, account, add, messageId);
+        bytes memory payload =
+            PayloadEncoder.encodeRegistrarList(HUB_CHAIN_ID, address(bridgeAdapter).toBytes32(), messageId, listName, account, add);
 
         vm.expectEmit();
         emit ISpokePortal.RegistrarListUpdateReceived(listName, account, add, messageId);
@@ -135,7 +159,8 @@ contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {
         bytes32 listName = EARNERS_LIST;
         address account = makeAddr("earner");
         bool add = false;
-        bytes memory payload = PayloadEncoder.encodeRegistrarList(listName, account, add, messageId);
+        bytes memory payload =
+            PayloadEncoder.encodeRegistrarList(HUB_CHAIN_ID, address(bridgeAdapter).toBytes32(), messageId, listName, account, add);
 
         vm.expectEmit();
         emit ISpokePortal.RegistrarListUpdateReceived(listName, account, add, messageId);
@@ -152,8 +177,16 @@ contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {
         bytes32 originRecipient = recipient.toBytes32();
         bytes32 tokenIn = address(mToken).toBytes32();
 
-        bytes memory payload =
-            PayloadEncoder.encodeFillReport(orderId, amountInToRelease, amountOutFilled, originRecipient, tokenIn, messageId);
+        bytes memory payload = PayloadEncoder.encodeFillReport(
+            HUB_CHAIN_ID,
+            address(bridgeAdapter).toBytes32(),
+            messageId,
+            orderId,
+            amountInToRelease,
+            amountOutFilled,
+            originRecipient,
+            tokenIn
+        );
 
         vm.expectCall(
             address(mockOrderBook),
@@ -184,8 +217,16 @@ contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {
         vm.prank(operator);
         spokePortal.setSupportedBridgingPath(address(mToken), HUB_CHAIN_ID, invalidWrappedToken.toBytes32(), true);
 
-        bytes memory payload =
-            PayloadEncoder.encodeTokenTransfer(amount, invalidWrappedToken.toBytes32(), sender, recipient.toBytes32(), index, messageId);
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            HUB_CHAIN_ID,
+            address(bridgeAdapter).toBytes32(),
+            messageId,
+            amount,
+            invalidWrappedToken.toBytes32(),
+            sender,
+            recipient.toBytes32(),
+            index
+        );
 
         vm.expectEmit();
         emit IPortal.TokenReceived(HUB_CHAIN_ID, invalidWrappedToken, sender.toBytes32(), recipient, amount, index, messageId);
@@ -204,8 +245,16 @@ contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {
 
     function test_receiveMessage_revertsIfUnsupportedBridgeAdapter() external {
         address unsupportedAdapter = makeAddr("unsupported");
-        bytes memory payload =
-            PayloadEncoder.encodeTokenTransfer(amount, address(mToken).toBytes32(), sender, recipient.toBytes32(), index, messageId);
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            HUB_CHAIN_ID,
+            address(bridgeAdapter).toBytes32(),
+            messageId,
+            amount,
+            address(mToken).toBytes32(),
+            sender,
+            recipient.toBytes32(),
+            index
+        );
 
         vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, HUB_CHAIN_ID, unsupportedAdapter));
 

@@ -30,20 +30,20 @@ contract SendFillReportUnitTest is HubPortalUnitTestBase {
         uint256 fee = 1;
         bytes32 messageId = _getMessageId();
         bytes memory payload = PayloadEncoder.encodeFillReport(
+            SPOKE_CHAIN_ID,
+            spokeBridgeAdapter,
+            messageId,
             testReport.orderId,
             testReport.amountInToRelease,
             testReport.amountOutFilled,
             testReport.originRecipient,
-            testReport.tokenIn,
-            messageId
+            testReport.tokenIn
         );
         address defaultBridgeAdapter = hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID);
 
         vm.expectCall(
             defaultBridgeAdapter,
-            abi.encodeCall(
-                IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, FILL_REPORT_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs)
-            )
+            abi.encodeCall(IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, FILL_REPORT_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs))
         );
         vm.expectEmit();
         emit IPortal.FillReportSent(
@@ -65,26 +65,29 @@ contract SendFillReportUnitTest is HubPortalUnitTestBase {
         uint256 fee = 1;
         bytes32 messageId = _getMessageId();
         bytes memory payload = PayloadEncoder.encodeFillReport(
+            SPOKE_CHAIN_ID,
+            spokeBridgeAdapter,
+            messageId,
             testReport.orderId,
             testReport.amountInToRelease,
             testReport.amountOutFilled,
             testReport.originRecipient,
-            testReport.tokenIn,
-            messageId
+            testReport.tokenIn
         );
 
         // Deploy a new mock adapter
         MockBridgeAdapter customAdapter = new MockBridgeAdapter();
         customAdapter.setPortal(address(hubPortal));
 
+        // Mock fetching peer bridge adapter
+        vm.mockCall(address(customAdapter), abi.encodeCall(MockBridgeAdapter.getPeer, (SPOKE_CHAIN_ID)), abi.encode(spokeBridgeAdapter));
+
         vm.prank(operator);
         hubPortal.setSupportedBridgeAdapter(SPOKE_CHAIN_ID, address(customAdapter), true);
 
         vm.expectCall(
             address(customAdapter),
-            abi.encodeCall(
-                IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, FILL_REPORT_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs)
-            )
+            abi.encodeCall(IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, FILL_REPORT_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs))
         );
         vm.expectEmit();
         emit IPortal.FillReportSent(

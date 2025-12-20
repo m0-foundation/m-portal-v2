@@ -34,7 +34,8 @@ contract SendTokenUnitTest is SpokePortalUnitTestBase {
         uint256 fee = 1;
         uint128 index = 1_100_000_068_703;
         bytes32 messageId = _getMessageId();
-        bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, hubMToken, user, recipient, index, messageId);
+        bytes memory payload =
+            PayloadEncoder.encodeTokenTransfer(HUB_CHAIN_ID, hubBridgeAdapter, messageId, amount, hubMToken, user, recipient, index);
         address defaultBridgeAdapter = spokePortal.defaultBridgeAdapter(HUB_CHAIN_ID);
 
         mToken.setCurrentIndex(index);
@@ -61,7 +62,8 @@ contract SendTokenUnitTest is SpokePortalUnitTestBase {
         uint256 fee = 1;
         uint128 index = 1_100_000_068_703;
         bytes32 messageId = _getMessageId();
-        bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, hubWrappedMToken, user, recipient, index, messageId);
+        bytes memory payload =
+            PayloadEncoder.encodeTokenTransfer(HUB_CHAIN_ID, hubBridgeAdapter, messageId, amount, hubWrappedMToken, user, recipient, index);
         address defaultBridgeAdapter = spokePortal.defaultBridgeAdapter(HUB_CHAIN_ID);
 
         mToken.setCurrentIndex(index);
@@ -92,11 +94,15 @@ contract SendTokenUnitTest is SpokePortalUnitTestBase {
         uint256 fee = 1;
         uint128 index = 1_100_000_068_703;
         bytes32 messageId = _getMessageId();
-        bytes memory payload = PayloadEncoder.encodeTokenTransfer(amount, hubMToken, user, recipient, index, messageId);
+        bytes memory payload =
+            PayloadEncoder.encodeTokenTransfer(HUB_CHAIN_ID, hubBridgeAdapter, messageId, amount, hubMToken, user, recipient, index);
 
         // Deploy a new mock adapter
         MockBridgeAdapter customAdapter = new MockBridgeAdapter();
         customAdapter.setPortal(address(spokePortal));
+
+        // Mock fetching peer bridge adapter
+        vm.mockCall(address(customAdapter), abi.encodeCall(MockBridgeAdapter.getPeer, (HUB_CHAIN_ID)), abi.encode(hubBridgeAdapter));
 
         mToken.setCurrentIndex(index);
 

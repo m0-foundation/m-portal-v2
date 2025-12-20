@@ -23,7 +23,7 @@ contract SendRegistrarKeyUnitTest is HubPortalUnitTestBase {
     function test_sendRegistrarKey_withDefaultAdapter() external {
         uint256 fee = 1;
         bytes32 messageId = _getMessageId();
-        bytes memory payload = PayloadEncoder.encodeRegistrarKey(testKey, testValue, messageId);
+        bytes memory payload = PayloadEncoder.encodeRegistrarKey(SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, testKey, testValue);
         address defaultBridgeAdapter = hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID);
 
         registrar.set(testKey, testValue);
@@ -42,11 +42,14 @@ contract SendRegistrarKeyUnitTest is HubPortalUnitTestBase {
     function test_sendRegistrarKey_withSpecificAdapter() external {
         uint256 fee = 1;
         bytes32 messageId = _getMessageId();
-        bytes memory payload = PayloadEncoder.encodeRegistrarKey(testKey, testValue, messageId);
+        bytes memory payload = PayloadEncoder.encodeRegistrarKey(SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, testKey, testValue);
 
         // Deploy a new mock adapter
         MockBridgeAdapter customAdapter = new MockBridgeAdapter();
         customAdapter.setPortal(address(hubPortal));
+
+        // Mock fetching peer bridge adapter
+        vm.mockCall(address(customAdapter), abi.encodeCall(MockBridgeAdapter.getPeer, (SPOKE_CHAIN_ID)), abi.encode(spokeBridgeAdapter));
 
         registrar.set(testKey, testValue);
 
