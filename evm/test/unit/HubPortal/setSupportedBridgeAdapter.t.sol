@@ -75,4 +75,29 @@ contract SetSupportedBridgeAdapterUnitTest is HubPortalUnitTestBase {
         assertTrue(hubPortal.supportedBridgeAdapter(SPOKE_CHAIN_ID, adapter2));
         assertTrue(hubPortal.supportedBridgeAdapter(SPOKE_CHAIN_ID, adapter3));
     }
+
+    function test_setSupportedBridgeAdapter_clearsDefaultAdapterWhenUnsupported() external {
+        // Add the adapter as supported
+        vm.startPrank(operator);
+        hubPortal.setSupportedBridgeAdapter(SPOKE_CHAIN_ID, newBridgeAdapter, true);
+
+        // Set it as the default adapter
+        hubPortal.setDefaultBridgeAdapter(SPOKE_CHAIN_ID, newBridgeAdapter);
+
+        // Verify it's set as default
+        assertEq(hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID), newBridgeAdapter);
+
+        // Set the adapter as unsupported, which clears the default
+        vm.expectEmit();
+        emit IPortal.DefaultBridgeAdapterSet(SPOKE_CHAIN_ID, address(0));
+        vm.expectEmit();
+        emit IPortal.SupportedBridgeAdapterSet(SPOKE_CHAIN_ID, newBridgeAdapter, false);
+        hubPortal.setSupportedBridgeAdapter(SPOKE_CHAIN_ID, newBridgeAdapter, false);
+
+        // Verify the adapter is no longer supported
+        assertFalse(hubPortal.supportedBridgeAdapter(SPOKE_CHAIN_ID, newBridgeAdapter));
+
+        // Verify the default adapter was cleared
+        assertEq(hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID), address(0));
+    }
 }

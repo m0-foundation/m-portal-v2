@@ -212,6 +212,12 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
 
         if (remoteChainConfig.supportedBridgeAdapter[bridgeAdapter] == supported) return;
 
+        // If the bridge adapter being removed is currently set as the default, clear the default adapter
+        if (!supported && remoteChainConfig.defaultBridgeAdapter == bridgeAdapter) {
+            remoteChainConfig.defaultBridgeAdapter = address(0);
+            emit DefaultBridgeAdapterSet(destinationChainId, address(0));
+        }
+
         remoteChainConfig.supportedBridgeAdapter[bridgeAdapter] = supported;
         emit SupportedBridgeAdapterSet(destinationChainId, bridgeAdapter, supported);
     }

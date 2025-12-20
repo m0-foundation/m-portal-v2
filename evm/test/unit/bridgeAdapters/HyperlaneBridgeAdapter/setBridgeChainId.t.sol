@@ -51,4 +51,54 @@ contract SetBridgeChainIdUnitTest is HyperlaneBridgeAdapterUnitTestBase {
         vm.prank(operator);
         adapter.setBridgeChainId(3, 0);
     }
+
+    function test_setBridgeChainId_cleansUpOldForwardMapping() external {
+        // Setup: Chain 3 is mapped to bridge chain 3000
+        uint32 chainId = 3;
+        uint256 oldBridgeChainId = 3000;
+        uint256 newBridgeChainId = 4000;
+
+        vm.prank(operator);
+        adapter.setBridgeChainId(chainId, oldBridgeChainId);
+
+        // Verify initial mapping
+        assertEq(adapter.getBridgeChainId(chainId), oldBridgeChainId);
+        assertEq(adapter.getChainId(oldBridgeChainId), chainId);
+
+        // Remap chain 3 to a different bridge chain 4000
+        vm.prank(operator);
+        adapter.setBridgeChainId(chainId, newBridgeChainId);
+
+        // Verify new mapping
+        assertEq(adapter.getBridgeChainId(chainId), newBridgeChainId);
+        assertEq(adapter.getChainId(newBridgeChainId), chainId);
+
+        // Verify old reverse mapping was cleaned up (bridge chain 3000 should not map to anything)
+        assertEq(adapter.getChainId(oldBridgeChainId), 0);
+    }
+
+    function test_setBridgeChainId_cleansUpOldReverseMapping() external {
+        // Setup: Chain 3 is mapped to bridge chain 3000
+        uint32 oldChainId = 3;
+        uint32 newChainId = 4;
+        uint256 bridgeChainId = 3000;
+
+        vm.prank(operator);
+        adapter.setBridgeChainId(oldChainId, bridgeChainId);
+
+        // Verify initial mapping
+        assertEq(adapter.getBridgeChainId(oldChainId), bridgeChainId);
+        assertEq(adapter.getChainId(bridgeChainId), oldChainId);
+
+        // Remap bridge chain 3000 to a different internal chain 4
+        vm.prank(operator);
+        adapter.setBridgeChainId(newChainId, bridgeChainId);
+
+        // Verify new mapping
+        assertEq(adapter.getBridgeChainId(newChainId), bridgeChainId);
+        assertEq(adapter.getChainId(bridgeChainId), newChainId);
+
+        // Verify old forward mapping was cleaned up (chain 3 should not map to anything)
+        assertEq(adapter.getBridgeChainId(oldChainId), 0);
+    }
 }
