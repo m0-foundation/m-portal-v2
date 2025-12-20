@@ -36,6 +36,9 @@ contract MigrateSpokePortalTest is MigrateSpokePortalBase, Test {
         assertTrue(spokePortal.isPaused());
         assertEq(spokePortal.pauser(), PAUSER_V1);
 
+        // TransceiverRegistry state
+        assertEq(spokePortal.getTransceivers().length, 1);
+
         // Supported bridging paths
         BridgingPath[] memory bridgingPaths = _getBridgingPaths();
         for (uint256 i = 0; i < bridgingPaths.length; i++) {
@@ -67,6 +70,9 @@ contract MigrateSpokePortalTest is MigrateSpokePortalBase, Test {
         // Pausable state
         assertFalse(spokePortal.isPaused());
         assertEq(spokePortal.pauser(), address(0));
+
+        // TransceiverRegistry state
+        assertEq(spokePortal.getTransceivers().length, 0);
 
         // All supported bridging paths are cleared
         BridgingPath[] memory bridgingPaths = _getBridgingPaths();

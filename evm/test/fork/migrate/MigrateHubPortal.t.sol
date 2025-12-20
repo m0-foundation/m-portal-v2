@@ -41,6 +41,9 @@ contract MigrateHubPortalTest is MigrateHubPortalBase, Test {
         assertTrue(hubPortal.isPaused());
         assertEq(hubPortal.pauser(), PAUSER_V1);
 
+        // TransceiverRegistry state
+        assertEq(hubPortal.getTransceivers().length, 1);
+
         // Supported bridging paths
         BridgingPath[] memory bridgingPaths = _getBridgingPaths();
         for (uint256 i = 0; i < bridgingPaths.length; i++) {
@@ -76,6 +79,9 @@ contract MigrateHubPortalTest is MigrateHubPortalBase, Test {
         // Pausable state
         assertFalse(hubPortal.isPaused());
         assertEq(hubPortal.pauser(), address(0));
+
+        // TransceiverRegistry state
+        assertEq(hubPortal.getTransceivers().length, 0);
 
         // All supported bridging paths are cleared
         BridgingPath[] memory bridgingPaths = _getBridgingPaths();

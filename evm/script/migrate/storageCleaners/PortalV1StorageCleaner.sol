@@ -4,7 +4,7 @@ pragma solidity 0.8.30;
 
 import { UUPSUpgradeable } from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 
-import { NttManagerPeer, AttestationInfo, Mode, Sequence, Threshold } from "../portalV1/IPortalV1.sol";
+import { NttManagerPeer, AttestationInfo, Mode, Sequence, Threshold, TransceiverInfo } from "../portalV1/IPortalV1.sol";
 
 struct BridgingPath {
     address sourceToken;
@@ -18,6 +18,7 @@ abstract contract PortalV1StorageCleaner is UUPSUpgradeable {
     /// @dev The current owner of the Portal contract
     address public constant MIGRATOR = 0xdcf79C332cB3Fe9d39A830a5f8de7cE6b1BD6fD1;
     address public constant PORTAL = 0xD925C84b55E4e44a53749fF5F2a5A13F63D128fd;
+    address public constant TRANSCEIVER = 0x0763196A091575adF99e2306E5e90E0Be5154841;
 
     error Unauthorized();
     error OnlyDelegateCall();
@@ -93,6 +94,38 @@ abstract contract PortalV1StorageCleaner is UUPSUpgradeable {
     }
 
     /////////////////////////////////////////////////////////////////////////////////////
+    //                                 IMPLEMENTATION                                  //
+    /////////////////////////////////////////////////////////////////////////////////////
+
+    /// @dev https://github.com/m0-foundation/native-token-transfers/blob/main/evm/src/libraries/Implementation.sol#L36
+    bytes32 private constant MIGRATING_SLOT = bytes32(uint256(keccak256("ntt.migrating")) - 1);
+
+    /// @dev https://github.com/m0-foundation/native-token-transfers/blob/main/evm/src/libraries/Implementation.sol#L38
+    bytes32 private constant MIGRATES_IMMUTABLES_SLOT = bytes32(uint256(keccak256("ntt.migratesImmutables")) - 1);
+
+    struct _Migrating {
+        bool isMigrating;
+    }
+
+    struct _Bool {
+        bool value;
+    }
+
+    function _getMigratingStorage() private pure returns (_Migrating storage $) {
+        uint256 slot = uint256(MIGRATING_SLOT);
+        assembly ("memory-safe") {
+            $.slot := slot
+        }
+    }
+
+    function _getMigratesImmutablesStorage() internal pure returns (_Bool storage $) {
+        uint256 slot = uint256(MIGRATES_IMMUTABLES_SLOT);
+        assembly ("memory-safe") {
+            $.slot := slot
+        }
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////
     //                                     OWNABLE                                     //
     /////////////////////////////////////////////////////////////////////////////////////
 
@@ -155,13 +188,93 @@ abstract contract PortalV1StorageCleaner is UUPSUpgradeable {
     }
 
     /////////////////////////////////////////////////////////////////////////////////////
+    //                            TRANSCEIVER REGISTRY                                 //
+    /////////////////////////////////////////////////////////////////////////////////////
+
+    /// @dev https://github.com/m0-foundation/native-token-transfers/blob/main/evm/src/NttManager/TransceiverRegistry.sol#L81
+    bytes32 private constant TRANSCEIVER_INFOS_SLOT = bytes32(uint256(keccak256("ntt.transceiverInfos")) - 1);
+
+    /// @dev https://github.com/m0-foundation/native-token-transfers/blob/main/evm/src/NttManager/TransceiverRegistry.sol#L84
+    bytes32 private constant TRANSCEIVER_BITMAP_SLOT = bytes32(uint256(keccak256("ntt.transceiverBitmap")) - 1);
+
+    /// @dev https://github.com/m0-foundation/native-token-transfers/blob/main/evm/src/NttManager/TransceiverRegistry.sol#L87
+    bytes32 private constant ENABLED_TRANSCEIVERS_SLOT = bytes32(uint256(keccak256("ntt.enabledTransceivers")) - 1);
+
+    /// @dev https://github.com/m0-foundation/native-token-transfers/blob/main/evm/src/NttManager/TransceiverRegistry.sol#L90
+    bytes32 private constant REGISTERED_TRANSCEIVERS_SLOT = bytes32(uint256(keccak256("ntt.registeredTransceivers")) - 1);
+
+    /// @dev https://github.com/m0-foundation/native-token-transfers/blob/main/evm/src/NttManager/TransceiverRegistry.sol#L93
+    bytes32 private constant NUM_REGISTERED_TRANSCEIVERS_SLOT = bytes32(uint256(keccak256("ntt.numRegisteredTransceivers")) - 1);
+
+    /// @dev Bitmap encoding the enabled transceivers.
+    /// invariant: forall (i: uint8), enabledTransceiverBitmap & i == 1 <=> transceiverInfos[i].enabled
+    struct _EnabledTransceiverBitmap {
+        uint64 bitmap;
+    }
+
+    /// @dev Total number of registered transceivers. This number can only increase.
+    /// invariant: numRegisteredTransceivers <= MAX_TRANSCEIVERS
+    /// invariant: forall (i: uint8),
+    ///   i < numRegisteredTransceivers <=> exists (a: address), transceiverInfos[a].index == i
+    struct _NumTransceivers {
+        uint8 registered;
+        uint8 enabled;
+    }
+
+    function _getTransceiverInfosStorage() internal pure returns (mapping(address => TransceiverInfo) storage $) {
+        uint256 slot = uint256(TRANSCEIVER_INFOS_SLOT);
+        assembly ("memory-safe") {
+            $.slot := slot
+        }
+    }
+
+    function _getEnabledTransceiversStorage() internal pure returns (address[] storage $) {
+        uint256 slot = uint256(ENABLED_TRANSCEIVERS_SLOT);
+        assembly ("memory-safe") {
+            $.slot := slot
+        }
+    }
+
+    function _getTransceiverBitmapStorage() private pure returns (_EnabledTransceiverBitmap storage $) {
+        uint256 slot = uint256(TRANSCEIVER_BITMAP_SLOT);
+        assembly ("memory-safe") {
+            $.slot := slot
+        }
+    }
+
+    function _getRegisteredTransceiversStorage() internal pure returns (address[] storage $) {
+        uint256 slot = uint256(REGISTERED_TRANSCEIVERS_SLOT);
+        assembly ("memory-safe") {
+            $.slot := slot
+        }
+    }
+
+    function _getNumTransceiversStorage() internal pure returns (_NumTransceivers storage $) {
+        uint256 slot = uint256(NUM_REGISTERED_TRANSCEIVERS_SLOT);
+        assembly ("memory-safe") {
+            $.slot := slot
+        }
+    }
+
+    function _getEnabledTransceiversBitmap() internal view virtual returns (uint64 bitmap) {
+        return _getTransceiverBitmapStorage().bitmap;
+    }
+
+    function getTransceivers() external pure returns (address[] memory result) {
+        result = _getEnabledTransceiversStorage();
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////
     //                                 MANAGER BASE                                    //
     /////////////////////////////////////////////////////////////////////////////////////
 
+    /// @dev https://github.com/m0-foundation/native-token-transfers/blob/main/evm/src/NttManager/ManagerBase.sol#L61
     bytes32 private constant MESSAGE_ATTESTATIONS_SLOT = bytes32(uint256(keccak256("ntt.messageAttestations")) - 1);
 
+    /// @dev https://github.com/m0-foundation/native-token-transfers/blob/main/evm/src/NttManager/ManagerBase.sol#L64
     bytes32 private constant MESSAGE_SEQUENCE_SLOT = bytes32(uint256(keccak256("ntt.messageSequence")) - 1);
 
+    /// @dev https://github.com/m0-foundation/native-token-transfers/blob/main/evm/src/NttManager/ManagerBase.sol#L67
     bytes32 private constant THRESHOLD_SLOT = bytes32(uint256(keccak256("ntt.threshold")) - 1);
 
     function _getThresholdStorage() private pure returns (Threshold storage $) {
@@ -232,12 +345,28 @@ abstract contract PortalV1StorageCleaner is UUPSUpgradeable {
         delete _getInitializableStorageSlot()._initialized;
         delete _getInitializableStorageSlot()._initializing;
 
+        // Clear Implementation storage
+        delete _getMigratingStorage().isMigrating;
+        delete _getMigratesImmutablesStorage().value;
+
         // Clear Ownable storage
         delete _getOwnableStorage()._owner;
 
         // Clear Pausable storage
         delete _getPauserStorage()._pauser;
         delete _getPauseStorage()._pauseFlag;
+
+        // Only one transceiver is registered and enabled in PortalV1
+        assert(_getNumTransceiversStorage().enabled == 1);
+        assert(_getNumTransceiversStorage().registered == 1);
+
+        // Clear TransceiverRegistry storage
+        delete _getTransceiverInfosStorage()[TRANSCEIVER];
+        _getEnabledTransceiversStorage().pop();
+        _getRegisteredTransceiversStorage().pop();
+        delete _getTransceiverBitmapStorage().bitmap;
+        delete _getNumTransceiversStorage().enabled;
+        delete _getNumTransceiversStorage().registered;
 
         // Clear ManagerBase storage
         delete _getThresholdStorage().num;
@@ -247,6 +376,8 @@ abstract contract PortalV1StorageCleaner is UUPSUpgradeable {
         for (uint256 i = 0; i < digests.length; i++) {
             delete attestations[digests[i]];
         }
+
+        mapping(uint16 => NttManagerPeer) storage peers = _getPeersStorage();
 
         // Clear Portal and NttManager storage
         for (uint256 i = 0; i < bridgingPaths.length; i++) {
@@ -262,7 +393,6 @@ abstract contract PortalV1StorageCleaner is UUPSUpgradeable {
             }
 
             // Clear NttManagerPeer
-            mapping(uint16 => NttManagerPeer) storage peers = _getPeersStorage();
             if (peers[destinationChainId].peerAddress != bytes32(0)) {
                 delete peers[destinationChainId];
             }
