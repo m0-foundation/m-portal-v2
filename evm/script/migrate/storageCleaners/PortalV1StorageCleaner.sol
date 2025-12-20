@@ -185,6 +185,10 @@ abstract contract PortalV1StorageCleaner is UUPSUpgradeable {
         }
     }
 
+    function isMessageExecuted(bytes32 digest) public view returns (bool) {
+        return _getMessageAttestationsStorage()[digest].executed;
+    }
+
     /////////////////////////////////////////////////////////////////////////////////////
     //                                  NTT MANAGER                                    //
     /////////////////////////////////////////////////////////////////////////////////////

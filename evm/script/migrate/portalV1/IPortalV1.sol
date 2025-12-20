@@ -91,11 +91,14 @@ interface IPortalV1 {
     function getTransceivers() external pure returns (address[] memory result);
 
     // ManagerBase
+    event MessageAttestedTo(bytes32 digest, address transceiver, uint8 index);
+
     function token() external view returns (address);
     function messageAttestations(bytes32 digest) external view returns (uint8 count);
     function nextMessageSequence() external view returns (uint64);
     function getThreshold() external view returns (uint8);
     function transceiverAttestedToMessage(bytes32 digest, uint8 index) external view returns (bool);
+    function isMessageExecuted(bytes32 digest) external view returns (bool);
 
     function upgrade(address newImplementation) external;
 
@@ -105,10 +108,7 @@ interface IPortalV1 {
 
     // Portal
     event SupportedBridgingPathSet(
-        address indexed sourceToken,
-        uint16 indexed destinationChainId,
-        bytes32 indexed destinationToken,
-        bool supported
+        address indexed sourceToken, uint16 indexed destinationChainId, bytes32 indexed destinationToken, bool supported
     );
 
     function currentIndex() external view returns (uint128);
