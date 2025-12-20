@@ -3,6 +3,7 @@ pragma solidity 0.8.30;
 
 import { Test } from "../../../lib/forge-std/src/Test.sol";
 import { IndexingMath } from "../../../lib/common/src/libs/IndexingMath.sol";
+import { IERC20 } from "../../../lib/common/src/interfaces/IERC20.sol";
 
 import { HubPortal } from "../../../src/HubPortal.sol";
 import { TypeConverter } from "../../../src/libraries/TypeConverter.sol";
@@ -91,6 +92,9 @@ contract MigrateHubPortalTest is MigrateHubPortalBase, Test {
     }
 
     function test_upgradeToHubPortalV2() external {
+        uint256 balanceBefore = IERC20(M_TOKEN).balanceOf(PORTAL);
+        uint128 indexBefore = IHubPortalV1(PORTAL).currentIndex();
+
         vm.startPrank(OWNER_V1);
 
         _upgradeToStorageCleaner();
@@ -111,6 +115,13 @@ contract MigrateHubPortalTest is MigrateHubPortalBase, Test {
         // Enable earning after initialization
         hubPortal.enableEarning();
         assertTrue(hubPortal.wasEarningEnabled());
+
+        uint256 balanceAfter = IERC20(M_TOKEN).balanceOf(PORTAL);
+        uint128 indexAfter = hubPortal.currentIndex();
+
+        // $M token balance and index should remain the same after migration
+        assertEq(indexAfter, indexBefore);
+        assertEq(balanceAfter, balanceBefore);
     }
 
     /// @dev Should be obtain from the events or configured
