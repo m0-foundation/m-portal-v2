@@ -60,6 +60,11 @@ interface IHubPortal is IPortal {
         uint32 indexed destinationChainId, uint128 index, bytes32 earnerMerkleRoot, address bridgeAdapter, bytes32 messageId
     );
 
+    /// @notice Emitted when cross-Spoke token transfer is enabled for the Spoke chain.
+    /// @param  spokeChainId     The ID of the Spoke chain.
+    /// @param  bridgedPrincipal The principal amount of $M tokens bridged to the Spoke chain before transfer was enabled.
+    event CrossSpokeTokenTransferEnabled(uint32 spokeChainId, uint248 bridgedPrincipal);
+
     ///////////////////////////////////////////////////////////////////////////
     //                             CUSTOM ERRORS                             //
     ///////////////////////////////////////////////////////////////////////////
@@ -92,9 +97,22 @@ interface IHubPortal is IPortal {
     /// @notice Returns the address of the Merkle Tree Builder.
     function merkleTreeBuilder() external view returns (address);
 
+    /// @notice Returns the principal amount of M tokens bridged to a specified Spoke chain.
+    /// @dev    Only applicable to isolated Spokes (i.e., `crossSpokeTokenTransferEnabled` == false).
+    function bridgedPrincipal(uint32 spokeChainId) external view returns (uint248);
+
+    /// @notice Returns whether cross-Spoke token transfer is enabled for a specified Spoke chain.
+    function crossSpokeTokenTransferEnabled(uint32 spokeChainId) external view returns (bool);
+
     ///////////////////////////////////////////////////////////////////////////
     //                         INTERACTIVE FUNCTIONS                         //
     ///////////////////////////////////////////////////////////////////////////
+
+    /// @notice Initializes the Proxy's storage
+    /// @param  initialOwner    The address of the owner.
+    /// @param  initialPauser   The address of the pauser.
+    /// @param  initialOperator The address of the operator.
+    function initialize(address initialOwner, address initialPauser, address initialOperator) external;
 
     /// @notice Sends the $M token index to the destination chain using the default bridge adapter.
     /// @param  destinationChainId The chain Id of the destination chain.
@@ -213,4 +231,10 @@ interface IHubPortal is IPortal {
 
     /// @notice Disables earning for the Hub Portal if disallowed by TTG.
     function disableEarning() external;
+
+    /// @notice Enables cross-Spoke token transfer for a specified Spoke chain.
+    /// @dev    Stops tracking the principal amount of $M tokens bridged to the Spoke chain.
+    ///         Must be called after calling `enableCrossSpokeTokenTransfer` in SpokePortal.
+    /// @param  spokeChainId The ID of the Spoke chain.
+    function enableCrossSpokeTokenTransfer(uint32 spokeChainId) external;
 }

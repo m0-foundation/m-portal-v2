@@ -5,15 +5,6 @@ pragma solidity 0.8.30;
 import { PayloadType } from "../libraries/PayloadEncoder.sol";
 import { IOrderBookLike } from "./IOrderBookLike.sol";
 
-struct ChainConfig {
-    /// @notice Default bridge adapter for each remote chain used if no bridge adapter is specified.
-    address defaultBridgeAdapter;
-    /// @notice Supported bridge adapters for each remote chain.
-    mapping(address bridgeAdapter => bool supported) supportedBridgeAdapter;
-    /// @notice Gas limit required to process different types of payload on destination chains.
-    mapping(PayloadType payloadType => uint256 gasLimit) payloadGasLimit;
-}
-
 /// @title  IPortal interface
 /// @author M0 Labs
 /// @notice Subset of functions inherited by both IHubPortal and ISpokePortal.
@@ -260,12 +251,6 @@ interface IPortal {
     ///////////////////////////////////////////////////////////////////////////
     //                         INTERACTIVE FUNCTIONS                         //
     ///////////////////////////////////////////////////////////////////////////
-
-    /// @notice Initializes the Proxy's storage
-    /// @param  initialOwner  The address of the owner.
-    /// @param  initialPauser The address of the pauser.
-    /// @param  initialOperator The address of the operator.
-    function initialize(address initialOwner, address initialPauser, address initialOperator) external;
 
     /// @notice Sets a bridging path support status.
     /// @param  sourceToken        The address of the token on the current chain.

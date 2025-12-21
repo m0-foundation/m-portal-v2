@@ -2,6 +2,7 @@
 pragma solidity 0.8.30;
 
 import { IPortal } from "../../../src/interfaces/IPortal.sol";
+import { IHubPortal } from "../../../src/interfaces/IHubPortal.sol";
 import { IOrderBookLike } from "../../../src/interfaces/IOrderBookLike.sol";
 import { TypeConverter } from "../../../src/libraries/TypeConverter.sol";
 import { PayloadEncoder } from "../../../src/libraries/PayloadEncoder.sol";
@@ -13,8 +14,10 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
 
     address internal sender = makeAddr("sender");
     address internal recipient = makeAddr("recipient");
+    address internal bridgeUser = makeAddr("bridgeUser");
     uint256 internal amount = 10e6;
     uint128 internal index = 1_100_000_068_703;
+    uint128 internal testIndex = 1_250_000_000_000; // 1.25 - principal != balance, clean conversions
     bytes32 internal messageId = bytes32(uint256(1));
 
     function setUp() public override {
@@ -25,9 +28,34 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
 
         // Fund wrappedMToken with M tokens for wrapping
         mToken.mint(address(wrappedMToken), 100e6);
+
+        // Fund bridgeUser with ETH for gas
+        vm.deal(bridgeUser, 1 ether);
+    }
+
+    /// @dev Helper to enable earning with a specific index
+    function _enableEarningWithIndex(uint128 _index) internal {
+        mToken.setCurrentIndex(_index);
+        registrar.setListContains(EARNERS_LIST, address(hubPortal), true);
+        hubPortal.enableEarning();
+    }
+
+    /// @dev Helper to bridge tokens to an isolated spoke (increases principal)
+    function _bridgeTokensToSpoke(uint256 _amount) internal {
+        mToken.mint(bridgeUser, _amount);
+        vm.startPrank(bridgeUser);
+        mToken.approve(address(hubPortal), _amount);
+        hubPortal.sendToken{ value: 1 }(
+            _amount, address(mToken), SPOKE_CHAIN_ID, spokeMToken, sender.toBytes32(), bridgeUser.toBytes32(), ""
+        );
+        vm.stopPrank();
     }
 
     function test_receiveMessage_tokenTransfer_mToken() external {
+        // Enable cross-spoke transfer to skip principal tracking for this test
+        vm.prank(operator);
+        hubPortal.enableCrossSpokeTokenTransfer(SPOKE_CHAIN_ID);
+
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
             SPOKE_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
@@ -49,6 +77,10 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
     }
 
     function test_receiveMessage_tokenTransfer_wrappedMToken() external {
+        // Enable cross-spoke transfer to skip principal tracking for this test
+        vm.prank(operator);
+        hubPortal.enableCrossSpokeTokenTransfer(SPOKE_CHAIN_ID);
+
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
             SPOKE_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
@@ -112,7 +144,11 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
         // Use an address that doesn't implement wrap() - wrapping will fail
         address invalidWrappedToken = makeAddr("invalidWrappedToken");
 
-        // First configure this as a supported bridging path
+        // Enable cross-spoke transfer to skip principal tracking for this test
+        vm.prank(operator);
+        hubPortal.enableCrossSpokeTokenTransfer(SPOKE_CHAIN_ID);
+
+        // Configure this as a supported bridging path
         vm.prank(operator);
         hubPortal.setSupportedBridgingPath(address(mToken), SPOKE_CHAIN_ID, invalidWrappedToken.toBytes32(), true);
 
@@ -158,5 +194,191 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
 
         vm.prank(unsupportedAdapter);
         hubPortal.receiveMessage(SPOKE_CHAIN_ID, payload);
+    }
+
+    // ==================== PRINCIPAL DECREASE TESTS ====================
+
+    function test_receiveMessage_decreasesPrincipalForIsolatedSpoke() external {
+        _enableEarningWithIndex(testIndex);
+        _bridgeTokensToSpoke(amount);
+
+        uint248 principalBeforeReceive = hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID);
+        assertTrue(principalBeforeReceive > 0);
+
+        // Now receive tokens back FROM the spoke (decreases principal)
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            SPOKE_CHAIN_ID,
+            address(bridgeAdapter).toBytes32(),
+            messageId,
+            amount,
+            address(mToken).toBytes32(),
+            sender,
+            recipient.toBytes32(),
+            testIndex
+        );
+
+        vm.prank(address(bridgeAdapter));
+        hubPortal.receiveMessage(SPOKE_CHAIN_ID, payload);
+
+        uint248 principalAfterReceive = hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID);
+        assertTrue(principalAfterReceive < principalBeforeReceive);
+    }
+
+    function test_receiveMessage_decreasesPrincipalToZero() external {
+        _enableEarningWithIndex(testIndex);
+        _bridgeTokensToSpoke(amount);
+
+        // Receive the exact same amount back
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            SPOKE_CHAIN_ID,
+            address(bridgeAdapter).toBytes32(),
+            messageId,
+            amount,
+            address(mToken).toBytes32(),
+            sender,
+            recipient.toBytes32(),
+            testIndex
+        );
+
+        vm.prank(address(bridgeAdapter));
+        hubPortal.receiveMessage(SPOKE_CHAIN_ID, payload);
+
+        assertEq(hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID), 0);
+    }
+
+    function test_receiveMessage_partialPrincipalDecrease() external {
+        uint256 sendAmount = amount * 2;
+        uint256 receiveAmount = amount;
+
+        _enableEarningWithIndex(testIndex);
+        _bridgeTokensToSpoke(sendAmount);
+
+        uint248 principalBeforeReceive = hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID);
+
+        // Receive only 1x amount back
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            SPOKE_CHAIN_ID,
+            address(bridgeAdapter).toBytes32(),
+            messageId,
+            receiveAmount,
+            address(mToken).toBytes32(),
+            sender,
+            recipient.toBytes32(),
+            testIndex
+        );
+
+        vm.prank(address(bridgeAdapter));
+        hubPortal.receiveMessage(SPOKE_CHAIN_ID, payload);
+
+        uint248 principalAfterReceive = hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID);
+
+        // Sent 2x amount, received 1x amount back, so half the principal remains
+        assertEq(principalAfterReceive, principalBeforeReceive / 2);
+    }
+
+    function test_receiveMessage_doesNotDecreasePrincipalForConnectedSpoke() external {
+        // Enable cross-spoke transfer for this spoke
+        vm.prank(operator);
+        hubPortal.enableCrossSpokeTokenTransfer(SPOKE_CHAIN_ID);
+
+        // Principal tracking is disabled for connected spokes, so this should not revert
+        // even though there is no principal to decrease
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            SPOKE_CHAIN_ID,
+            address(bridgeAdapter).toBytes32(),
+            messageId,
+            amount,
+            address(mToken).toBytes32(),
+            sender,
+            recipient.toBytes32(),
+            index
+        );
+
+        vm.prank(address(bridgeAdapter));
+        hubPortal.receiveMessage(SPOKE_CHAIN_ID, payload);
+
+        // Should succeed and principal should remain 0
+        assertEq(hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID), 0);
+        assertEq(mToken.balanceOf(recipient), amount);
+    }
+
+    function test_receiveMessage_revertsIfInsufficientBridgedBalance() external {
+        _enableEarningWithIndex(testIndex);
+        _bridgeTokensToSpoke(amount / 2);
+
+        // Try to receive 10e6 back (more than was bridged)
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            SPOKE_CHAIN_ID,
+            address(bridgeAdapter).toBytes32(),
+            messageId,
+            amount,
+            address(mToken).toBytes32(),
+            sender,
+            recipient.toBytes32(),
+            testIndex
+        );
+
+        vm.expectRevert(IHubPortal.InsufficientBridgedBalance.selector);
+
+        vm.prank(address(bridgeAdapter));
+        hubPortal.receiveMessage(SPOKE_CHAIN_ID, payload);
+    }
+
+    function test_receiveMessage_revertsIfNothingBridged() external {
+        mToken.setCurrentIndex(testIndex);
+
+        // Try to receive tokens when nothing was bridged
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            SPOKE_CHAIN_ID,
+            address(bridgeAdapter).toBytes32(),
+            messageId,
+            amount,
+            address(mToken).toBytes32(),
+            sender,
+            recipient.toBytes32(),
+            testIndex
+        );
+
+        vm.expectRevert(IHubPortal.InsufficientBridgedBalance.selector);
+
+        vm.prank(address(bridgeAdapter));
+        hubPortal.receiveMessage(SPOKE_CHAIN_ID, payload);
+    }
+
+    function test_receiveMessage_principalCalculationWithChangingIndex() external {
+        uint128 sendIndex = 1_250_000_000_000; // 1.25
+        uint128 receiveIndex = 1_500_000_000_000; // 1.5
+
+        _enableEarningWithIndex(sendIndex);
+        _bridgeTokensToSpoke(amount);
+
+        // At index 1.25, principal = 10e6 / 1.25 = 8e6
+        uint248 principalAfterSend = hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID);
+        uint248 expectedPrincipal = uint248((uint256(amount) * 1e12) / sendIndex);
+        assertEq(principalAfterSend, expectedPrincipal);
+        assertTrue(principalAfterSend != amount); // Verify principal != balance
+
+        // Change index to 1.5
+        mToken.setCurrentIndex(receiveIndex);
+
+        // To unlock principal at index 1.5, we need to receive: principal * 1.5 = 8e6 * 1.5 = 12e6
+        uint256 receiveAmount = (uint256(principalAfterSend) * receiveIndex) / 1e12;
+
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            SPOKE_CHAIN_ID,
+            address(bridgeAdapter).toBytes32(),
+            messageId,
+            receiveAmount,
+            address(mToken).toBytes32(),
+            sender,
+            recipient.toBytes32(),
+            receiveIndex
+        );
+
+        vm.prank(address(bridgeAdapter));
+        hubPortal.receiveMessage(SPOKE_CHAIN_ID, payload);
+
+        // Principal should be 0 (fully unlocked)
+        assertEq(hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID), 0);
     }
 }

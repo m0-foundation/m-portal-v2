@@ -2,6 +2,7 @@
 pragma solidity 0.8.30;
 
 import { IPortal } from "../../../src/interfaces/IPortal.sol";
+import { ISpokePortal } from "../../../src/interfaces/ISpokePortal.sol";
 import { SpokePortal } from "../../../src/SpokePortal.sol";
 
 import { SpokePortalUnitTestBase } from "./SpokePortalUnitTestBase.sol";
@@ -16,21 +17,30 @@ contract ConstructorUnitTest is SpokePortalUnitTestBase {
 
     function test_constructor_zeroMToken() external {
         vm.expectRevert(IPortal.ZeroMToken.selector);
-        new SpokePortal(address(0), address(registrar), address(swapFacility), address(mockOrderBook));
+        new SpokePortal(address(0), address(registrar), address(swapFacility), address(mockOrderBook), HUB_CHAIN_ID);
     }
 
     function test_constructor_zeroRegistrar() external {
         vm.expectRevert(IPortal.ZeroRegistrar.selector);
-        new SpokePortal(address(mToken), address(0), address(swapFacility), address(mockOrderBook));
+        new SpokePortal(address(mToken), address(0), address(swapFacility), address(mockOrderBook), HUB_CHAIN_ID);
     }
 
     function test_constructor_zeroSwapFacility() external {
         vm.expectRevert(IPortal.ZeroSwapFacility.selector);
-        new SpokePortal(address(mToken), address(registrar), address(0), address(mockOrderBook));
+        new SpokePortal(address(mToken), address(registrar), address(0), address(mockOrderBook), HUB_CHAIN_ID);
     }
 
     function test_constructor_zeroOrderBook() external {
         vm.expectRevert(IPortal.ZeroOrderBook.selector);
-        new SpokePortal(address(mToken), address(registrar), address(swapFacility), address(0));
+        new SpokePortal(address(mToken), address(registrar), address(swapFacility), address(0), HUB_CHAIN_ID);
+    }
+
+    function test_constructor_zeroHubChainId() external {
+        vm.expectRevert(ISpokePortal.ZeroHubChain.selector);
+        new SpokePortal(address(mToken), address(registrar), address(swapFacility), address(mockOrderBook), 0);
+    }
+
+    function test_constructor_hubChainId() external view {
+        assertEq(spokePortal.hubChainId(), HUB_CHAIN_ID);
     }
 }
