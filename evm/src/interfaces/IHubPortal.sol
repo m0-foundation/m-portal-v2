@@ -61,7 +61,7 @@ interface IHubPortal is IPortal {
     );
 
     /// @notice Emitted when cross-Spoke token transfer is enabled for the Spoke chain.
-    /// @param  spokeChainId     The chain Id of the Spoke.
+    /// @param  spokeChainId     The ID of the Spoke chain.
     /// @param  bridgedPrincipal The principal amount of $M tokens bridged to the Spoke chain before transfer was enabled.
     event CrossSpokeTokenTransferEnabled(uint32 spokeChainId, uint248 bridgedPrincipal);
 
@@ -107,6 +107,12 @@ interface IHubPortal is IPortal {
     ///////////////////////////////////////////////////////////////////////////
     //                         INTERACTIVE FUNCTIONS                         //
     ///////////////////////////////////////////////////////////////////////////
+
+    /// @notice Initializes the Proxy's storage
+    /// @param  initialOwner    The address of the owner.
+    /// @param  initialPauser   The address of the pauser.
+    /// @param  initialOperator The address of the operator.
+    function initialize(address initialOwner, address initialPauser, address initialOperator) external;
 
     /// @notice Sends the $M token index to the destination chain using the default bridge adapter.
     /// @param  destinationChainId The chain Id of the destination chain.
@@ -227,7 +233,8 @@ interface IHubPortal is IPortal {
     function disableEarning() external;
 
     /// @notice Enables cross-Spoke token transfer for a specified Spoke chain.
-    /// @dev    Must be called after calling `disableCrossSpokeTokenTransfer` in SpokePortal.
-    /// @param  spokeChainId The chain Id of the Spoke.
+    /// @dev    Stops tracking the principal amount of $M tokens bridged to the Spoke chain.
+    ///         Must be called after calling `enableCrossSpokeTokenTransfer` in SpokePortal.
+    /// @param  spokeChainId The ID of the Spoke chain.
     function enableCrossSpokeTokenTransfer(uint32 spokeChainId) external;
 }

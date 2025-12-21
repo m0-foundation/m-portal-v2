@@ -68,6 +68,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         if ((merkleTreeBuilder = merkleTreeBuilder_) == address(0)) revert ZeroMerkleTreeBuilder();
     }
 
+    /// @inheritdoc IHubPortal
     function initialize(address owner, address pauser, address operator) external initializer {
         _initialize(owner, pauser, operator);
 

@@ -46,16 +46,24 @@ interface ISpokePortal is IPortal {
     //                          VIEW/PURE FUNCTIONS                          //
     ///////////////////////////////////////////////////////////////////////////
 
-    /// @notice Returns the Hub chain ID.
+    /// @notice Returns the ID of the Hub chain.
     function hubChainId() external view returns (uint32);
 
-    /// @notice Returns whether cross-Spoke token transfer is enabled.
+    /// @notice Returns whether the current Spoke can transfer tokens to other Spoke chains.
     function crossSpokeTokenTransferEnabled() external view returns (bool);
 
     ///////////////////////////////////////////////////////////////////////////
     //                        INTERACTIVE FUNCTIONS                          //
     ///////////////////////////////////////////////////////////////////////////
 
+    /// @notice Initializes the Proxy's storage
+    /// @param  initialOwner              The address of the owner.
+    /// @param  initialPauser             The address of the pauser.
+    /// @param  initialOperator           The address of the operator.
+    /// @param  crossSpokeTransferEnabled Indicates whether the current Spoke can transfer tokens to other Spoke chains.
+    function initialize(address initialOwner, address initialPauser, address initialOperator, bool crossSpokeTransferEnabled) external;
+
     /// @notice Enables cross-Spoke token transfer.
+    /// @dev    Must be called after `enableCrossSpokeTokenTransfer` is called in HubPortal.
     function enableCrossSpokeTokenTransfer() external;
 }
