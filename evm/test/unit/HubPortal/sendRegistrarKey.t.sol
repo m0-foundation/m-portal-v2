@@ -81,7 +81,7 @@ contract SendRegistrarKeyUnitTest is HubPortalUnitTestBase {
     }
 
     function test_sendRegistrarKey_revertsIfNoBridgeAdapterSet() external {
-        uint32 unconfiguredChain = 3;
+        uint32 unconfiguredChain = 999;
 
         vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, unconfiguredChain));
         hubPortal.sendRegistrarKey(unconfiguredChain, testKey, refundAddress, bridgeAdapterArgs);

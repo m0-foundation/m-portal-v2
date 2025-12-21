@@ -5,6 +5,7 @@ import { PausableUpgradeable } from "../../../lib/common/lib/openzeppelin-contra
 
 import { IBridgeAdapter } from "../../../src/interfaces/IBridgeAdapter.sol";
 import { IPortal } from "../../../src/interfaces/IPortal.sol";
+import { ISpokePortal } from "../../../src/interfaces/ISpokePortal.sol";
 import { TypeConverter } from "../../../src/libraries/TypeConverter.sol";
 import { PayloadEncoder } from "../../../src/libraries/PayloadEncoder.sol";
 
@@ -165,7 +166,7 @@ contract SendTokenUnitTest is SpokePortalUnitTestBase {
     }
 
     function test_sendToken_revertsIfNoBridgeAdapterSet() external {
-        uint32 unconfiguredChain = 3;
+        uint32 unconfiguredChain = 999;
 
         vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, unconfiguredChain));
         vm.prank(user);
@@ -205,6 +206,102 @@ contract SendTokenUnitTest is SpokePortalUnitTestBase {
         spokePortal.sendToken(
             amount, address(mToken), HUB_CHAIN_ID, unsupportedDestinationToken, recipient, refundAddress, bridgeAdapterArgs
         );
+        vm.stopPrank();
+    }
+
+    // ==================== CROSS-SPOKE RESTRICTION TESTS ====================
+
+    function test_sendToken_allowsSendToHubWhenIsolated() external {
+        // crossSpokeTokenTransferEnabled is false by default (from setUp)
+        assertFalse(spokePortal.crossSpokeTokenTransferEnabled());
+
+        uint256 fee = 1;
+        uint128 index = 1_100_000_068_703;
+
+        mToken.setCurrentIndex(index);
+
+        vm.startPrank(user);
+        mToken.approve(address(spokePortal), amount);
+
+        // Should succeed sending to hub when isolated
+        spokePortal.sendToken{ value: fee }(amount, address(mToken), HUB_CHAIN_ID, hubMToken, recipient, refundAddress, bridgeAdapterArgs);
+        vm.stopPrank();
+
+        // Verify tokens were burned (sent)
+        assertEq(mToken.balanceOf(user), 100e6 - amount);
+    }
+
+    function test_sendToken_allowsSendToAnyChainWhenConnected() external {
+        // Enable cross-spoke transfer
+        vm.prank(operator);
+        spokePortal.enableCrossSpokeTokenTransfer();
+
+        assertTrue(spokePortal.crossSpokeTokenTransferEnabled());
+
+        uint256 fee = 1;
+        uint128 index = 1_100_000_068_703;
+
+        mToken.setCurrentIndex(index);
+
+        vm.startPrank(user);
+        mToken.approve(address(spokePortal), amount);
+
+        // Should succeed sending to another spoke when connected
+        spokePortal.sendToken{ value: fee }(amount, address(mToken), SPOKE_CHAIN_ID_2, spoke2MToken, recipient, refundAddress, bridgeAdapterArgs);
+        vm.stopPrank();
+
+        // Verify tokens were burned (sent)
+        assertEq(mToken.balanceOf(user), 100e6 - amount);
+    }
+
+    function test_sendToken_allowsSendToHubWhenConnected() external {
+        // Enable cross-spoke transfer
+        vm.prank(operator);
+        spokePortal.enableCrossSpokeTokenTransfer();
+
+        assertTrue(spokePortal.crossSpokeTokenTransferEnabled());
+
+        uint256 fee = 1;
+        uint128 index = 1_100_000_068_703;
+
+        mToken.setCurrentIndex(index);
+
+        vm.startPrank(user);
+        mToken.approve(address(spokePortal), amount);
+
+        // Should still succeed sending to hub when connected
+        spokePortal.sendToken{ value: fee }(amount, address(mToken), HUB_CHAIN_ID, hubMToken, recipient, refundAddress, bridgeAdapterArgs);
+        vm.stopPrank();
+
+        // Verify tokens were burned (sent)
+        assertEq(mToken.balanceOf(user), 100e6 - amount);
+    }
+
+    function test_sendToken_revertsIfSendToSpokeWhenIsolated() external {
+        // crossSpokeTokenTransferEnabled is false by default (from setUp)
+        assertFalse(spokePortal.crossSpokeTokenTransferEnabled());
+
+        vm.startPrank(user);
+        mToken.approve(address(spokePortal), amount);
+
+        vm.expectRevert(abi.encodeWithSelector(ISpokePortal.TokenTransferToSpokeDisabled.selector, SPOKE_CHAIN_ID_2));
+
+        spokePortal.sendToken(amount, address(mToken), SPOKE_CHAIN_ID_2, spoke2MToken, recipient, refundAddress, bridgeAdapterArgs);
+        vm.stopPrank();
+    }
+
+    function test_sendToken_revertsIfSendToSelfChainWhenIsolated() external {
+        // crossSpokeTokenTransferEnabled is false by default (from setUp)
+        assertFalse(spokePortal.crossSpokeTokenTransferEnabled());
+
+        vm.startPrank(user);
+        mToken.approve(address(spokePortal), amount);
+
+        // Trying to send to own chain ID should fail
+        // Note: This reverts with UnsupportedDestinationChain because sending to self is not supported
+        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, SPOKE_CHAIN_ID));
+
+        spokePortal.sendToken(amount, address(mToken), SPOKE_CHAIN_ID, hubMToken, recipient, refundAddress, bridgeAdapterArgs);
         vm.stopPrank();
     }
 }

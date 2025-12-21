@@ -30,6 +30,13 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
         mToken.mint(address(wrappedMToken), 100e6);
     }
 
+    /// @dev Helper to enable earning with a specific index
+    function _enableEarningWithIndex(uint128 _index) internal {
+        mToken.setCurrentIndex(_index);
+        registrar.setListContains(EARNERS_LIST, address(hubPortal), true);
+        hubPortal.enableEarning();
+    }
+
     function test_sendToken_withMToken() external {
         uint256 fee = 1;
         uint128 index = 1_100_000_068_703;
@@ -38,9 +45,7 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
             PayloadEncoder.encodeTokenTransfer(SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, amount, spokeMToken, user, recipient, index);
         address defaultBridgeAdapter = hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID);
 
-        mToken.setCurrentIndex(index);
-        registrar.setListContains(EARNERS_LIST, address(hubPortal), true);
-        hubPortal.enableEarning();
+        _enableEarningWithIndex(index);
 
         vm.startPrank(user);
         mToken.approve(address(hubPortal), amount);
@@ -69,9 +74,7 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
         );
         address defaultBridgeAdapter = hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID);
 
-        mToken.setCurrentIndex(index);
-        registrar.setListContains(EARNERS_LIST, address(hubPortal), true);
-        hubPortal.enableEarning();
+        _enableEarningWithIndex(index);
 
         vm.startPrank(user);
         wrappedMToken.approve(address(hubPortal), amount);
@@ -107,9 +110,7 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
         // Mock fetching peer bridge adapter
         vm.mockCall(address(customAdapter), abi.encodeCall(MockBridgeAdapter.getPeer, (SPOKE_CHAIN_ID)), abi.encode(spokeBridgeAdapter));
 
-        mToken.setCurrentIndex(index);
-        registrar.setListContains(EARNERS_LIST, address(hubPortal), true);
-        hubPortal.enableEarning();
+        _enableEarningWithIndex(index);
 
         vm.prank(operator);
         hubPortal.setSupportedBridgeAdapter(SPOKE_CHAIN_ID, address(customAdapter), true);
@@ -174,7 +175,7 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
     }
 
     function test_sendToken_revertsIfNoBridgeAdapterSet() external {
-        uint32 unconfiguredChain = 3;
+        uint32 unconfiguredChain = 999;
 
         vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, unconfiguredChain));
         vm.prank(user);
@@ -215,5 +216,134 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
             amount, address(mToken), SPOKE_CHAIN_ID, unsupportedDestinationToken, recipient, refundAddress, bridgeAdapterArgs
         );
         vm.stopPrank();
+    }
+
+    // ==================== PRINCIPAL TRACKING TESTS ====================
+
+    function test_sendToken_tracksPrincipalForIsolatedSpoke() external {
+        uint256 fee = 1;
+        uint128 index = 1_100_000_068_703;
+
+        _enableEarningWithIndex(index);
+
+        assertEq(hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID), 0);
+
+        vm.startPrank(user);
+        mToken.approve(address(hubPortal), amount);
+        hubPortal.sendToken{ value: fee }(amount, address(mToken), SPOKE_CHAIN_ID, spokeMToken, recipient, refundAddress, bridgeAdapterArgs);
+        vm.stopPrank();
+
+        // Principal should be calculated as: amount * EXP_SCALED_ONE / index
+        // With index = 1_100_000_068_703 (approx 1.1e12), and EXP_SCALED_ONE = 1e12
+        // Principal = amount * 1e12 / 1_100_000_068_703 (rounded down)
+        uint248 expectedPrincipal = uint248((uint256(amount) * 1e12) / index);
+        assertEq(hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID), expectedPrincipal);
+    }
+
+    function test_sendToken_tracksPrincipalMultipleTransfers() external {
+        uint256 fee = 1;
+        uint128 index = 1_100_000_068_703;
+
+        _enableEarningWithIndex(index);
+
+        vm.startPrank(user);
+        mToken.approve(address(hubPortal), amount * 3);
+
+        // First transfer
+        hubPortal.sendToken{ value: fee }(amount, address(mToken), SPOKE_CHAIN_ID, spokeMToken, recipient, refundAddress, bridgeAdapterArgs);
+        uint248 principalAfterFirst = hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID);
+
+        // Second transfer
+        hubPortal.sendToken{ value: fee }(amount, address(mToken), SPOKE_CHAIN_ID, spokeMToken, recipient, refundAddress, bridgeAdapterArgs);
+        uint248 principalAfterSecond = hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID);
+
+        // Third transfer
+        hubPortal.sendToken{ value: fee }(amount, address(mToken), SPOKE_CHAIN_ID, spokeMToken, recipient, refundAddress, bridgeAdapterArgs);
+        uint248 principalAfterThird = hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID);
+
+        vm.stopPrank();
+
+        // Principal should accumulate correctly
+        uint248 singlePrincipal = uint248((uint256(amount) * 1e12) / index);
+        assertEq(principalAfterFirst, singlePrincipal);
+        assertEq(principalAfterSecond, singlePrincipal * 2);
+        assertEq(principalAfterThird, singlePrincipal * 3);
+    }
+
+    function test_sendToken_principalCalculationWithDifferentIndexes() external {
+        uint256 fee = 1;
+        uint128 index1 = 1_250_000_000_000; // 1.25
+        uint128 index2 = 1_500_000_000_000; // 1.5
+
+        _enableEarningWithIndex(index1);
+
+        vm.startPrank(user);
+        mToken.approve(address(hubPortal), amount * 2);
+
+        // First transfer at index 1.25 - principal = 10e6 / 1.25 = 8e6
+        hubPortal.sendToken{ value: fee }(amount, address(mToken), SPOKE_CHAIN_ID, spokeMToken, recipient, refundAddress, bridgeAdapterArgs);
+
+        uint248 firstPrincipal = uint248((uint256(amount) * 1e12) / index1);
+        uint248 principalAfterFirst = hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID);
+        assertEq(principalAfterFirst, firstPrincipal);
+        assertTrue(principalAfterFirst != amount); // Verify principal != balance
+
+        // Change index to 1.5
+        mToken.setCurrentIndex(index2);
+
+        // Second transfer at index 1.5 - principal = 10e6 / 1.5 = 6.666e6
+        hubPortal.sendToken{ value: fee }(amount, address(mToken), SPOKE_CHAIN_ID, spokeMToken, recipient, refundAddress, bridgeAdapterArgs);
+
+        vm.stopPrank();
+
+        uint248 secondPrincipal = uint248((uint256(amount) * 1e12) / index2);
+        uint248 expectedTotal = firstPrincipal + secondPrincipal;
+        assertEq(hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID), expectedTotal);
+    }
+
+    function test_sendToken_doesNotTrackPrincipalForConnectedSpoke() external {
+        uint256 fee = 1;
+        uint128 index = 1_100_000_068_703;
+
+        _enableEarningWithIndex(index);
+
+        // Enable cross-spoke transfer for this spoke
+        vm.prank(operator);
+        hubPortal.enableCrossSpokeTokenTransfer(SPOKE_CHAIN_ID);
+
+        assertEq(hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID), 0);
+
+        vm.startPrank(user);
+        mToken.approve(address(hubPortal), amount);
+        hubPortal.sendToken{ value: fee }(amount, address(mToken), SPOKE_CHAIN_ID, spokeMToken, recipient, refundAddress, bridgeAdapterArgs);
+        vm.stopPrank();
+
+        // Principal should remain 0 for connected spoke
+        assertEq(hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID), 0);
+    }
+
+    function test_sendToken_principalRoundsDown() external {
+        uint256 fee = 1;
+        // Use an index that will cause rounding
+        uint128 index = 1_100_000_000_001;
+        uint256 testAmount = 1_100_000_000_001; // Amount that won't divide evenly
+
+        mToken.mint(user, testAmount);
+        _enableEarningWithIndex(index);
+
+        vm.startPrank(user);
+        mToken.approve(address(hubPortal), testAmount);
+        hubPortal.sendToken{ value: fee }(testAmount, address(mToken), SPOKE_CHAIN_ID, spokeMToken, recipient, refundAddress, bridgeAdapterArgs);
+        vm.stopPrank();
+
+        // Principal should be rounded down
+        // principal = testAmount * 1e12 / index (rounded down)
+        uint248 expectedPrincipal = uint248((uint256(testAmount) * 1e12) / index);
+
+        // Verify it's the floor, not ceiling
+        uint256 backToAmount = (uint256(expectedPrincipal) * index) / 1e12;
+        assertTrue(backToAmount <= testAmount);
+
+        assertEq(hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID), expectedPrincipal);
     }
 }

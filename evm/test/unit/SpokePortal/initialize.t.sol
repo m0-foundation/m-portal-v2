@@ -44,4 +44,20 @@ contract InitializeUnitTest is SpokePortalUnitTestBase {
         vm.expectRevert(IPortal.ZeroOperator.selector);
         new ERC1967Proxy(address(implementation), initializeData);
     }
+
+    // ==================== CROSS-SPOKE TRANSFER INITIALIZATION TESTS ====================
+
+    function test_initialize_crossSpokeTransferDisabled() external {
+        // Default setUp already initializes with false, verify it
+        assertFalse(spokePortal.crossSpokeTokenTransferEnabled());
+    }
+
+    function test_initialize_crossSpokeTransferEnabled() external {
+        // Deploy a new SpokePortal with crossSpokeTransferEnabled = true
+        bytes memory initializeData = abi.encodeCall(SpokePortal.initialize, (admin, pauser, operator, true));
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initializeData);
+        SpokePortal enabledPortal = SpokePortal(address(proxy));
+
+        assertTrue(enabledPortal.crossSpokeTokenTransferEnabled());
+    }
 }
