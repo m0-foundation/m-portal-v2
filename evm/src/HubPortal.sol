@@ -9,12 +9,16 @@ import { IBridgeAdapter } from "./interfaces/IBridgeAdapter.sol";
 import { IMTokenLike } from "./interfaces/IMTokenLike.sol";
 import { IMerkleTreeBuilderLike } from "./interfaces/IMerkleTreeBuilderLike.sol";
 import { IRegistrarLike } from "./interfaces/IRegistrarLike.sol";
-import { IPortal, ChainConfig } from "./interfaces/IPortal.sol";
-import { IHubPortal, SpokeChainConfig } from "./interfaces/IHubPortal.sol";
+import { IHubPortal } from "./interfaces/IHubPortal.sol";
 
 import { Portal } from "./Portal.sol";
 import { PayloadType, PayloadEncoder } from "./libraries/PayloadEncoder.sol";
 import { TypeConverter } from "./libraries/TypeConverter.sol";
+
+struct SpokeChainConfig {
+    uint248 bridgedPrincipal;
+    bool crossSpokeTokenTransferEnabled;
+}
 
 abstract contract HubPortalStorageLayout {
     /// @custom:storage-location erc7201:M0.storage.HubPortal

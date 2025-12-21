@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { IAccessControl } from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
+import {
+    IAccessControl
+} from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
 
 import { ISpokePortal } from "../../../src/interfaces/ISpokePortal.sol";
 
@@ -46,11 +48,7 @@ contract EnableCrossSpokeTokenTransferUnitTest is SpokePortalUnitTestBase {
         vm.assume(caller != operator);
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                caller,
-                spokePortal.OPERATOR_ROLE()
-            )
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, caller, spokePortal.OPERATOR_ROLE())
         );
 
         vm.prank(caller);

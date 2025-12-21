@@ -46,13 +46,7 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
         vm.startPrank(bridgeUser);
         mToken.approve(address(hubPortal), _amount);
         hubPortal.sendToken{ value: 1 }(
-            _amount,
-            address(mToken),
-            SPOKE_CHAIN_ID,
-            spokeMToken,
-            sender.toBytes32(),
-            bridgeUser.toBytes32(),
-            ""
+            _amount, address(mToken), SPOKE_CHAIN_ID, spokeMToken, sender.toBytes32(), bridgeUser.toBytes32(), ""
         );
         vm.stopPrank();
     }

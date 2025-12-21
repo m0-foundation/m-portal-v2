@@ -4,11 +4,6 @@ pragma solidity 0.8.30;
 
 import { IPortal } from "./IPortal.sol";
 
-struct SpokeChainConfig {
-    uint248 bridgedPrincipal;
-    bool crossSpokeTokenTransferEnabled;
-}
-
 /// @title  HubPortal interface.
 /// @author M0 Labs
 interface IHubPortal is IPortal {
@@ -64,7 +59,7 @@ interface IHubPortal is IPortal {
     event EarnerMerkleRootSent(
         uint32 indexed destinationChainId, uint128 index, bytes32 earnerMerkleRoot, address bridgeAdapter, bytes32 messageId
     );
-    
+
     /// @notice Emitted when cross-Spoke token transfer is enabled for the Spoke chain.
     /// @param  spokeChainId     The chain Id of the Spoke.
     /// @param  bridgedPrincipal The principal amount of $M tokens bridged to the Spoke chain before transfer was enabled.
@@ -106,7 +101,7 @@ interface IHubPortal is IPortal {
 
     /// @notice Returns the address of the Merkle Tree Builder.
     function merkleTreeBuilder() external view returns (address);
-    
+
     /// @notice Returns the principal amount of M tokens bridged to a specified Spoke chain.
     /// @dev    Only applicable to isolated Spokes (i.e., `crossSpokeTokenTransferEnabled` == false).
     function bridgedPrincipal(uint32 spokeChainId) external view returns (uint248);

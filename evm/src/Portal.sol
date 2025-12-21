@@ -11,12 +11,21 @@ import { PausableUpgradeable } from "../lib/common/lib/openzeppelin-contracts-up
 import { UUPSUpgradeable } from "../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import { IBridgeAdapter } from "./interfaces/IBridgeAdapter.sol";
-import { IPortal, ChainConfig } from "./interfaces/IPortal.sol";
+import { IPortal } from "./interfaces/IPortal.sol";
 import { ISwapFacilityLike } from "./interfaces/ISwapFacilityLike.sol";
 import { IOrderBookLike } from "./interfaces/IOrderBookLike.sol";
 import { ReentrancyLock } from "./utils/ReentrancyLock.sol";
 import { PayloadType, PayloadEncoder } from "./libraries/PayloadEncoder.sol";
 import { TypeConverter } from "./libraries/TypeConverter.sol";
+
+struct ChainConfig {
+    /// @notice Default bridge adapter for each remote chain used if no bridge adapter is specified.
+    address defaultBridgeAdapter;
+    /// @notice Supported bridge adapters for each remote chain.
+    mapping(address bridgeAdapter => bool supported) supportedBridgeAdapter;
+    /// @notice Gas limit required to process different types of payload on destination chains.
+    mapping(PayloadType payloadType => uint256 gasLimit) payloadGasLimit;
+}
 
 abstract contract PortalStorageLayout {
     /// @custom:storage-location erc7201:M0.storage.Portal

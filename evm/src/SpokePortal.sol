@@ -5,7 +5,6 @@ pragma solidity 0.8.30;
 import { ISpokeMTokenLike } from "./interfaces/ISpokeMTokenLike.sol";
 import { IRegistrarLike } from "./interfaces/IRegistrarLike.sol";
 import { ISpokePortal } from "./interfaces/ISpokePortal.sol";
-import { IPortal } from "./interfaces/IPortal.sol";
 
 import { Portal } from "./Portal.sol";
 import { PayloadType, PayloadEncoder } from "./libraries/PayloadEncoder.sol";

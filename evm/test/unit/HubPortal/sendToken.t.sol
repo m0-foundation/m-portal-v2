@@ -333,7 +333,9 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
 
         vm.startPrank(user);
         mToken.approve(address(hubPortal), testAmount);
-        hubPortal.sendToken{ value: fee }(testAmount, address(mToken), SPOKE_CHAIN_ID, spokeMToken, recipient, refundAddress, bridgeAdapterArgs);
+        hubPortal.sendToken{ value: fee }(
+            testAmount, address(mToken), SPOKE_CHAIN_ID, spokeMToken, recipient, refundAddress, bridgeAdapterArgs
+        );
         vm.stopPrank();
 
         // Principal should be rounded down

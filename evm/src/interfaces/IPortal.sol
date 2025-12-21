@@ -5,15 +5,6 @@ pragma solidity 0.8.30;
 import { PayloadType } from "../libraries/PayloadEncoder.sol";
 import { IOrderBookLike } from "./IOrderBookLike.sol";
 
-struct ChainConfig {
-    /// @notice Default bridge adapter for each remote chain used if no bridge adapter is specified.
-    address defaultBridgeAdapter;
-    /// @notice Supported bridge adapters for each remote chain.
-    mapping(address bridgeAdapter => bool supported) supportedBridgeAdapter;
-    /// @notice Gas limit required to process different types of payload on destination chains.
-    mapping(PayloadType payloadType => uint256 gasLimit) payloadGasLimit;
-}
-
 /// @title  IPortal interface
 /// @author M0 Labs
 /// @notice Subset of functions inherited by both IHubPortal and ISpokePortal.

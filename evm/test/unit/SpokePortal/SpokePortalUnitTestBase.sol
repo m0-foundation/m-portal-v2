@@ -8,7 +8,6 @@ import {
 } from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import { SpokePortal } from "../../../src/SpokePortal.sol";
-import { ChainConfig } from "../../../src/interfaces/IPortal.sol";
 import { PayloadType } from "../../../src/libraries/PayloadEncoder.sol";
 import { TypeConverter } from "../../../src/libraries/TypeConverter.sol";
 

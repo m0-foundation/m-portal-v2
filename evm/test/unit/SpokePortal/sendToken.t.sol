@@ -247,7 +247,9 @@ contract SendTokenUnitTest is SpokePortalUnitTestBase {
         mToken.approve(address(spokePortal), amount);
 
         // Should succeed sending to another spoke when connected
-        spokePortal.sendToken{ value: fee }(amount, address(mToken), SPOKE_CHAIN_ID_2, spoke2MToken, recipient, refundAddress, bridgeAdapterArgs);
+        spokePortal.sendToken{ value: fee }(
+            amount, address(mToken), SPOKE_CHAIN_ID_2, spoke2MToken, recipient, refundAddress, bridgeAdapterArgs
+        );
         vm.stopPrank();
 
         // Verify tokens were burned (sent)

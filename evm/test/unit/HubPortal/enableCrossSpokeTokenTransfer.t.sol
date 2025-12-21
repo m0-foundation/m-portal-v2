@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { IAccessControl } from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
+import {
+    IAccessControl
+} from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
 
 import { IHubPortal } from "../../../src/interfaces/IHubPortal.sol";
 import { TypeConverter } from "../../../src/libraries/TypeConverter.sol";
@@ -107,13 +109,7 @@ contract EnableCrossSpokeTokenTransferUnitTest is HubPortalUnitTestBase {
     function testFuzz_enableCrossSpokeTokenTransfer_revertsIfNotOperator(address caller) external {
         vm.assume(caller != operator);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                caller,
-                hubPortal.OPERATOR_ROLE()
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, caller, hubPortal.OPERATOR_ROLE()));
 
         vm.prank(caller);
         hubPortal.enableCrossSpokeTokenTransfer(SPOKE_CHAIN_ID);
