@@ -32,9 +32,6 @@ interface ISpokePortal is IPortal {
     /// @notice Emitted when cross-Spoke token transfer is enabled.
     event CrossSpokeTokenTransferEnabled();
 
-    /// @notice Emitted when cross-Spoke token transfer is disabled.
-    event CrossSpokeTokenTransferDisabled();
-
     ///////////////////////////////////////////////////////////////////////////
     //                             CUSTOM ERRORS                             //
     ///////////////////////////////////////////////////////////////////////////
