@@ -11,12 +11,21 @@ import { PausableUpgradeable } from "../lib/common/lib/openzeppelin-contracts-up
 import { UUPSUpgradeable } from "../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import { IBridgeAdapter } from "./interfaces/IBridgeAdapter.sol";
-import { IPortal, ChainConfig } from "./interfaces/IPortal.sol";
+import { IPortal } from "./interfaces/IPortal.sol";
 import { ISwapFacilityLike } from "./interfaces/ISwapFacilityLike.sol";
 import { IOrderBookLike } from "./interfaces/IOrderBookLike.sol";
 import { ReentrancyLock } from "./utils/ReentrancyLock.sol";
 import { PayloadType, PayloadEncoder } from "./libraries/PayloadEncoder.sol";
 import { TypeConverter } from "./libraries/TypeConverter.sol";
+
+struct ChainConfig {
+    /// @notice Default bridge adapter for each remote chain used if no bridge adapter is specified.
+    address defaultBridgeAdapter;
+    /// @notice Supported bridge adapters for each remote chain.
+    mapping(address bridgeAdapter => bool supported) supportedBridgeAdapter;
+    /// @notice Gas limit required to process different types of payload on destination chains.
+    mapping(PayloadType payloadType => uint256 gasLimit) payloadGasLimit;
+}
 
 abstract contract PortalStorageLayout {
     /// @custom:storage-location erc7201:M0.storage.Portal
@@ -360,6 +369,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         _revertIfZeroRecipient(recipient);
         _revertIfInvalidDestinationChain(destinationChainId);
         _revertIfUnsupportedBridgingPath(sourceToken, destinationChainId, destinationToken);
+        _revertIfTokenTransferDisabled(destinationChainId);
 
         uint256 startingBalance = _mBalanceOf(address(this));
 
@@ -377,7 +387,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
 
         // Burn M tokens on Spoke.
         // In case of Hub, only update the bridged principal amount as tokens already transferred.
-        _burnOrLock(transferAmount);
+        _burnOrLock(destinationChainId, transferAmount);
 
         bytes memory payload;
         uint128 index;
@@ -461,10 +471,10 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
 
         if (destinationToken == mToken) {
             // mints or unlocks $M Token to the recipient
-            _mintOrUnlock(recipient, amount, index);
+            _mintOrUnlock(sourceChainId, recipient, amount, index);
         } else {
             // mints or unlocks $M Token to the Portal
-            _mintOrUnlock(address(this), amount, index);
+            _mintOrUnlock(sourceChainId, address(this), amount, index);
 
             // wraps $M token and transfers it to the recipient
             _wrap(destinationToken, recipient, amount);
@@ -528,15 +538,17 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
 
     /// @dev   HubPortal:   unlocks and transfers `amount` $M tokens to `recipient`.
     ///        SpokePortal: mints `amount` $M tokens to `recipient`.
-    /// @param recipient The account receiving $M tokens.
-    /// @param amount    The amount of $M tokens to unlock/mint.
-    /// @param index     The index from the source chain.
-    function _mintOrUnlock(address recipient, uint256 amount, uint128 index) internal virtual { }
+    /// @param sourceChainId The ID of the source chain.
+    /// @param recipient     The account receiving $M tokens.
+    /// @param amount        The amount of $M tokens to unlock/mint.
+    /// @param index         The index from the source chain.
+    function _mintOrUnlock(uint32 sourceChainId, address recipient, uint256 amount, uint128 index) internal virtual { }
 
     /// @dev   HubPortal:   locks `amount` $M tokens.
     ///        SpokePortal: burns `amount` $M tokens.
-    /// @param amount The amount of $M tokens to lock/burn.
-    function _burnOrLock(uint256 amount) internal virtual { }
+    /// @param destinationChainId The ID of the destination chain.
+    /// @param amount             The amount of $M tokens to lock/burn.
+    function _burnOrLock(uint32 destinationChainId, uint256 amount) internal virtual { }
 
     ///////////////////////////////////////////////////////////////////////////
     //                 INTERNAL/PRIVATE VIEW/PURE FUNCTIONS                  //
@@ -618,6 +630,9 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     function _revertIfUnsupportedBridgeAdapter(uint32 chainId, address bridgeAdapter) internal view {
         if (!supportedBridgeAdapter(chainId, bridgeAdapter)) revert UnsupportedBridgeAdapter(chainId, bridgeAdapter);
     }
+
+    /// @dev Overridden in SpokePortal to allow bridging only to the Hub chain for isolated Spokes.
+    function _revertIfTokenTransferDisabled(uint32 chainId) internal view virtual { }
 
     function _revertIfUnsupportedBridgingPath(address sourceToken, uint32 destinationChainId, bytes32 destinationToken) internal view {
         PortalStorageStruct storage $ = _getPortalStorageLocation();

@@ -18,30 +18,46 @@ contract InitializeUnitTest is SpokePortalUnitTestBase {
     }
 
     function test_initialize_cannotReinitialize() external {
-        bytes memory initializeData = abi.encodeCall(SpokePortal.initialize, (admin, pauser, operator));
+        bytes memory initializeData = abi.encodeCall(SpokePortal.initialize, (admin, pauser, operator, false));
 
         (bool success,) = address(spokePortal).call(initializeData);
         assertFalse(success);
     }
 
     function test_initialize_zeroAdmin() external {
-        bytes memory initializeData = abi.encodeCall(SpokePortal.initialize, (address(0), pauser, operator));
+        bytes memory initializeData = abi.encodeCall(SpokePortal.initialize, (address(0), pauser, operator, false));
 
         vm.expectRevert(IPortal.ZeroAdmin.selector);
         new ERC1967Proxy(address(implementation), initializeData);
     }
 
     function test_initialize_zeroPauser() external {
-        bytes memory initializeData = abi.encodeCall(SpokePortal.initialize, (admin, address(0), operator));
+        bytes memory initializeData = abi.encodeCall(SpokePortal.initialize, (admin, address(0), operator, false));
 
         vm.expectRevert(IPortal.ZeroPauser.selector);
         new ERC1967Proxy(address(implementation), initializeData);
     }
 
     function test_initialize_zeroOperator() external {
-        bytes memory initializeData = abi.encodeCall(SpokePortal.initialize, (admin, pauser, address(0)));
+        bytes memory initializeData = abi.encodeCall(SpokePortal.initialize, (admin, pauser, address(0), false));
 
         vm.expectRevert(IPortal.ZeroOperator.selector);
         new ERC1967Proxy(address(implementation), initializeData);
+    }
+
+    // ==================== CROSS-SPOKE TRANSFER INITIALIZATION TESTS ====================
+
+    function test_initialize_crossSpokeTransferDisabled() external {
+        // Default setUp already initializes with false, verify it
+        assertFalse(spokePortal.crossSpokeTokenTransferEnabled());
+    }
+
+    function test_initialize_crossSpokeTransferEnabled() external {
+        // Deploy a new SpokePortal with crossSpokeTransferEnabled = true
+        bytes memory initializeData = abi.encodeCall(SpokePortal.initialize, (admin, pauser, operator, true));
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initializeData);
+        SpokePortal enabledPortal = SpokePortal(address(proxy));
+
+        assertTrue(enabledPortal.crossSpokeTokenTransferEnabled());
     }
 }

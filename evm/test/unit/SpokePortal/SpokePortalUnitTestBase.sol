@@ -8,7 +8,6 @@ import {
 } from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import { SpokePortal } from "../../../src/SpokePortal.sol";
-import { ChainConfig } from "../../../src/interfaces/IPortal.sol";
 import { PayloadType } from "../../../src/libraries/PayloadEncoder.sol";
 import { TypeConverter } from "../../../src/libraries/TypeConverter.sol";
 
@@ -24,6 +23,7 @@ abstract contract SpokePortalUnitTestBase is Test {
 
     uint32 internal constant HUB_CHAIN_ID = 1;
     uint32 internal constant SPOKE_CHAIN_ID = 2;
+    uint32 internal constant SPOKE_CHAIN_ID_2 = 3;
 
     uint256 internal constant FILL_REPORT_GAS_LIMIT = 150_000;
     uint256 internal constant TOKEN_TRANSFER_GAS_LIMIT = 250_000;
@@ -47,6 +47,10 @@ abstract contract SpokePortalUnitTestBase is Test {
     bytes32 internal hubWrappedMToken = makeAddr("hubWrappedMToken").toBytes32();
     bytes32 internal hubBridgeAdapter = makeAddr("hubBridgeAdapter").toBytes32();
 
+    bytes32 internal spoke2MToken = makeAddr("spoke2MToken").toBytes32();
+    bytes32 internal spoke2WrappedMToken = makeAddr("spoke2WrappedMToken").toBytes32();
+    bytes32 internal spoke2BridgeAdapter = makeAddr("spoke2BridgeAdapter").toBytes32();
+
     address internal admin = makeAddr("admin");
     address internal operator = makeAddr("operator");
     address internal pauser = makeAddr("pauser");
@@ -65,10 +69,10 @@ abstract contract SpokePortalUnitTestBase is Test {
         bridgeAdapter = new MockBridgeAdapter();
 
         // Deploy implementation
-        implementation = new SpokePortal(address(mToken), address(registrar), address(swapFacility), address(mockOrderBook));
+        implementation = new SpokePortal(address(mToken), address(registrar), address(swapFacility), address(mockOrderBook), HUB_CHAIN_ID);
 
         // Deploy UUPS proxy
-        bytes memory initializeData = abi.encodeCall(SpokePortal.initialize, (admin, pauser, operator));
+        bytes memory initializeData = abi.encodeCall(SpokePortal.initialize, (admin, pauser, operator, false));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initializeData);
         spokePortal = SpokePortal(address(proxy));
 
@@ -85,6 +89,17 @@ abstract contract SpokePortalUnitTestBase is Test {
         spokePortal.setPayloadGasLimit(HUB_CHAIN_ID, PayloadType.TokenTransfer, TOKEN_TRANSFER_GAS_LIMIT);
         spokePortal.setPayloadGasLimit(HUB_CHAIN_ID, PayloadType.FillReport, FILL_REPORT_GAS_LIMIT);
 
+        // Configure second spoke (for cross-spoke transfer tests)
+        spokePortal.setDefaultBridgeAdapter(SPOKE_CHAIN_ID_2, address(bridgeAdapter));
+
+        spokePortal.setSupportedBridgingPath(address(mToken), SPOKE_CHAIN_ID_2, spoke2MToken, true);
+        spokePortal.setSupportedBridgingPath(address(mToken), SPOKE_CHAIN_ID_2, spoke2WrappedMToken, true);
+        spokePortal.setSupportedBridgingPath(address(wrappedMToken), SPOKE_CHAIN_ID_2, spoke2MToken, true);
+        spokePortal.setSupportedBridgingPath(address(wrappedMToken), SPOKE_CHAIN_ID_2, spoke2WrappedMToken, true);
+
+        spokePortal.setPayloadGasLimit(SPOKE_CHAIN_ID_2, PayloadType.TokenTransfer, TOKEN_TRANSFER_GAS_LIMIT);
+        spokePortal.setPayloadGasLimit(SPOKE_CHAIN_ID_2, PayloadType.FillReport, FILL_REPORT_GAS_LIMIT);
+
         vm.stopPrank();
 
         // Fund accounts
@@ -96,6 +111,7 @@ abstract contract SpokePortalUnitTestBase is Test {
 
         // Mock fetching peer bridge adapter
         vm.mockCall(address(bridgeAdapter), abi.encodeCall(MockBridgeAdapter.getPeer, (HUB_CHAIN_ID)), abi.encode(hubBridgeAdapter));
+        vm.mockCall(address(bridgeAdapter), abi.encodeCall(MockBridgeAdapter.getPeer, (SPOKE_CHAIN_ID_2)), abi.encode(spoke2BridgeAdapter));
     }
 
     function _getMessageId() internal returns (bytes32) {
