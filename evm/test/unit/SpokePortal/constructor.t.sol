@@ -39,4 +39,8 @@ contract ConstructorUnitTest is SpokePortalUnitTestBase {
         vm.expectRevert(ISpokePortal.ZeroHubChain.selector);
         new SpokePortal(address(mToken), address(registrar), address(swapFacility), address(mockOrderBook), 0);
     }
+
+    function test_constructor_hubChainId() external view {
+        assertEq(spokePortal.hubChainId(), HUB_CHAIN_ID);
+    }
 }

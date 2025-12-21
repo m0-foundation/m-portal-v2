@@ -121,7 +121,7 @@ contract SendFillReportUnitTest is HubPortalUnitTestBase {
     }
 
     function test_sendFillReport_revertsIfNoBridgeAdapterSet() external {
-        uint32 unconfiguredChain = 3;
+        uint32 unconfiguredChain = 999;
 
         vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, unconfiguredChain));
         vm.prank(address(mockOrderBook));

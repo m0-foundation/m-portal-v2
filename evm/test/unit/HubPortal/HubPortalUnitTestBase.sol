@@ -24,6 +24,7 @@ abstract contract HubPortalUnitTestBase is Test {
 
     uint32 internal constant HUB_CHAIN_ID = 1;
     uint32 internal constant SPOKE_CHAIN_ID = 2;
+    uint32 internal constant SPOKE_CHAIN_ID_2 = 3;
 
     uint256 internal constant INDEX_UPDATE_GAS_LIMIT = 100_000;
     uint256 internal constant KEY_UPDATE_GAS_LIMIT = 100_000;
@@ -51,6 +52,10 @@ abstract contract HubPortalUnitTestBase is Test {
     bytes32 internal spokeMToken = makeAddr("spokeMToken").toBytes32();
     bytes32 internal spokeWrappedMToken = makeAddr("spokeWrappedMToken").toBytes32();
     bytes32 internal spokeBridgeAdapter = makeAddr("spokeBridgeAdapter").toBytes32();
+
+    bytes32 internal spoke2MToken = makeAddr("spoke2MToken").toBytes32();
+    bytes32 internal spoke2WrappedMToken = makeAddr("spoke2WrappedMToken").toBytes32();
+    bytes32 internal spoke2BridgeAdapter = makeAddr("spoke2BridgeAdapter").toBytes32();
 
     address internal admin = makeAddr("admin");
     address internal operator = makeAddr("operator");
@@ -96,6 +101,21 @@ abstract contract HubPortalUnitTestBase is Test {
         hubPortal.setPayloadGasLimit(SPOKE_CHAIN_ID, PayloadType.FillReport, FILL_REPORT_GAS_LIMIT);
         hubPortal.setPayloadGasLimit(SPOKE_CHAIN_ID, PayloadType.EarnerMerkleRoot, EARNER_MERKLE_ROOT_GAS_LIMIT);
 
+        // Configure second spoke
+        hubPortal.setDefaultBridgeAdapter(SPOKE_CHAIN_ID_2, address(bridgeAdapter));
+
+        hubPortal.setSupportedBridgingPath(address(mToken), SPOKE_CHAIN_ID_2, spoke2MToken, true);
+        hubPortal.setSupportedBridgingPath(address(mToken), SPOKE_CHAIN_ID_2, spoke2WrappedMToken, true);
+        hubPortal.setSupportedBridgingPath(address(wrappedMToken), SPOKE_CHAIN_ID_2, spoke2MToken, true);
+        hubPortal.setSupportedBridgingPath(address(wrappedMToken), SPOKE_CHAIN_ID_2, spoke2WrappedMToken, true);
+
+        hubPortal.setPayloadGasLimit(SPOKE_CHAIN_ID_2, PayloadType.TokenTransfer, TOKEN_TRANSFER_GAS_LIMIT);
+        hubPortal.setPayloadGasLimit(SPOKE_CHAIN_ID_2, PayloadType.Index, INDEX_UPDATE_GAS_LIMIT);
+        hubPortal.setPayloadGasLimit(SPOKE_CHAIN_ID_2, PayloadType.RegistrarKey, KEY_UPDATE_GAS_LIMIT);
+        hubPortal.setPayloadGasLimit(SPOKE_CHAIN_ID_2, PayloadType.RegistrarList, LIST_UPDATE_GAS_LIMIT);
+        hubPortal.setPayloadGasLimit(SPOKE_CHAIN_ID_2, PayloadType.FillReport, FILL_REPORT_GAS_LIMIT);
+        hubPortal.setPayloadGasLimit(SPOKE_CHAIN_ID_2, PayloadType.EarnerMerkleRoot, EARNER_MERKLE_ROOT_GAS_LIMIT);
+
         vm.stopPrank();
 
         // Fund accounts
@@ -107,6 +127,7 @@ abstract contract HubPortalUnitTestBase is Test {
 
         // Mock fetching peer bridge adapter
         vm.mockCall(address(bridgeAdapter), abi.encodeCall(MockBridgeAdapter.getPeer, (SPOKE_CHAIN_ID)), abi.encode(spokeBridgeAdapter));
+        vm.mockCall(address(bridgeAdapter), abi.encodeCall(MockBridgeAdapter.getPeer, (SPOKE_CHAIN_ID_2)), abi.encode(spoke2BridgeAdapter));
     }
 
     function _getMessageId() internal returns (bytes32) {
