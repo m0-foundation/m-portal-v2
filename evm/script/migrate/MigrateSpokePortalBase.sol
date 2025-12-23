@@ -26,8 +26,10 @@ abstract contract MigrateSpokePortalBase is MigratePortalBase {
 
     /// @dev Upgrade SpokePortal to Portal V2 implementation AFTER storage has been cleared
     function _upgradeToPortalV2() internal virtual {
-        bytes memory initializeData = abi.encodeCall(SpokePortal.initialize, (ADMIN_V2, PAUSER_V2, OPERATOR_V2));
-        address spokePortalV2Implementation = address(new SpokePortal(M_TOKEN, REGISTRAR, SWAP_FACILITY, ORDER_BOOK));
+        uint32 HUB_CHAIN_ID = 1; // Ethereum Mainnet
+        bool crossSpokeTransferEnabled = false; // default is false
+        bytes memory initializeData = abi.encodeCall(SpokePortal.initialize, (ADMIN_V2, PAUSER_V2, OPERATOR_V2, crossSpokeTransferEnabled));
+        address spokePortalV2Implementation = address(new SpokePortal(M_TOKEN, REGISTRAR, SWAP_FACILITY, ORDER_BOOK, HUB_CHAIN_ID));
         UUPSUpgradeable(PORTAL).upgradeToAndCall(spokePortalV2Implementation, initializeData);
     }
 }
