@@ -175,6 +175,32 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     }
 
     /// @inheritdoc IPortal
+    function sendCancelReport(
+        uint32 destinationChainId,
+        IOrderBookLike.CancelReport calldata report,
+        bytes32 refundAddress,
+        bytes calldata bridgeAdapterArgs
+    ) external payable whenNotPaused whenNotLocked returns (bytes32 messageId) {
+        address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
+        _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
+
+        return _sendCancelReport(destinationChainId, report, refundAddress, bridgeAdapter, bridgeAdapterArgs);
+    }
+
+    /// @inheritdoc IPortal
+    function sendCancelReport(
+        uint32 destinationChainId,
+        IOrderBookLike.CancelReport calldata report,
+        bytes32 refundAddress,
+        address bridgeAdapter,
+        bytes calldata bridgeAdapterArgs
+    ) external payable whenNotPaused whenNotLocked returns (bytes32 messageId) {
+        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
+
+        return _sendCancelReport(destinationChainId, report, refundAddress, bridgeAdapter, bridgeAdapterArgs);
+    }
+
+    /// @inheritdoc IPortal
     function receiveMessage(uint32 sourceChainId, bytes calldata payload) external {
         _revertIfUnsupportedBridgeAdapter(sourceChainId, msg.sender);
 
@@ -187,6 +213,11 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
 
         if (payloadType == PayloadType.FillReport) {
             _receiveFillReport(sourceChainId, payload);
+            return;
+        }
+
+        if (payloadType == PayloadType.CancelReport) {
+            _receiveCancelReport(sourceChainId, payload);
             return;
         }
 
@@ -498,6 +529,39 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         );
     }
 
+    function _sendCancelReport(
+        uint32 destinationChainId,
+        IOrderBookLike.CancelReport calldata report,
+        bytes32 refundAddress,
+        address bridgeAdapter,
+        bytes calldata bridgeAdapterArgs
+    ) private returns (bytes32 messageId) {
+        if (msg.sender != orderBook) revert NotOrderBook();
+        _revertIfZeroRefundAddress(refundAddress);
+        _revertIfInvalidDestinationChain(destinationChainId);
+
+        messageId = _getMessageId(destinationChainId);
+        bytes memory payload = PayloadEncoder.encodeCancelReport(
+            destinationChainId,
+            IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId),
+            messageId,
+            report.orderId,
+            report.originSender,
+            report.tokenIn
+        );
+
+        _sendMessage(destinationChainId, PayloadType.CancelReport, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
+
+        emit CancelReportSent(
+            destinationChainId,
+            report.orderId,
+            report.originSender,
+            report.tokenIn,
+            bridgeAdapter,
+            messageId
+        );
+    }
+
     /// @dev   Handles token transfer message on the destination.
     /// @param sourceChainId The ID of the source chain.
     /// @param payload       The message payload.
@@ -561,6 +625,25 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
             );
 
         emit FillReportReceived(sourceChainId, orderId, amountInToRelease, amountOutFilled, originRecipient, tokenIn, messageId);
+    }
+
+    /// @dev   Handles cancel report message on the destination.
+    /// @param sourceChainId The ID of the source chain.
+    /// @param payload       The message payload.
+    function _receiveCancelReport(uint32 sourceChainId, bytes memory payload) private {
+        (bytes32 messageId, bytes32 orderId, bytes32 orderSender, bytes32 tokenIn) =
+            payload.decodeCancelReport();
+
+        IOrderBookLike(orderBook)
+            .reportCancel(
+                IOrderBookLike.CancelReport({
+                    orderId: orderId,
+                    originSender: orderSender,
+                    tokenIn: tokenIn
+                })
+            );
+
+        emit CancelReportReceived(sourceChainId, orderId, orderSender, tokenIn, messageId);
     }
 
     /// @dev Generates a unique across all chains message ID.
