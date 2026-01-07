@@ -577,6 +577,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
 
         IOrderBookLike(orderBook)
             .reportFill(
+                sourceChainId,
                 IOrderBookLike.FillReport({
                     orderId: orderId,
                     amountInToRelease: amountInToRelease,
@@ -598,6 +599,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
 
         IOrderBookLike(orderBook)
             .reportCancel(
+                sourceChainId,
                 IOrderBookLike.CancelReport({
                     orderId: orderId,
                     originSender: orderSender,
