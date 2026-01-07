@@ -8,11 +8,11 @@ contract MockOrderBook is IOrderBookLike {
     FillReport public lastFillReport;
     CancelReport public lastCancelReport;
 
-    function reportFill(FillReport calldata report) external {
+    function reportFill(uint32 _sourceChainId, FillReport calldata report) external {
         lastFillReport = report;
     }
 
-    function reportCancel(CancelReport calldata report) external {
+    function reportCancel(uint32 _sourceChainId, CancelReport calldata report) external {
         lastCancelReport = report;
     }
 }
