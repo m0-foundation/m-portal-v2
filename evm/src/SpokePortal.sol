@@ -56,7 +56,10 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
     /// @inheritdoc ISpokePortal
     function initialize(address owner, address pauser, address operator, bool crossSpokeTransferEnabled) external initializer {
         _initialize(owner, pauser, operator);
-        _getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled[currentChainId] = crossSpokeTransferEnabled;
+        
+        if (crossSpokeTransferEnabled) {
+            _enableCrossSpokeTokenTransfer(currentChainId);
+        }
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -67,8 +70,7 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
     function enableCrossSpokeTokenTransfer(uint32 spokeChainId) external onlyRole(OPERATOR_ROLE) {
         if (_getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled[spokeChainId]) return;
 
-        _getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled[spokeChainId] = true;
-        emit CrossSpokeTokenTransferEnabled(spokeChainId);
+        _enableCrossSpokeTokenTransfer(spokeChainId);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -152,6 +154,12 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
         uint256 amount
     ) internal override {
         ISpokeMTokenLike(mToken).burn(amount);
+    }
+
+    /// @dev Enables cross-Spoke token transfer for the specified Spoke.
+    function _enableCrossSpokeTokenTransfer(uint32 spokeChainId) private {
+        _getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled[spokeChainId] = true;
+        emit CrossSpokeTokenTransferEnabled(spokeChainId);
     }
 
     /// @dev Reverts if the destination chain is the Hub chain
