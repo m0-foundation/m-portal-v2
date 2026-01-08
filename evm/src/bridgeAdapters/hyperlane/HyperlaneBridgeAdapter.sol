@@ -28,8 +28,8 @@ contract HyperlaneBridgeAdapter is BridgeAdapter, IHyperlaneBridgeAdapter {
     }
 
     /// @inheritdoc IBridgeAdapter
-    function initialize(address owner, address operator) external initializer {
-        _initialize(owner, operator);
+    function initialize(address admin, address operator) external initializer {
+        _initialize(admin, operator);
     }
 
     /// @inheritdoc IBridgeAdapter
