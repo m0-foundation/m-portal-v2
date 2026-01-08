@@ -12,7 +12,7 @@ import { PayloadType, PayloadEncoder } from "./libraries/PayloadEncoder.sol";
 abstract contract SpokePortalStorageLayout {
     /// @custom:storage-location erc7201:M0.storage.SpokePortal
     struct SpokePortalStorageStruct {
-        bool crossSpokeTokenTransferEnabled;
+        mapping(uint32 spokeChainId => bool) crossSpokeTokenTransferEnabled;
     }
 
     // keccak256(abi.encode(uint256(keccak256("M0.storage.SpokePortal")) - 1)) & ~bytes32(uint256(0xff))
@@ -56,7 +56,10 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
     /// @inheritdoc ISpokePortal
     function initialize(address owner, address pauser, address operator, bool crossSpokeTransferEnabled) external initializer {
         _initialize(owner, pauser, operator);
-        _getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled = crossSpokeTransferEnabled;
+        
+        if (crossSpokeTransferEnabled) {
+            _enableCrossSpokeTokenTransfer(currentChainId);
+        }
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -64,11 +67,10 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
     ///////////////////////////////////////////////////////////////////////////
 
     /// @inheritdoc ISpokePortal
-    function enableCrossSpokeTokenTransfer() external onlyRole(OPERATOR_ROLE) {
-        if (_getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled) return;
+    function enableCrossSpokeTokenTransfer(uint32 spokeChainId) external onlyRole(OPERATOR_ROLE) {
+        if (_getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled[spokeChainId]) return;
 
-        _getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled = true;
-        emit CrossSpokeTokenTransferEnabled();
+        _enableCrossSpokeTokenTransfer(spokeChainId);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -76,8 +78,8 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
     ///////////////////////////////////////////////////////////////////////////
 
     /// @inheritdoc ISpokePortal
-    function crossSpokeTokenTransferEnabled() external view returns (bool) {
-        return _getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled;
+    function crossSpokeTokenTransferEnabled(uint32 spokeChainId) external view returns (bool) {
+        return _getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled[spokeChainId];
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -154,12 +156,24 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
         ISpokeMTokenLike(mToken).burn(amount);
     }
 
+    /// @dev Enables cross-Spoke token transfer for the specified Spoke.
+    function _enableCrossSpokeTokenTransfer(uint32 spokeChainId) private {
+        _getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled[spokeChainId] = true;
+        emit CrossSpokeTokenTransferEnabled(spokeChainId);
+    }
+
     /// @dev Reverts if the destination chain is the Hub chain
     function _revertIfTokenTransferDisabled(uint32 destinationChainId) internal view override {
-        // If cross-Spoke token transfer is enabled, allow send tokens to any supported chain
-        if (_getSpokePortalStorageLocation().crossSpokeTokenTransferEnabled) return;
-        // Otherwise, allow sending tokens only to the Hub chain
-        if (destinationChainId != hubChainId) revert TokenTransferToSpokeDisabled(destinationChainId);
+        // Always allow sending tokens to the Hub chain
+        if (destinationChainId == hubChainId) return;
+
+        SpokePortalStorageStruct storage $ = _getSpokePortalStorageLocation();
+
+        // Current chain is isolated, disallow sending tokens to any other Spoke
+        if (!$.crossSpokeTokenTransferEnabled[currentChainId]) revert CrossSpokeTokenTransferDisabled(currentChainId);
+
+        // Destination chain is isolated, disallow sending tokens to that Spoke
+        if (!$.crossSpokeTokenTransferEnabled[destinationChainId]) revert CrossSpokeTokenTransferDisabled(destinationChainId);
     }
 
     ///////////////////////////////////////////////////////////////////////////

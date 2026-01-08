@@ -49,7 +49,7 @@ contract InitializeUnitTest is SpokePortalUnitTestBase {
 
     function test_initialize_crossSpokeTransferDisabled() external {
         // Default setUp already initializes with false, verify it
-        assertFalse(spokePortal.crossSpokeTokenTransferEnabled());
+        assertFalse(spokePortal.crossSpokeTokenTransferEnabled(spokePortal.currentChainId()));
     }
 
     function test_initialize_crossSpokeTransferEnabled() external {
@@ -58,6 +58,6 @@ contract InitializeUnitTest is SpokePortalUnitTestBase {
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initializeData);
         SpokePortal enabledPortal = SpokePortal(address(proxy));
 
-        assertTrue(enabledPortal.crossSpokeTokenTransferEnabled());
+        assertTrue(enabledPortal.crossSpokeTokenTransferEnabled(enabledPortal.currentChainId()));
     }
 }
