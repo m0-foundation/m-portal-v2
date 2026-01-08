@@ -19,6 +19,7 @@ contract SendTokenUnitTest is SpokePortalUnitTestBase {
     bytes internal bridgeAdapterArgs = "";
     bytes32 internal recipient = makeAddr("recipient").toBytes32();
     uint256 internal amount = 10e6;
+    uint32 currentChainId;
 
     function setUp() public override {
         super.setUp();
@@ -29,6 +30,8 @@ contract SendTokenUnitTest is SpokePortalUnitTestBase {
 
         // Fund wrappedMToken with M tokens for unwrapping
         mToken.mint(address(wrappedMToken), 100e6);
+
+        currentChainId = spokePortal.currentChainId();
     }
 
     function test_sendToken_mToken() external {
@@ -212,8 +215,8 @@ contract SendTokenUnitTest is SpokePortalUnitTestBase {
     // ==================== CROSS-SPOKE RESTRICTION TESTS ====================
 
     function test_sendToken_allowsSendToHubWhenIsolated() external {
-        // crossSpokeTokenTransferEnabled is false by default (from setUp)
-        assertFalse(spokePortal.crossSpokeTokenTransferEnabled());
+        // crossSpokeTokenTransferEnabled is false by default (from setUp) for the current chain
+        assertFalse(spokePortal.crossSpokeTokenTransferEnabled(currentChainId));
 
         uint256 fee = 1;
         uint128 index = 1_100_000_068_703;
@@ -231,12 +234,19 @@ contract SendTokenUnitTest is SpokePortalUnitTestBase {
         assertEq(mToken.balanceOf(user), 100e6 - amount);
     }
 
-    function test_sendToken_allowsSendToAnyChainWhenConnected() external {
-        // Enable cross-spoke transfer
-        vm.prank(operator);
-        spokePortal.enableCrossSpokeTokenTransfer();
+    function test_sendToken_allowsSendToOtherConnectedChainWhenConnected() external {
+        vm.startPrank(operator);
 
-        assertTrue(spokePortal.crossSpokeTokenTransferEnabled());
+        // Enable cross-spoke transfer for the current chain
+        spokePortal.enableCrossSpokeTokenTransfer(currentChainId);
+
+        // Enable cross-spoke transfer for the remote Spoke chain
+        spokePortal.enableCrossSpokeTokenTransfer(SPOKE_CHAIN_ID_2);
+
+        vm.stopPrank();
+
+        assertTrue(spokePortal.crossSpokeTokenTransferEnabled(currentChainId));
+        assertTrue(spokePortal.crossSpokeTokenTransferEnabled(SPOKE_CHAIN_ID_2));
 
         uint256 fee = 1;
         uint128 index = 1_100_000_068_703;
@@ -257,11 +267,11 @@ contract SendTokenUnitTest is SpokePortalUnitTestBase {
     }
 
     function test_sendToken_allowsSendToHubWhenConnected() external {
-        // Enable cross-spoke transfer
+        // Enable cross-spoke transfer for the current chain
         vm.prank(operator);
-        spokePortal.enableCrossSpokeTokenTransfer();
+        spokePortal.enableCrossSpokeTokenTransfer(currentChainId);
 
-        assertTrue(spokePortal.crossSpokeTokenTransferEnabled());
+        assertTrue(spokePortal.crossSpokeTokenTransferEnabled(currentChainId));
 
         uint256 fee = 1;
         uint128 index = 1_100_000_068_703;
@@ -280,21 +290,40 @@ contract SendTokenUnitTest is SpokePortalUnitTestBase {
     }
 
     function test_sendToken_revertsIfSendToSpokeWhenIsolated() external {
-        // crossSpokeTokenTransferEnabled is false by default (from setUp)
-        assertFalse(spokePortal.crossSpokeTokenTransferEnabled());
+        // crossSpokeTokenTransferEnabled is false by default (from setUp) for the current chain
+        assertFalse(spokePortal.crossSpokeTokenTransferEnabled(currentChainId));
 
         vm.startPrank(user);
         mToken.approve(address(spokePortal), amount);
 
-        vm.expectRevert(abi.encodeWithSelector(ISpokePortal.TokenTransferToSpokeDisabled.selector, SPOKE_CHAIN_ID_2));
+        vm.expectRevert(abi.encodeWithSelector(ISpokePortal.CrossSpokeTokenTransferDisabled.selector, currentChainId));
+
+        spokePortal.sendToken(amount, address(mToken), SPOKE_CHAIN_ID_2, spoke2MToken, recipient, refundAddress, bridgeAdapterArgs);
+        vm.stopPrank();
+    }
+
+    function test_sendToken_revertsIfSendToIsolatedSpokeWhenConnected() external {
+        // Enable cross-spoke transfer for the current chain
+        vm.prank(operator);
+        spokePortal.enableCrossSpokeTokenTransfer(currentChainId);
+
+        assertTrue(spokePortal.crossSpokeTokenTransferEnabled(currentChainId));
+
+        // crossSpokeTokenTransferEnabled is false by default for SPOKE_CHAIN_ID_2
+        assertFalse(spokePortal.crossSpokeTokenTransferEnabled(SPOKE_CHAIN_ID_2));
+
+        vm.startPrank(user);
+        mToken.approve(address(spokePortal), amount);
+
+        vm.expectRevert(abi.encodeWithSelector(ISpokePortal.CrossSpokeTokenTransferDisabled.selector, SPOKE_CHAIN_ID_2));
 
         spokePortal.sendToken(amount, address(mToken), SPOKE_CHAIN_ID_2, spoke2MToken, recipient, refundAddress, bridgeAdapterArgs);
         vm.stopPrank();
     }
 
     function test_sendToken_revertsIfSendToSelfChainWhenIsolated() external {
-        // crossSpokeTokenTransferEnabled is false by default (from setUp)
-        assertFalse(spokePortal.crossSpokeTokenTransferEnabled());
+        // crossSpokeTokenTransferEnabled is false by default (from setUp) for the current chain
+        assertFalse(spokePortal.crossSpokeTokenTransferEnabled(currentChainId));
 
         vm.startPrank(user);
         mToken.approve(address(spokePortal), amount);
