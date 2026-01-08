@@ -29,8 +29,9 @@ interface ISpokePortal is IPortal {
     /// @param  messageId The unique ID of the message.
     event RegistrarListUpdateReceived(bytes32 indexed listName, address indexed account, bool add, bytes32 messageId);
 
-    /// @notice Emitted when cross-Spoke token transfer is enabled.
-    event CrossSpokeTokenTransferEnabled();
+    /// @notice Emitted when cross-Spoke token transfer is enabled for the specified Spoke.
+    /// @param  spokeChainId The ID of the Spoke chain.
+    event CrossSpokeTokenTransferEnabled(uint32 indexed spokeChainId);
 
     ///////////////////////////////////////////////////////////////////////////
     //                             CUSTOM ERRORS                             //
@@ -39,8 +40,9 @@ interface ISpokePortal is IPortal {
     /// @notice Thrown when the Hub chain is 0.
     error ZeroHubChain();
 
-    /// @notice Thrown when calling `sendToken` and cross-Spoke token transfer is disabled.
-    error TokenTransferToSpokeDisabled(uint32 destinationChainId);
+    /// @notice Thrown when calling `sendToken` and cross-Spoke token transfer is disabled for the specified Spoke.
+    /// @param  spokeChainId The ID of the Spoke chain for which the transfer is disabled.
+    error CrossSpokeTokenTransferDisabled(uint32 spokeChainId);
 
     ///////////////////////////////////////////////////////////////////////////
     //                          VIEW/PURE FUNCTIONS                          //
@@ -49,8 +51,10 @@ interface ISpokePortal is IPortal {
     /// @notice Returns the ID of the Hub chain.
     function hubChainId() external view returns (uint32);
 
-    /// @notice Returns whether the current Spoke can transfer tokens to other Spoke chains.
-    function crossSpokeTokenTransferEnabled() external view returns (bool);
+    /// @notice Returns whether the specified Spoke can transfer tokens to other Spoke chains.
+    /// @dev    Holds values for both local and remote Spoke chains.
+    /// @param  spokeChainId The ID of the Spoke chain.
+    function crossSpokeTokenTransferEnabled(uint32 spokeChainId) external view returns (bool);
 
     ///////////////////////////////////////////////////////////////////////////
     //                        INTERACTIVE FUNCTIONS                          //
@@ -63,7 +67,9 @@ interface ISpokePortal is IPortal {
     /// @param  crossSpokeTransferEnabled Indicates whether the current Spoke can transfer tokens to other Spoke chains.
     function initialize(address initialOwner, address initialPauser, address initialOperator, bool crossSpokeTransferEnabled) external;
 
-    /// @notice Enables cross-Spoke token transfer.
-    /// @dev    Must be called after `enableCrossSpokeTokenTransfer` is called in HubPortal.
-    function enableCrossSpokeTokenTransfer() external;
+    /// @notice Enables the specified Spoke chain to send and receive token transfers to and from other Spokes
+    /// @dev    Used for both local and remote Spokes
+    ///         Must be called after `enableCrossSpokeTokenTransfer` is called in HubPortal.
+    /// @param  spokeChainId The ID of the Spoke chain.
+    function enableCrossSpokeTokenTransfer(uint32 spokeChainId) external;
 }

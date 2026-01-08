@@ -13,30 +13,31 @@ contract EnableCrossSpokeTokenTransferUnitTest is SpokePortalUnitTestBase {
     // ==================== POSITIVE TESTS ====================
 
     function test_enableCrossSpokeTokenTransfer_success() external {
-        assertFalse(spokePortal.crossSpokeTokenTransferEnabled());
+        uint32 currentChainId = spokePortal.currentChainId();
+        assertFalse(spokePortal.crossSpokeTokenTransferEnabled(currentChainId));
 
         vm.expectEmit();
-        emit ISpokePortal.CrossSpokeTokenTransferEnabled();
+        emit ISpokePortal.CrossSpokeTokenTransferEnabled(currentChainId);
 
         vm.prank(operator);
-        spokePortal.enableCrossSpokeTokenTransfer();
+        spokePortal.enableCrossSpokeTokenTransfer(currentChainId);
 
-        assertTrue(spokePortal.crossSpokeTokenTransferEnabled());
+        assertTrue(spokePortal.crossSpokeTokenTransferEnabled(currentChainId));
     }
 
     function test_enableCrossSpokeTokenTransfer_idempotent() external {
         vm.prank(operator);
-        spokePortal.enableCrossSpokeTokenTransfer();
+        spokePortal.enableCrossSpokeTokenTransfer(SPOKE_CHAIN_ID_2);
 
-        assertTrue(spokePortal.crossSpokeTokenTransferEnabled());
+        assertTrue(spokePortal.crossSpokeTokenTransferEnabled(SPOKE_CHAIN_ID_2));
 
         // Second call should return early without emitting event
         vm.recordLogs();
         vm.prank(operator);
-        spokePortal.enableCrossSpokeTokenTransfer();
+        spokePortal.enableCrossSpokeTokenTransfer(SPOKE_CHAIN_ID_2);
 
         // Should still be enabled
-        assertTrue(spokePortal.crossSpokeTokenTransferEnabled());
+        assertTrue(spokePortal.crossSpokeTokenTransferEnabled(SPOKE_CHAIN_ID_2));
 
         // No event should be emitted on second call
         assertEq(vm.getRecordedLogs().length, 0);
@@ -46,12 +47,13 @@ contract EnableCrossSpokeTokenTransferUnitTest is SpokePortalUnitTestBase {
 
     function testFuzz_enableCrossSpokeTokenTransfer_revertsIfNotOperator(address caller) external {
         vm.assume(caller != operator);
+        uint32 currentChainId = spokePortal.currentChainId();
 
         vm.expectRevert(
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, caller, spokePortal.OPERATOR_ROLE())
         );
 
         vm.prank(caller);
-        spokePortal.enableCrossSpokeTokenTransfer();
+        spokePortal.enableCrossSpokeTokenTransfer(currentChainId);
     }
 }
