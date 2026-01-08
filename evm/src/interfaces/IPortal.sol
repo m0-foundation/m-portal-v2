@@ -122,6 +122,7 @@ interface IPortal {
     /// @param  bridgeAdapter      The address of the bridge adapter.
     /// @param  supported          `True` if the bridge adapter is supported, `false` otherwise.
     event SupportedBridgeAdapterSet(uint32 indexed destinationChainId, address indexed bridgeAdapter, bool supported);
+
     ///////////////////////////////////////////////////////////////////////////
     //                             CUSTOM ERRORS                             //
     ///////////////////////////////////////////////////////////////////////////
@@ -180,11 +181,14 @@ interface IPortal {
     /// @notice Thrown if bridging to the destination chain is not supported.
     error UnsupportedDestinationChain(uint32 destinationChainId);
 
-    /// @notice Thrown in `transferMLikeToken` function when bridging path is not supported
+    /// @notice Thrown in `sendToken` function when bridging path is not supported
     error UnsupportedBridgingPath(address sourceToken, uint32 destinationChainId, bytes32 destinationToken);
 
     /// @notice Thrown when the bridge adapter is not supported for the destination chain.
     error UnsupportedBridgeAdapter(uint32 destinationChainId, address bridgeAdapter);
+
+    /// @notice Thrown in `sendToken` function when the actual amount received is less than the specified amount.
+    error InsufficientAmountReceived(uint256 specifiedAmount, uint256 actualAmount);
 
     ///////////////////////////////////////////////////////////////////////////
     //                          VIEW/PURE FUNCTIONS                          //
