@@ -9,6 +9,8 @@ import { TypeConverter } from "../../../src/libraries/TypeConverter.sol";
 import { PayloadEncoder } from "../../../src/libraries/PayloadEncoder.sol";
 
 import { MockBridgeAdapter } from "../../mocks/MockBridgeAdapter.sol";
+import { MockFeeOnTransferExtension } from "../../mocks/MockFeeOnTransferExtension.sol";
+import { MockFeeOnUnwrapExtension } from "../../mocks/MockFeeOnUnwrapExtension.sol";
 import { HubPortalUnitTestBase } from "./HubPortalUnitTestBase.sol";
 
 contract SendTokenUnitTest is HubPortalUnitTestBase {
@@ -215,6 +217,42 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
         hubPortal.sendToken(
             amount, address(mToken), SPOKE_CHAIN_ID, unsupportedDestinationToken, recipient, refundAddress, bridgeAdapterArgs
         );
+        vm.stopPrank();
+    }
+
+    function test_sendToken_revertsForFeeOnTransferToken() external {
+        uint256 feeRate = 100; // 1%
+        address feeRecipient = makeAddr("feeRecipient");
+        MockFeeOnTransferExtension feeOnTransferToken = new MockFeeOnTransferExtension(address(mToken), feeRate, feeRecipient);
+        mToken.mint(address(feeOnTransferToken), 100e6);
+        feeOnTransferToken.mint(user, 100e6);
+
+        vm.prank(operator);
+        hubPortal.setSupportedBridgingPath(address(feeOnTransferToken), SPOKE_CHAIN_ID, spokeMToken, true);
+
+        vm.startPrank(user);
+        feeOnTransferToken.approve(address(hubPortal), amount);
+
+        vm.expectRevert(abi.encodeWithSelector(IPortal.InsufficientAmountReceived.selector, amount, amount - amount * feeRate / 10_000));
+        hubPortal.sendToken(amount, address(feeOnTransferToken), SPOKE_CHAIN_ID, spokeMToken, recipient, refundAddress, bridgeAdapterArgs);
+        vm.stopPrank();
+    }
+
+    function test_sendToken_revertsForFeeOnUnwrapToken() external {
+        uint256 feeRate = 100; // 1%
+        address feeRecipient = makeAddr("feeRecipient");
+        MockFeeOnUnwrapExtension feeOnUnwrapToken = new MockFeeOnUnwrapExtension(address(mToken), feeRate, feeRecipient);
+        mToken.mint(address(feeOnUnwrapToken), 100e6);
+        feeOnUnwrapToken.mint(user, 100e6);
+
+        vm.prank(operator);
+        hubPortal.setSupportedBridgingPath(address(feeOnUnwrapToken), SPOKE_CHAIN_ID, spokeMToken, true);
+
+        vm.startPrank(user);
+        feeOnUnwrapToken.approve(address(hubPortal), amount);
+
+        vm.expectRevert(abi.encodeWithSelector(IPortal.InsufficientAmountReceived.selector, amount, amount - amount * feeRate / 10_000));
+        hubPortal.sendToken(amount, address(feeOnUnwrapToken), SPOKE_CHAIN_ID, spokeMToken, recipient, refundAddress, bridgeAdapterArgs);
         vm.stopPrank();
     }
 

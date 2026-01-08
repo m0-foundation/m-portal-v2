@@ -2,8 +2,11 @@
 
 pragma solidity 0.8.30;
 
-import { IERC20 } from "../lib/common/src/interfaces/IERC20.sol";
 import { IndexingMath } from "../lib/common/src/libs/IndexingMath.sol";
+import { IERC20 } from "../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {
+    SafeERC20
+} from "../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {
     AccessControlUpgradeable
 } from "../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
@@ -52,6 +55,7 @@ abstract contract PortalStorageLayout {
 abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, PausableUpgradeable, ReentrancyLock, UUPSUpgradeable, IPortal {
     using TypeConverter for *;
     using PayloadEncoder for bytes;
+    using SafeERC20 for IERC20;
 
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
@@ -371,27 +375,17 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         _revertIfUnsupportedBridgingPath(sourceToken, destinationChainId, destinationToken);
         _revertIfTokenTransferDisabled(destinationChainId);
 
-        uint256 startingBalance = _mBalanceOf(address(this));
+        // Transfer and if the source token isn't $M token, unwrap it to $M token.
+        _transferAndUnwrap(sourceToken, amount);
 
-        // Transfer source token from the sender
-        IERC20(sourceToken).transferFrom(msg.sender, address(this), amount);
-
-        // If the source token isn't $M token, unwrap it
-        if (sourceToken != address(mToken)) {
-            IERC20(sourceToken).approve(swapFacility, amount);
-            ISwapFacilityLike(swapFacility).swapOutM(sourceToken, amount, address(this));
-        }
-
-        // Adjust amount based on actual received $M tokens for potential fee-on-transfer tokens
-        uint256 transferAmount = _getTransferAmount(startingBalance, amount);
-
-        // Burn M tokens on Spoke.
+        // Burn $M tokens on Spoke.
         // In case of Hub, only update the bridged principal amount as tokens already transferred.
-        _burnOrLock(destinationChainId, transferAmount);
+        _burnOrLock(destinationChainId, amount);
 
         bytes memory payload;
         uint128 index;
-        // Extracted to prevent stack too deep error
+        // Prevent stack too deep error
+        uint256 transferAmount = amount;
         (payload, messageId, index) =
             _createTokenTransferPayload(transferAmount, destinationChainId, destinationToken, msg.sender, recipient, bridgeAdapter);
 
@@ -400,6 +394,50 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         emit TokenSent(
             sourceToken, destinationChainId, destinationToken, msg.sender, recipient, transferAmount, index, bridgeAdapter, messageId
         );
+    }
+
+    /// @dev Transfers the specified amount of `sourceToken` from the sender to the Portal
+    ///      If the source token is not $M token, it unwraps it to $M token.
+    ///      Reverts if the actual amount received is less than the specified amount.
+    function _transferAndUnwrap(address sourceToken, uint256 specifiedAmount) internal {
+        uint256 mBalanceBefore = _mBalanceOf(address(this));
+        uint256 sourceTokenBalanceBefore = _tokenBalanceOf(sourceToken, address(this));
+
+        // Transfer source token from the sender
+        IERC20(sourceToken).safeTransferFrom(msg.sender, address(this), specifiedAmount);
+        uint256 actualAmount;
+
+        // If the source token isn't $M token, unwrap it
+        if (sourceToken != address(mToken)) {
+            // The actual amount of the source tokens that Portal received from the sender.
+            actualAmount = _tokenBalanceOf(sourceToken, address(this)) - sourceTokenBalanceBefore;
+
+            // NOTE: SwapFacility doesn't support fee-on-transfer tokens.
+            // Revert if the actual amount received is less than the specified amount.
+            if (actualAmount < specifiedAmount) revert InsufficientAmountReceived(specifiedAmount, actualAmount);
+
+            IERC20(sourceToken).forceApprove(swapFacility, actualAmount);
+            ISwapFacilityLike(swapFacility).swapOutM(sourceToken, actualAmount, address(this));
+        }
+
+        // The actual amount of $M tokens that Portal received from the SwapFacility.
+        actualAmount = _mBalanceOf(address(this)) - mBalanceBefore;
+
+        // NOTE: The actual amount received can be less than the specified amount due to:
+        //       - rounding down when transferring between $M earners and non-earners in Wrapped $M V1;
+        //       - fee on unwrap in the source $M extension token.
+        if (specifiedAmount > actualAmount) {
+            unchecked {
+                // Revert if the difference between the specified transfer amount and
+                // the actual amount exceeds the maximum acceptable rounding error.
+                if (specifiedAmount - actualAmount > _getMaxRoundingError()) {
+                    revert InsufficientAmountReceived(specifiedAmount, actualAmount);
+                }
+                // Otherwise, the specified amount will be transferred, and the deficit caused
+                // by rounding down will be covered from the yield earned by HubPortal.
+                // SpokePortal must be funded with $M to cover such deficits.
+            }
+        }
     }
 
     /// @dev Creates token transfer payload.
@@ -569,33 +607,6 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         return IBridgeAdapter(bridgeAdapter).quote(destinationChainId, gasLimit, payload);
     }
 
-    /// @dev  Returns the adjusted transfer amount accounting for potential fee-on-transfer tokens.
-    /// @param startingBalance The starting $M token balance of the Portal.
-    /// @param specifiedAmount The transfer amount specified by the sender.
-    function _getTransferAmount(uint256 startingBalance, uint256 specifiedAmount) internal view returns (uint256) {
-        // The actual amount of $M tokens that Portal received from the sender.
-        // Accounts for potential rounding errors when transferring between earners and non-earners,
-        // as well as potential fee-on-transfer functionality in the source token.
-        uint256 actualAmount = _mBalanceOf(address(this)) - startingBalance;
-
-        if (specifiedAmount > actualAmount) {
-            unchecked {
-                // If the difference between the specified transfer amount and the actual amount exceeds
-                // the maximum acceptable rounding error (e.g., due to fee-on-transfer in an extension token)
-                // transfer the actual amount, not the specified.
-
-                // Otherwise, the specified amount will be transferred and the deficit caused by rounding error will
-                // be covered from the yield earned by HubPortal.
-                if (specifiedAmount - actualAmount > _getMaxRoundingError()) {
-                    // Ensure that updated transfer amount is greater than 0
-                    _revertIfZeroAmount(actualAmount);
-                    return actualAmount;
-                }
-            }
-        }
-        return specifiedAmount;
-    }
-
     /// @dev Reverts if `amount` is zero.
     function _revertIfZeroAmount(uint256 amount) private pure {
         if (amount == 0) revert ZeroAmount();
@@ -644,7 +655,8 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     /// @dev Returns the current M token index used by the Portal.
     function _currentIndex() internal view virtual returns (uint128) { }
 
-    /// @dev Returns the maximum rounding error that can occur when transferring M tokens to the Portal
+    /// @dev Returns the maximum rounding error that can occur when transferring and unwrapping $M extensions.
+    ///      This applies only to Wrapped $M V1 and should be removed once Wrapped $M is upgraded.
     function _getMaxRoundingError() private view returns (uint256) {
         return _currentIndex() / IndexingMath.EXP_SCALED_ONE + 1;
     }
@@ -652,5 +664,10 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     /// @dev Returns the M Token balance of `account`.
     function _mBalanceOf(address account) internal view returns (uint256) {
         return IERC20(mToken).balanceOf(account);
+    }
+
+    /// @dev Returns the `token` balance of `account`.
+    function _tokenBalanceOf(address token, address account) internal view returns (uint256) {
+        return IERC20(token).balanceOf(account);
     }
 }
