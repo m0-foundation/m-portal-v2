@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: GPL-3.0
-
 pragma solidity 0.8.30;
 
 import { BytesParser } from "./BytesParser.sol";
@@ -11,7 +10,8 @@ enum PayloadType {
     RegistrarKey,
     RegistrarList,
     FillReport,
-    EarnerMerkleRoot
+    EarnerMerkleRoot,
+    CancelReport
 }
 
 /// @title  PayloadEncoder
@@ -326,6 +326,58 @@ library PayloadEncoder {
         payload.checkLength(offset);
     }
 
+    /// @notice Encodes an OrderBook cancel report payload.
+    /// @param destinationChainId The destination chain ID.
+    /// @param destinationPeer    The address of the peer bridge adapter on the destination chain.
+    /// @param messageId          The message ID.
+    /// @param orderId            The ID of the order that the cancellation is being reported for.
+    /// @param orderSender        The address that originally created the order on the origin chain.
+    /// @param tokenIn            The address of the input token on the origin chain.
+    function encodeCancelReport(
+        uint32 destinationChainId,
+        bytes32 destinationPeer,
+        bytes32 messageId,
+        bytes32 orderId,
+        bytes32 orderSender,
+        bytes32 tokenIn
+    ) internal pure returns (bytes memory) {
+        return abi.encodePacked(
+            PayloadType.CancelReport,
+            destinationChainId,
+            destinationPeer,
+            messageId,
+            orderId,
+            orderSender,
+            tokenIn
+        );
+    }
+
+    /// @notice Decodes an OrderBook cancel report payload.
+    /// @param  payload    The payload to decode.
+    /// @return messageId  The message ID.
+    /// @return orderId    The ID of the order that the cancellation is being reported for.
+    /// @return orderSender The address that originally created the order on the origin chain.
+    /// @return tokenIn    The address of the input token on the origin chain.
+    function decodeCancelReport(bytes memory payload)
+        internal
+        pure
+        returns (
+            bytes32 messageId,
+            bytes32 orderId,
+            bytes32 orderSender,
+            bytes32 tokenIn
+        )
+    {
+        uint256 offset = HEADER_LENGTH - MESSAGE_ID_LENGTH;
+
+        (messageId, offset) = payload.asBytes32Unchecked(offset);
+        (orderId, offset) = payload.asBytes32Unchecked(offset);
+        (orderSender, offset) = payload.asBytes32Unchecked(offset);
+        (tokenIn, offset) = payload.asBytes32Unchecked(offset);
+
+        payload.checkLength(offset);
+    }
+
     /// @notice Generates a payload with empty data for the given payload type.
     /// @dev    Used for estimating gas costs for different payload types.
     function generateEmptyPayload(PayloadType payloadType) internal pure returns (bytes memory) {
@@ -344,6 +396,8 @@ library PayloadEncoder {
             return encodeFillReport(destinationChainId, destinationPeer, messageId, bytes32(0), 0, 0, bytes32(0), bytes32(0));
         } else if (payloadType == PayloadType.EarnerMerkleRoot) {
             return encodeEarnerMerkleRoot(destinationChainId, destinationPeer, messageId, 0, bytes32(0));
+        } else if (payloadType == PayloadType.CancelReport) {
+            return encodeCancelReport(destinationChainId, destinationPeer, messageId, bytes32(0), bytes32(0), bytes32(0));
         }
 
         revert InvalidPayloadType(uint8(payloadType));

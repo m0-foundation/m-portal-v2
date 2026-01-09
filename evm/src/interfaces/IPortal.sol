@@ -91,6 +91,35 @@ interface IPortal {
         bytes32 messageId
     );
 
+    /// @notice Emitted when a cancel report is sent to a origin chain.
+    /// @param destinationChainId The ID of the destination chain.
+    /// @param orderId            The ID of the order being reported.
+    /// @param originSender       The address on the origin chain that created the order.
+    /// @param tokenIn            The address of the input token on the origin chain.
+    /// @param bridgeAdapter      The address of the bridge adapter used to send the message.
+    /// @param messageId          The unique identifier for the sent message.
+    event CancelReportSent(
+        uint32 indexed destinationChainId,
+        bytes32 indexed orderId,
+        bytes32 originSender,
+        bytes32 tokenIn,
+        address bridgeAdapter,
+        bytes32 messageId
+    );
+
+    /// @notice Emitted when an order cancel report is received from a source chain.
+    /// @param sourceChainId The ID of the source chain.
+    /// @param orderId       The ID of the order being reported.
+    /// @param originSender  The address on the origin chain that created the order.
+    /// @param tokenIn       The address of the input token on the origin chain.
+    event CancelReportReceived(
+        uint32 indexed sourceChainId,
+        bytes32 indexed orderId,
+        bytes32 originSender,
+        bytes32 tokenIn,
+        bytes32 messageId
+    );
+
     /// @notice Emitted when wrapping M token to the Extension token is failed on the destination.
     /// @param  destinationExtension The address of M Extension on the destination chain.
     /// @param  recipient            The account receiving tokens.
@@ -346,6 +375,34 @@ interface IPortal {
     function sendFillReport(
         uint32 destinationChainId,
         IOrderBookLike.FillReport calldata report,
+        bytes32 refundAddress,
+        address bridgeAdapter,
+        bytes calldata bridgeAdapterArgs
+    ) external payable returns (bytes32 messageId);
+
+    /// @notice Sends the cancel report to the destination chain using the default bridge adapter.
+    /// @param  destinationChainId The ID of the destination chain.
+    /// @param  report             The OrderBook cancel report to send.
+    /// @param  refundAddress      The address to receive excess native gas on the source chain
+    /// @param  bridgeAdapterArgs  The optional bridge adapter arguments, could be empty.
+    /// @return messageId          The ID uniquely identifying the message.
+    function sendCancelReport(
+        uint32 destinationChainId,
+        IOrderBookLike.CancelReport calldata report,
+        bytes32 refundAddress,
+        bytes calldata bridgeAdapterArgs
+    ) external payable returns (bytes32 messageId);
+
+    /// @notice Sends the cancel report to the destination chain using the specified bridge adapter.
+    /// @param  destinationChainId The ID of the destination chain.
+    /// @param  report             The OrderBook cancel report to send.
+    /// @param  refundAddress      The address to receive excess native gas on the source chain
+    /// @param  bridgeAdapter      The address of the bridge adapter to use.
+    /// @param  bridgeAdapterArgs  The optional bridge adapter arguments, could be empty.
+    /// @return messageId          The ID uniquely identifying the message.
+    function sendCancelReport(
+        uint32 destinationChainId,
+        IOrderBookLike.CancelReport calldata report,
         bytes32 refundAddress,
         address bridgeAdapter,
         bytes calldata bridgeAdapterArgs
