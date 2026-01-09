@@ -139,23 +139,7 @@ contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {
         spokePortal.receiveMessage(HUB_CHAIN_ID, payload);
 
         assertEq(registrar.get(key), value);
-    }
-
-    function test_receiveMessage_registrarKey_updatesIndex() external {
-        bytes32 key = bytes32("test_key");
-        bytes32 value = bytes32("test_value");
-        uint128 newIndex = 1_200_000_000_000;
-        bytes memory payload =
-            PayloadEncoder.encodeRegistrarKey(HUB_CHAIN_ID, address(bridgeAdapter).toBytes32(), messageId, newIndex, key, value);
-
-        vm.expectEmit();
-        emit ISpokePortal.RegistrarKeyReceived(key, value, newIndex, messageId);
-
-        vm.prank(address(bridgeAdapter));
-        spokePortal.receiveMessage(HUB_CHAIN_ID, payload);
-
-        assertEq(registrar.get(key), value);
-        assertEq(mToken.currentIndex(), newIndex);
+        assertEq(mToken.currentIndex(), index);
     }
 
     function test_receiveMessage_registrarList_add() external {
@@ -171,6 +155,8 @@ contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {
 
         vm.prank(address(bridgeAdapter));
         spokePortal.receiveMessage(HUB_CHAIN_ID, payload);
+
+        assertEq(mToken.currentIndex(), index);
     }
 
     function test_receiveMessage_registrarList_remove() external {
@@ -186,6 +172,8 @@ contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {
 
         vm.prank(address(bridgeAdapter));
         spokePortal.receiveMessage(HUB_CHAIN_ID, payload);
+
+        assertEq(mToken.currentIndex(), index);
     }
 
     function test_receiveMessage_fillReport() external {
@@ -231,6 +219,8 @@ contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {
 
         vm.prank(address(bridgeAdapter));
         spokePortal.receiveMessage(HUB_CHAIN_ID, payload);
+
+        assertEq(mToken.currentIndex(), index);
     }
 
     function test_receiveMessage_cancelReport() external {
@@ -261,6 +251,8 @@ contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {
 
         vm.prank(address(bridgeAdapter));
         spokePortal.receiveMessage(HUB_CHAIN_ID, payload);
+
+        assertEq(mToken.currentIndex(), index);
     }
 
     function test_receiveMessage_tokenTransfer_wrapFails() external {
@@ -295,6 +287,8 @@ contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {
         assertEq(mToken.balanceOf(recipient), amount);
         // SpokePortal mints, so balance doesn't decrease
         assertEq(mToken.balanceOf(address(spokePortal)), 0);
+
+        assertEq(mToken.currentIndex(), index);
     }
 
     function test_receiveMessage_revertsIfUnsupportedBridgeAdapter() external {
