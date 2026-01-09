@@ -44,6 +44,12 @@ contract PayloadEncoderTest is Test {
 
         payload = abi.encodePacked(PayloadType.FillReport, DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID);
         assertEq(uint8(PayloadEncoder.decodePayloadType(payload)), uint8(PayloadType.FillReport));
+
+        payload = abi.encodePacked(PayloadType.EarnerMerkleRoot, DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID);
+        assertEq(uint8(PayloadEncoder.decodePayloadType(payload)), uint8(PayloadType.EarnerMerkleRoot));
+
+        payload = abi.encodePacked(PayloadType.CancelReport, DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID);
+        assertEq(uint8(PayloadEncoder.decodePayloadType(payload)), uint8(PayloadType.CancelReport));
     }
 
     /// forge-config: default.allow_internal_expect_revert = true
@@ -432,5 +438,92 @@ contract PayloadEncoderTest is Test {
         assertEq(decodedMessageId, messageId);
         assertEq(decodedIndex, index);
         assertEq(decodedEarnerMerkleRoot, earnerMerkleRoot);
+    }
+
+    function test_encodeCancelReport() external view {
+        bytes32 orderId = "1";
+        bytes32 orderSender = "sender";
+        bytes32 tokenIn = "tokenIn";
+        uint128 amountInToRefund = 1000e6;
+        bytes memory payload =
+            PayloadEncoder.encodeCancelReport(DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, orderId, orderSender, tokenIn, amountInToRefund);
+
+        assertEq(
+            payload,
+            abi.encodePacked(
+                PayloadType.CancelReport,
+                DESTINATION_CHAIN_ID,
+                DESTINATION_PEER,
+                MESSAGE_ID,
+                orderId,
+                orderSender,
+                tokenIn,
+                amountInToRefund
+            )
+        );
+    }
+
+    function testFuzz_encodeCancelReport(
+        bytes32 messageId,
+        bytes32 orderId,
+        bytes32 orderSender,
+        bytes32 tokenIn,
+        uint128 amountInToRefund
+    ) external view {
+        bytes memory payload =
+            PayloadEncoder.encodeCancelReport(DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, orderId, orderSender, tokenIn, amountInToRefund);
+
+        assertEq(
+            payload,
+            abi.encodePacked(
+                PayloadType.CancelReport,
+                DESTINATION_CHAIN_ID,
+                DESTINATION_PEER,
+                messageId,
+                orderId,
+                orderSender,
+                tokenIn,
+                amountInToRefund
+            )
+        );
+    }
+
+    function test_decodeCancelReport() external view {
+        bytes32 messageId = "messageId";
+        bytes32 orderId = "1";
+        bytes32 orderSender = "sender";
+        bytes32 tokenIn = "tokenIn";
+        uint128 amountInToRefund = 1000e6;
+        bytes memory payload =
+            PayloadEncoder.encodeCancelReport(DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, orderId, orderSender, tokenIn, amountInToRefund);
+
+        (bytes32 decodedMessageId, bytes32 decodedOrderId, bytes32 decodedOrderSender, bytes32 decodedTokenIn, uint128 decodedAmountInToRefund) =
+            PayloadEncoder.decodeCancelReport(payload);
+
+        assertEq(decodedMessageId, messageId);
+        assertEq(decodedOrderId, orderId);
+        assertEq(decodedOrderSender, orderSender);
+        assertEq(decodedTokenIn, tokenIn);
+        assertEq(decodedAmountInToRefund, amountInToRefund);
+    }
+
+    function testFuzz_decodeCancelReport(
+        bytes32 messageId,
+        bytes32 orderId,
+        bytes32 orderSender,
+        bytes32 tokenIn,
+        uint128 amountInToRefund
+    ) external view {
+        bytes memory payload =
+            PayloadEncoder.encodeCancelReport(DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, orderId, orderSender, tokenIn, amountInToRefund);
+
+        (bytes32 decodedMessageId, bytes32 decodedOrderId, bytes32 decodedOrderSender, bytes32 decodedTokenIn, uint128 decodedAmountInToRefund) =
+            PayloadEncoder.decodeCancelReport(payload);
+
+        assertEq(decodedMessageId, messageId);
+        assertEq(decodedOrderId, orderId);
+        assertEq(decodedOrderSender, orderSender);
+        assertEq(decodedTokenIn, tokenIn);
+        assertEq(decodedAmountInToRefund, amountInToRefund);
     }
 }

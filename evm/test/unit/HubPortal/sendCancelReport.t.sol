@@ -21,7 +21,8 @@ contract SendCancelReportUnitTest is HubPortalUnitTestBase {
     IOrderBookLike.CancelReport internal testReport = IOrderBookLike.CancelReport({
         orderId: bytes32(uint256(1)),
         originSender: makeAddr("originSender").toBytes32(),
-        tokenIn: makeAddr("tokenIn").toBytes32()
+        tokenIn: makeAddr("tokenIn").toBytes32(),
+        amountInToRefund: 1000e6
     });
 
     function test_sendCancelReport_withDefaultAdapter() external {
@@ -33,7 +34,8 @@ contract SendCancelReportUnitTest is HubPortalUnitTestBase {
             messageId,
             testReport.orderId,
             testReport.originSender,
-            testReport.tokenIn
+            testReport.tokenIn,
+            testReport.amountInToRefund
         );
         address defaultBridgeAdapter = hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID);
 
@@ -47,6 +49,7 @@ contract SendCancelReportUnitTest is HubPortalUnitTestBase {
             testReport.orderId,
             testReport.originSender,
             testReport.tokenIn,
+            testReport.amountInToRefund,
             defaultBridgeAdapter,
             messageId
         );
@@ -64,7 +67,8 @@ contract SendCancelReportUnitTest is HubPortalUnitTestBase {
             messageId,
             testReport.orderId,
             testReport.originSender,
-            testReport.tokenIn
+            testReport.tokenIn,
+            testReport.amountInToRefund
         );
 
         // Deploy a new mock adapter
@@ -87,6 +91,7 @@ contract SendCancelReportUnitTest is HubPortalUnitTestBase {
             testReport.orderId,
             testReport.originSender,
             testReport.tokenIn,
+            testReport.amountInToRefund,
             address(customAdapter),
             messageId
         );

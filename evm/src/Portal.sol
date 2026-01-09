@@ -547,7 +547,8 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
             messageId,
             report.orderId,
             report.originSender,
-            report.tokenIn
+            report.tokenIn,
+            report.amountInToRefund
         );
 
         _sendMessage(destinationChainId, PayloadType.CancelReport, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
@@ -557,6 +558,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
             report.orderId,
             report.originSender,
             report.tokenIn,
+            report.amountInToRefund,
             bridgeAdapter,
             messageId
         );
@@ -632,7 +634,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     /// @param sourceChainId The ID of the source chain.
     /// @param payload       The message payload.
     function _receiveCancelReport(uint32 sourceChainId, bytes memory payload) private {
-        (bytes32 messageId, bytes32 orderId, bytes32 orderSender, bytes32 tokenIn) =
+        (bytes32 messageId, bytes32 orderId, bytes32 orderSender, bytes32 tokenIn, uint128 amountInToRefund) =
             payload.decodeCancelReport();
 
         IOrderBookLike(orderBook)
@@ -641,11 +643,12 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
                 IOrderBookLike.CancelReport({
                     orderId: orderId,
                     originSender: orderSender,
-                    tokenIn: tokenIn
+                    tokenIn: tokenIn,
+                    amountInToRefund: amountInToRefund
                 })
             );
 
-        emit CancelReportReceived(sourceChainId, orderId, orderSender, tokenIn, messageId);
+        emit CancelReportReceived(sourceChainId, orderId, orderSender, tokenIn, amountInToRefund, messageId);
     }
 
     /// @dev Generates a unique across all chains message ID.
