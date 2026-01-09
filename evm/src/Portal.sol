@@ -521,7 +521,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     /// @dev Creates token transfer payload.
     /// @return payload   The encoded payload.
     /// @return messageId The message ID for the cross-chain transfer.
-    /// @return index     The current M token index.
+    /// @return index     The current $M token index.
     function _createTokenTransferPayload(
         uint256 transferAmount,
         uint32 destinationChainId,
@@ -534,7 +534,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         index = _currentIndex();
         bytes32 destinationPeer = IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId);
         payload = PayloadEncoder.encodeTokenTransfer(
-            destinationChainId, destinationPeer, messageId, transferAmount, destinationToken, sender, recipient, index
+            destinationChainId, destinationPeer, messageId, index, transferAmount, destinationToken, sender, recipient
         );
     }
 
@@ -550,17 +550,10 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         _revertIfZeroRefundAddress(refundAddress);
         _revertIfInvalidDestinationChain(destinationChainId);
 
-        messageId = _getMessageId(destinationChainId);
-        bytes memory payload = PayloadEncoder.encodeFillReport(
-            destinationChainId,
-            IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId),
-            messageId,
-            report.orderId,
-            report.amountInToRelease,
-            report.amountOutFilled,
-            report.originRecipient,
-            report.tokenIn
-        );
+        bytes memory payload;
+        uint128 index;
+        // Prevent stack too deep error
+        (payload, messageId, index) = _createFillReportPayload(destinationChainId, report, bridgeAdapter);
 
         _sendMessage(destinationChainId, PayloadType.FillReport, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
 
@@ -571,8 +564,34 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
             report.amountOutFilled,
             report.originRecipient,
             report.tokenIn,
+            index,
             bridgeAdapter,
             messageId
+        );
+    }
+
+    /// @dev Creates fill report payload.
+    /// @return payload   The encoded payload.
+    /// @return messageId The message ID for the cross-chain fill report.
+    /// @return index     The current $M token index.
+    function _createFillReportPayload(
+        uint32 destinationChainId,
+        IOrderBookLike.FillReport calldata report,
+        address bridgeAdapter
+    ) internal returns (bytes memory payload, bytes32 messageId, uint128 index) {
+        messageId = _getMessageId(destinationChainId);
+        index = _currentIndex();
+
+        payload = PayloadEncoder.encodeFillReport(
+            destinationChainId,
+            IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId),
+            messageId,
+            index,
+            report.orderId,
+            report.amountInToRelease,
+            report.amountOutFilled,
+            report.originRecipient,
+            report.tokenIn
         );
     }
 
@@ -587,11 +606,13 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         _revertIfZeroRefundAddress(refundAddress);
         _revertIfInvalidDestinationChain(destinationChainId);
 
+        uint128 index = _currentIndex();
         messageId = _getMessageId(destinationChainId);
         bytes memory payload = PayloadEncoder.encodeCancelReport(
             destinationChainId,
             IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId),
             messageId,
+            index,
             report.orderId,
             report.originSender,
             report.tokenIn,
@@ -601,7 +622,14 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         _sendMessage(destinationChainId, PayloadType.CancelReport, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
 
         emit CancelReportSent(
-            destinationChainId, report.orderId, report.originSender, report.tokenIn, report.amountInToRefund, bridgeAdapter, messageId
+            destinationChainId,
+            report.orderId,
+            report.originSender,
+            report.tokenIn,
+            report.amountInToRefund,
+            index,
+            bridgeAdapter,
+            messageId
         );
     }
 
@@ -609,7 +637,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     /// @param sourceChainId The ID of the source chain.
     /// @param payload       The message payload.
     function _receiveToken(uint32 sourceChainId, bytes memory payload) private {
-        (bytes32 messageId, uint256 amount, address destinationToken, bytes32 sender, address recipient, uint128 index) =
+        (bytes32 messageId, uint128 index, uint256 amount, address destinationToken, bytes32 sender, address recipient) =
             payload.decodeTokenTransfer();
 
         emit TokenReceived(sourceChainId, destinationToken, sender, recipient, amount, index, messageId);
@@ -653,8 +681,15 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     /// @param sourceChainId The ID of the source chain.
     /// @param payload       The message payload.
     function _receiveFillReport(uint32 sourceChainId, bytes memory payload) private {
-        (bytes32 messageId, bytes32 orderId, uint128 amountInToRelease, uint128 amountOutFilled, bytes32 originRecipient, bytes32 tokenIn) =
-            payload.decodeFillReport();
+        (
+            bytes32 messageId,
+            uint128 index,
+            bytes32 orderId,
+            uint128 amountInToRelease,
+            uint128 amountOutFilled,
+            bytes32 originRecipient,
+            bytes32 tokenIn
+        ) = payload.decodeFillReport();
 
         IOrderBookLike(orderBook)
             .reportFill(
@@ -668,14 +703,17 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
                 })
             );
 
-        emit FillReportReceived(sourceChainId, orderId, amountInToRelease, amountOutFilled, originRecipient, tokenIn, messageId);
+        _updateMTokenIndex(index);
+
+        emit FillReportReceived(sourceChainId, orderId, amountInToRelease, amountOutFilled, originRecipient, tokenIn, index, messageId);
     }
 
     /// @dev   Handles cancel report message on the destination.
     /// @param sourceChainId The ID of the source chain.
     /// @param payload       The message payload.
     function _receiveCancelReport(uint32 sourceChainId, bytes memory payload) private {
-        (bytes32 messageId, bytes32 orderId, bytes32 orderSender, bytes32 tokenIn, uint128 amountInToRefund) = payload.decodeCancelReport();
+        (bytes32 messageId, uint128 index, bytes32 orderId, bytes32 orderSender, bytes32 tokenIn, uint128 amountInToRefund) =
+            payload.decodeCancelReport();
 
         IOrderBookLike(orderBook)
             .reportCancel(
@@ -684,8 +722,9 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
                     orderId: orderId, originSender: orderSender, tokenIn: tokenIn, amountInToRefund: amountInToRefund
                 })
             );
+        _updateMTokenIndex(index);
 
-        emit CancelReportReceived(sourceChainId, orderId, orderSender, tokenIn, amountInToRefund, messageId);
+        emit CancelReportReceived(sourceChainId, orderId, orderSender, tokenIn, amountInToRefund, index, messageId);
     }
 
     /// @dev Pauses sending cross-chain messages.
@@ -744,6 +783,9 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     /// @param destinationChainId The ID of the destination chain.
     /// @param amount             The amount of $M tokens to lock/burn.
     function _burnOrLock(uint32 destinationChainId, uint256 amount) internal virtual { }
+
+    /// @dev   Overridden in SpokePortal to update the $M token index.
+    function _updateMTokenIndex(uint128 index) internal virtual { }
 
     ///////////////////////////////////////////////////////////////////////////
     //                 INTERNAL/PRIVATE VIEW/PURE FUNCTIONS                  //

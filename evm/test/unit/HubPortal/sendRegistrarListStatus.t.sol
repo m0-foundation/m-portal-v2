@@ -17,13 +17,19 @@ contract SendRegistrarListStatusUnitTest is HubPortalUnitTestBase {
     bytes internal bridgeAdapterArgs = "";
     bytes32 internal testListName = bytes32("LIST");
     address internal testAccount = makeAddr("account");
+    uint128 internal index = 1_100_000_068_703;
+
+    function setUp() public override {
+        super.setUp();
+        _enableEarningWithIndex(index);
+    }
 
     function test_sendRegistrarListStatus_withDefaultAdapter_accountInList() external {
         uint256 fee = 1;
         bytes32 messageId = _getMessageId();
         bool status = true;
         bytes memory payload =
-            PayloadEncoder.encodeRegistrarList(SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, testListName, testAccount, status);
+            PayloadEncoder.encodeRegistrarList(SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, index, testListName, testAccount, status);
         address defaultBridgeAdapter = hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID);
 
         registrar.setListContains(testListName, testAccount, status);
@@ -33,7 +39,7 @@ contract SendRegistrarListStatusUnitTest is HubPortalUnitTestBase {
             abi.encodeCall(IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, LIST_UPDATE_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs))
         );
         vm.expectEmit();
-        emit IHubPortal.RegistrarListStatusSent(SPOKE_CHAIN_ID, testListName, testAccount, status, defaultBridgeAdapter, messageId);
+        emit IHubPortal.RegistrarListStatusSent(SPOKE_CHAIN_ID, testListName, testAccount, status, index, defaultBridgeAdapter, messageId);
 
         vm.prank(user);
         hubPortal.sendRegistrarListStatus{ value: fee }(SPOKE_CHAIN_ID, testListName, testAccount, refundAddress, bridgeAdapterArgs);
@@ -44,7 +50,7 @@ contract SendRegistrarListStatusUnitTest is HubPortalUnitTestBase {
         bytes32 messageId = _getMessageId();
         bool status = false;
         bytes memory payload =
-            PayloadEncoder.encodeRegistrarList(SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, testListName, testAccount, status);
+            PayloadEncoder.encodeRegistrarList(SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, index, testListName, testAccount, status);
         address defaultBridgeAdapter = hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID);
 
         registrar.setListContains(testListName, testAccount, status);
@@ -54,7 +60,7 @@ contract SendRegistrarListStatusUnitTest is HubPortalUnitTestBase {
             abi.encodeCall(IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, LIST_UPDATE_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs))
         );
         vm.expectEmit();
-        emit IHubPortal.RegistrarListStatusSent(SPOKE_CHAIN_ID, testListName, testAccount, status, defaultBridgeAdapter, messageId);
+        emit IHubPortal.RegistrarListStatusSent(SPOKE_CHAIN_ID, testListName, testAccount, status, index, defaultBridgeAdapter, messageId);
 
         vm.prank(user);
         hubPortal.sendRegistrarListStatus{ value: fee }(SPOKE_CHAIN_ID, testListName, testAccount, refundAddress, bridgeAdapterArgs);
@@ -65,7 +71,7 @@ contract SendRegistrarListStatusUnitTest is HubPortalUnitTestBase {
         bytes32 messageId = _getMessageId();
         bool status = true;
         bytes memory payload =
-            PayloadEncoder.encodeRegistrarList(SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, testListName, testAccount, status);
+            PayloadEncoder.encodeRegistrarList(SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, index, testListName, testAccount, status);
 
         // Deploy a new mock adapter
         MockBridgeAdapter customAdapter = new MockBridgeAdapter();
@@ -84,7 +90,7 @@ contract SendRegistrarListStatusUnitTest is HubPortalUnitTestBase {
             abi.encodeCall(IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, LIST_UPDATE_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs))
         );
         vm.expectEmit();
-        emit IHubPortal.RegistrarListStatusSent(SPOKE_CHAIN_ID, testListName, testAccount, status, address(customAdapter), messageId);
+        emit IHubPortal.RegistrarListStatusSent(SPOKE_CHAIN_ID, testListName, testAccount, status, index, address(customAdapter), messageId);
 
         vm.prank(user);
         hubPortal.sendRegistrarListStatus{ value: fee }(

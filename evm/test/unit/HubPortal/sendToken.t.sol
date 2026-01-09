@@ -30,19 +30,12 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
         mToken.mint(address(wrappedMToken), 100e6);
     }
 
-    /// @dev Helper to enable earning with a specific index
-    function _enableEarningWithIndex(uint128 _index) internal {
-        mToken.setCurrentIndex(_index);
-        registrar.setListContains(EARNERS_LIST, address(hubPortal), true);
-        hubPortal.enableEarning();
-    }
-
     function test_sendToken_withMToken() external {
         uint256 fee = 1;
         uint128 index = 1_100_000_068_703;
         bytes32 messageId = _getMessageId();
         bytes memory payload =
-            PayloadEncoder.encodeTokenTransfer(SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, amount, spokeMToken, user, recipient, index);
+            PayloadEncoder.encodeTokenTransfer(SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, index, amount, spokeMToken, user, recipient);
         address defaultBridgeAdapter = hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID);
 
         _enableEarningWithIndex(index);
@@ -70,7 +63,7 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
         uint128 index = 1_100_000_068_703;
         bytes32 messageId = _getMessageId();
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
-            SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, amount, spokeWrappedMToken, user, recipient, index
+            SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, index, amount, spokeWrappedMToken, user, recipient
         );
         address defaultBridgeAdapter = hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID);
 
@@ -101,7 +94,7 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
         uint128 index = 1_100_000_068_703;
         bytes32 messageId = _getMessageId();
         bytes memory payload =
-            PayloadEncoder.encodeTokenTransfer(SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, amount, spokeMToken, user, recipient, index);
+            PayloadEncoder.encodeTokenTransfer(SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, index, amount, spokeMToken, user, recipient);
 
         // Deploy a new mock adapter
         MockBridgeAdapter customAdapter = new MockBridgeAdapter();
