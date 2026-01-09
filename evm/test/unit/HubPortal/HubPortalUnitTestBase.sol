@@ -30,6 +30,7 @@ abstract contract HubPortalUnitTestBase is Test {
     uint256 internal constant KEY_UPDATE_GAS_LIMIT = 100_000;
     uint256 internal constant LIST_UPDATE_GAS_LIMIT = 100_000;
     uint256 internal constant FILL_REPORT_GAS_LIMIT = 150_000;
+    uint256 internal constant CANCEL_REPORT_GAS_LIMIT = 150_000;
     uint256 internal constant TOKEN_TRANSFER_GAS_LIMIT = 250_000;
     uint256 internal constant EARNER_MERKLE_ROOT_GAS_LIMIT = 100_000;
 
@@ -99,6 +100,7 @@ abstract contract HubPortalUnitTestBase is Test {
         hubPortal.setPayloadGasLimit(SPOKE_CHAIN_ID, PayloadType.RegistrarKey, KEY_UPDATE_GAS_LIMIT);
         hubPortal.setPayloadGasLimit(SPOKE_CHAIN_ID, PayloadType.RegistrarList, LIST_UPDATE_GAS_LIMIT);
         hubPortal.setPayloadGasLimit(SPOKE_CHAIN_ID, PayloadType.FillReport, FILL_REPORT_GAS_LIMIT);
+        hubPortal.setPayloadGasLimit(SPOKE_CHAIN_ID, PayloadType.CancelReport, CANCEL_REPORT_GAS_LIMIT);
         hubPortal.setPayloadGasLimit(SPOKE_CHAIN_ID, PayloadType.EarnerMerkleRoot, EARNER_MERKLE_ROOT_GAS_LIMIT);
 
         // Configure second spoke
@@ -114,6 +116,7 @@ abstract contract HubPortalUnitTestBase is Test {
         hubPortal.setPayloadGasLimit(SPOKE_CHAIN_ID_2, PayloadType.RegistrarKey, KEY_UPDATE_GAS_LIMIT);
         hubPortal.setPayloadGasLimit(SPOKE_CHAIN_ID_2, PayloadType.RegistrarList, LIST_UPDATE_GAS_LIMIT);
         hubPortal.setPayloadGasLimit(SPOKE_CHAIN_ID_2, PayloadType.FillReport, FILL_REPORT_GAS_LIMIT);
+        hubPortal.setPayloadGasLimit(SPOKE_CHAIN_ID_2, PayloadType.CancelReport, CANCEL_REPORT_GAS_LIMIT);
         hubPortal.setPayloadGasLimit(SPOKE_CHAIN_ID_2, PayloadType.EarnerMerkleRoot, EARNER_MERKLE_ROOT_GAS_LIMIT);
 
         vm.stopPrank();

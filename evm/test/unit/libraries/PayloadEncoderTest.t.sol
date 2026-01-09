@@ -23,9 +23,9 @@ contract PayloadEncoderTest is Test {
 
     /// forge-config: default.allow_internal_expect_revert = true
     function test_decodePayloadType_invalidPayloadType() external {
-        bytes memory payload = abi.encodePacked(uint8(6), DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID);
+        bytes memory payload = abi.encodePacked(uint8(100), DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID);
 
-        vm.expectRevert(abi.encodeWithSelector(PayloadEncoder.InvalidPayloadType.selector, 6));
+        vm.expectRevert(abi.encodeWithSelector(PayloadEncoder.InvalidPayloadType.selector, 100));
         PayloadEncoder.decodePayloadType(payload);
     }
 

@@ -7,7 +7,7 @@ pragma solidity 0.8.30;
 /// @notice Subset of OrderBook interface required for Portal contracts.
 interface IOrderBookLike {
     /// @notice Data reported from a destination chain back to the origin chain about a fill
-    /// @dev    This struct is sent by the messenger contract to report fills that occurred
+    /// @dev    This struct is sent by the portal contract to report fills that occurred
     ///         on the destination chain back to the origin chain for refund processing.
     /// @param orderId The ID of the order being reported
     /// @param amountInToRelease The amount of input token to release to the filler on the origin chain
@@ -23,8 +23,31 @@ interface IOrderBookLike {
         bytes32 tokenIn;
     }
 
-    /// @notice Report a fill that was made on another chain back to this chain as the origin chain
-    /// @dev    Must be called by the messenger contract
-    /// @param report Fill data sent from the destination chain
-    function reportFill(FillReport calldata report) external;
+    /// @notice Data reported from a destination chain back to the origin chain about a cancelled order
+    /// @dev    This struct is sent by the portal contract to report orders that were cancelled
+    ///         on the destination chain back to the origin chain for cleanup processing.
+    /// @param orderId The ID of the order being reported
+    /// @param originSender The address on the origin chain that created the order
+    /// @param tokenIn The address of the input token on the origin chain
+    struct CancelReport {
+        bytes32 orderId;
+        bytes32 originSender;
+        bytes32 tokenIn;
+    }
+
+    /**
+     * @notice Report a fill that was made on another chain back to this chain as the origin chain
+     * @dev Must be called by the portal contract
+     * @param sourceChainId_ The chain ID that the fill report was sent from
+     * @param report_ Fill data sent from the destination chain
+     */
+    function reportFill(uint32 sourceChainId_, FillReport calldata report_) external;
+
+    /**
+     * @notice Report a cross-chain cancellation of an order.
+     * @dev Must be called by the portal contract
+     * @param sourceChainId_ The chain ID that the cancel report was sent from
+     * @param report_ Cancel data sent from the destination chain
+     */
+    function reportCancel(uint32 sourceChainId_, CancelReport calldata report_) external;
 }

@@ -123,18 +123,57 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
             address(mockOrderBook),
             abi.encodeCall(
                 IOrderBookLike.reportFill,
-                IOrderBookLike.FillReport({
-                    orderId: orderId,
-                    amountInToRelease: amountInToRelease,
-                    amountOutFilled: amountOutFilled,
-                    originRecipient: originRecipient,
-                    tokenIn: tokenIn
-                })
+                (
+                    SPOKE_CHAIN_ID,
+                    IOrderBookLike.FillReport({
+                        orderId: orderId,
+                        amountInToRelease: amountInToRelease,
+                        amountOutFilled: amountOutFilled,
+                        originRecipient: originRecipient,
+                        tokenIn: tokenIn
+                    })
+                )
             )
         );
 
         vm.expectEmit();
         emit IPortal.FillReportReceived(SPOKE_CHAIN_ID, orderId, amountInToRelease, amountOutFilled, originRecipient, tokenIn, messageId);
+
+        vm.prank(address(bridgeAdapter));
+        hubPortal.receiveMessage(SPOKE_CHAIN_ID, payload);
+    }
+
+    function test_receiveMessage_cancelReport() external {
+        bytes32 orderId = bytes32("orderId");
+        bytes32 originSender = sender.toBytes32();
+        bytes32 tokenIn = address(mToken).toBytes32();
+
+        bytes memory payload = PayloadEncoder.encodeCancelReport(
+            SPOKE_CHAIN_ID,
+            address(bridgeAdapter).toBytes32(),
+            messageId,
+            orderId,
+            originSender,
+            tokenIn
+        );
+
+        vm.expectCall(
+            address(mockOrderBook),
+            abi.encodeCall(
+                IOrderBookLike.reportCancel,
+                (
+                    SPOKE_CHAIN_ID,
+                    IOrderBookLike.CancelReport({
+                        orderId: orderId,
+                        originSender: originSender,
+                        tokenIn: tokenIn
+                    })
+                )
+            )
+        );
+
+        vm.expectEmit();
+        emit IPortal.CancelReportReceived(SPOKE_CHAIN_ID, orderId, originSender, tokenIn, messageId);
 
         vm.prank(address(bridgeAdapter));
         hubPortal.receiveMessage(SPOKE_CHAIN_ID, payload);
