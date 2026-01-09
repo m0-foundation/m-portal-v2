@@ -22,17 +22,19 @@ library PayloadEncoder {
     using TypeConverter for *;
 
     /// @dev All payloads have a common header structure:
-    /// ┌──────────────┬──────────────────────┬──────────────────┬────────────┬───────────────────────┐
-    /// │ Payload Type │ Destination Chain ID │ Destination Peer │ Message ID │ Payload Specific Data │
-    /// │   (uint8)    │       (uint32)       │    (bytes32)     │  (bytes32) │     (variable)        │
-    /// │   1 byte     │       4 bytes        │    32 bytes      │  32 bytes  │         ...           │
-    /// └──────────────┴──────────────────────┴──────────────────┴────────────┴───────────────────────┘
+    /// ┌──────────────┬──────────────────────┬──────────────────┬────────────┬───────────┬───────────────────────┐
+    /// │ Payload Type │ Destination Chain ID │ Destination Peer │ Message ID │ $M Index  │ Payload Specific Data │
+    /// │   (uint8)    │       (uint32)       │    (bytes32)     │  (bytes32) │ (uint128) │      (variable)       │
+    /// │   1 byte     │       4 bytes        │    32 bytes      │  32 bytes  │ 16 bytes  │         ...           │
+    /// └──────────────┴──────────────────────┴──────────────────┴────────────┴───────────┴───────────────────────┘
     uint256 internal constant PAYLOAD_TYPE_LENGTH = 1;
     uint256 internal constant DESTINATION_CHAIN_ID_LENGTH = 4;
     uint256 internal constant DESTINATION_PEER_LENGTH = 32;
     uint256 internal constant MESSAGE_ID_LENGTH = 32;
+    uint256 internal constant INDEX_LENGTH = 16;
     uint256 internal constant HEADER_LENGTH =
-        PAYLOAD_TYPE_LENGTH + DESTINATION_CHAIN_ID_LENGTH + DESTINATION_PEER_LENGTH + MESSAGE_ID_LENGTH;
+        PAYLOAD_TYPE_LENGTH + DESTINATION_CHAIN_ID_LENGTH + DESTINATION_PEER_LENGTH + MESSAGE_ID_LENGTH + INDEX_LENGTH;
+    uint256 internal constant OFFSET = PAYLOAD_TYPE_LENGTH + DESTINATION_CHAIN_ID_LENGTH + DESTINATION_PEER_LENGTH;
 
     error InvalidPayloadLength(uint256 length);
     error InvalidPayloadType(uint8 value);
@@ -71,20 +73,20 @@ library PayloadEncoder {
     /// @param destinationChainId The destination chain ID.
     /// @param destinationPeer    The address of the peer bridge adapter on the destination chain.
     /// @param messageId          The message ID.
+    /// @param index              The $M token index.
     /// @param amount             The amount of tokens to transfer.
     /// @param destinationToken   The address of the destination token.
     /// @param sender             The address of the sender.
     /// @param recipient          The address of the recipient.
-    /// @param index              The $M token index.
     function encodeTokenTransfer(
         uint32 destinationChainId,
         bytes32 destinationPeer,
         bytes32 messageId,
+        uint128 index,
         uint256 amount,
         bytes32 destinationToken,
         address sender,
-        bytes32 recipient,
-        uint128 index
+        bytes32 recipient
     ) internal pure returns (bytes memory) {
         // Converting addresses to `bytes32` and amount to `uint128` to support non-EVM chains.
         return abi.encodePacked(
@@ -92,37 +94,37 @@ library PayloadEncoder {
             destinationChainId,
             destinationPeer,
             messageId,
+            index,
             amount.toUint128(),
             destinationToken,
             sender.toBytes32(),
-            recipient,
-            index
+            recipient
         );
     }
 
     /// @notice Decodes a token transfer payload.
     /// @param  payload          The payload to decode.
     /// @return messageId        The message ID.
+    /// @return index            The $M token index.
     /// @return amount           The amount of tokens to transfer.
     /// @return destinationToken The address of the destination token.
     /// @return sender           The address of the sender.
     /// @return recipient        The address of the recipient.
-    /// @return index            The $M token index.
     function decodeTokenTransfer(bytes memory payload)
         internal
         pure
-        returns (bytes32 messageId, uint256 amount, address destinationToken, bytes32 sender, address recipient, uint128 index)
+        returns (bytes32 messageId, uint128 index, uint256 amount, address destinationToken, bytes32 sender, address recipient)
     {
-        uint256 offset = HEADER_LENGTH - MESSAGE_ID_LENGTH;
+        uint256 offset = OFFSET;
         bytes32 destinationTokenBytes32;
         bytes32 recipientBytes32;
 
         (messageId, offset) = payload.asBytes32Unchecked(offset);
+        (index, offset) = payload.asUint128Unchecked(offset);
         (amount, offset) = payload.asUint128Unchecked(offset);
         (destinationTokenBytes32, offset) = payload.asBytes32Unchecked(offset);
         (sender, offset) = payload.asBytes32Unchecked(offset);
         (recipientBytes32, offset) = payload.asBytes32Unchecked(offset);
-        (index, offset) = payload.asUint128Unchecked(offset);
 
         destinationToken = destinationTokenBytes32.toAddress();
         recipient = recipientBytes32.toAddress();
@@ -149,7 +151,7 @@ library PayloadEncoder {
     /// @return messageId The message ID.
     /// @return index     $M token index.
     function decodeIndex(bytes memory payload) internal pure returns (bytes32 messageId, uint128 index) {
-        uint256 offset = HEADER_LENGTH - MESSAGE_ID_LENGTH;
+        uint256 offset = OFFSET;
 
         (messageId, offset) = payload.asBytes32Unchecked(offset);
         (index, offset) = payload.asUint128Unchecked(offset);
@@ -161,27 +163,31 @@ library PayloadEncoder {
     /// @param destinationChainId The destination chain ID.
     /// @param destinationPeer    The address of the peer bridge adapter on the destination chain.
     /// @param messageId          The message ID.
+    /// @param index              $M token index.
     /// @param key                The Registrar key.
     /// @param value              The Registrar value.
     function encodeRegistrarKey(
         uint32 destinationChainId,
         bytes32 destinationPeer,
         bytes32 messageId,
+        uint128 index,
         bytes32 key,
         bytes32 value
     ) internal pure returns (bytes memory) {
-        return abi.encodePacked(PayloadType.RegistrarKey, destinationChainId, destinationPeer, messageId, key, value);
+        return abi.encodePacked(PayloadType.RegistrarKey, destinationChainId, destinationPeer, messageId, index, key, value);
     }
 
     /// @notice Decodes Registrar key-value pair payload.
     /// @param  payload   The payload to decode.
     /// @return messageId The message ID.
+    /// @return index     $M token index.
     /// @return key       The Registrar key.
     /// @return value     The Registrar value.
-    function decodeRegistrarKey(bytes memory payload) internal pure returns (bytes32 messageId, bytes32 key, bytes32 value) {
-        uint256 offset = HEADER_LENGTH - MESSAGE_ID_LENGTH;
+    function decodeRegistrarKey(bytes memory payload) internal pure returns (bytes32 messageId, uint128 index, bytes32 key, bytes32 value) {
+        uint256 offset = OFFSET;
 
         (messageId, offset) = payload.asBytes32Unchecked(offset);
+        (index, offset) = payload.asUint128Unchecked(offset);
         (key, offset) = payload.asBytes32Unchecked(offset);
         (value, offset) = payload.asBytes32Unchecked(offset);
 
@@ -192,6 +198,7 @@ library PayloadEncoder {
     /// @param destinationChainId The destination chain ID.
     /// @param destinationPeer    The address of the peer bridge adapter on the destination chain.
     /// @param messageId          The message ID.
+    /// @param index              $M token index.
     /// @param listName           The name of the list.
     /// @param account            The address of the account.
     /// @param add                Indicates whether to add or remove the account from the list.
@@ -199,27 +206,30 @@ library PayloadEncoder {
         uint32 destinationChainId,
         bytes32 destinationPeer,
         bytes32 messageId,
+        uint128 index,
         bytes32 listName,
         address account,
         bool add
     ) internal pure returns (bytes memory) {
-        return abi.encodePacked(PayloadType.RegistrarList, destinationChainId, destinationPeer, messageId, listName, account, add);
+        return abi.encodePacked(PayloadType.RegistrarList, destinationChainId, destinationPeer, messageId, index, listName, account, add);
     }
 
     /// @notice Decodes Registrar list update payload.
     /// @param  payload   The payload to decode.
     /// @return messageId The message ID.
+    /// @return index     $M token index.
     /// @return listName  The name of the list.
     /// @return account   The address of the account.
     /// @return add       Indicates whether the account was added or removed from the list.
     function decodeRegistrarList(bytes memory payload)
         internal
         pure
-        returns (bytes32 messageId, bytes32 listName, address account, bool add)
+        returns (bytes32 messageId, uint128 index, bytes32 listName, address account, bool add)
     {
-        uint256 offset = HEADER_LENGTH - MESSAGE_ID_LENGTH;
+        uint256 offset = OFFSET;
 
         (messageId, offset) = payload.asBytes32Unchecked(offset);
+        (index, offset) = payload.asUint128Unchecked(offset);
         (listName, offset) = payload.asBytes32Unchecked(offset);
         (account, offset) = payload.asAddressUnchecked(offset);
         (add, offset) = payload.asBoolUnchecked(offset);
@@ -231,6 +241,7 @@ library PayloadEncoder {
     /// @param destinationChainId The destination chain ID.
     /// @param destinationPeer    The address of the peer bridge adapter on the destination chain.
     /// @param messageId          The message ID.
+    /// @param index              $M token index.
     /// @param orderId            The ID of the order being reported.
     /// @param amountInToRelease  The amount of input token to release to the filler on the source chain.
     /// @param amountOutFilled    The amount of output tokens filled.
@@ -240,6 +251,7 @@ library PayloadEncoder {
         uint32 destinationChainId,
         bytes32 destinationPeer,
         bytes32 messageId,
+        uint128 index,
         bytes32 orderId,
         uint128 amountInToRelease,
         uint128 amountOutFilled,
@@ -251,6 +263,7 @@ library PayloadEncoder {
             destinationChainId,
             destinationPeer,
             messageId,
+            index,
             orderId,
             amountInToRelease,
             amountOutFilled,
@@ -262,6 +275,7 @@ library PayloadEncoder {
     /// @notice Decodes a fill report payload.
     /// @param  payload           The payload to decode.
     /// @return messageId         The message ID.
+    /// @return index             $M token index.
     /// @return orderId           The ID of the order being reported.
     /// @return amountInToRelease The amount of input token to release to the filler on the source chain.
     /// @return amountOutFilled   The amount of output tokens filled.
@@ -272,6 +286,7 @@ library PayloadEncoder {
         pure
         returns (
             bytes32 messageId,
+            uint128 index,
             bytes32 orderId,
             uint128 amountInToRelease,
             uint128 amountOutFilled,
@@ -279,9 +294,10 @@ library PayloadEncoder {
             bytes32 tokenIn
         )
     {
-        uint256 offset = HEADER_LENGTH - MESSAGE_ID_LENGTH;
+        uint256 offset = OFFSET;
 
         (messageId, offset) = payload.asBytes32Unchecked(offset);
+        (index, offset) = payload.asUint128Unchecked(offset);
         (orderId, offset) = payload.asBytes32Unchecked(offset);
         (amountInToRelease, offset) = payload.asUint128Unchecked(offset);
         (amountOutFilled, offset) = payload.asUint128Unchecked(offset);
@@ -317,7 +333,7 @@ library PayloadEncoder {
         pure
         returns (bytes32 messageId, uint128 index, bytes32 earnerMerkleRoot)
     {
-        uint256 offset = HEADER_LENGTH - MESSAGE_ID_LENGTH;
+        uint256 offset = OFFSET;
 
         (messageId, offset) = payload.asBytes32Unchecked(offset);
         (index, offset) = payload.asUint128Unchecked(offset);
@@ -330,6 +346,7 @@ library PayloadEncoder {
     /// @param destinationChainId The destination chain ID.
     /// @param destinationPeer    The address of the peer bridge adapter on the destination chain.
     /// @param messageId          The message ID.
+    /// @param index              $M token index.
     /// @param orderId            The ID of the order that the cancellation is being reported for.
     /// @param orderSender        The address that originally created the order on the origin chain.
     /// @param tokenIn            The address of the input token on the origin chain.
@@ -337,43 +354,33 @@ library PayloadEncoder {
         uint32 destinationChainId,
         bytes32 destinationPeer,
         bytes32 messageId,
+        uint128 index,
         bytes32 orderId,
         bytes32 orderSender,
         bytes32 tokenIn,
         uint128 amountInToRefund
     ) internal pure returns (bytes memory) {
         return abi.encodePacked(
-            PayloadType.CancelReport,
-            destinationChainId,
-            destinationPeer,
-            messageId,
-            orderId,
-            orderSender,
-            tokenIn,
-            amountInToRefund
+            PayloadType.CancelReport, destinationChainId, destinationPeer, messageId, index, orderId, orderSender, tokenIn, amountInToRefund
         );
     }
 
     /// @notice Decodes an OrderBook cancel report payload.
     /// @param  payload    The payload to decode.
     /// @return messageId  The message ID.
+    /// @return index      $M token index.
     /// @return orderId    The ID of the order that the cancellation is being reported for.
     /// @return orderSender The address that originally created the order on the origin chain.
     /// @return tokenIn    The address of the input token on the origin chain.
     function decodeCancelReport(bytes memory payload)
         internal
         pure
-        returns (
-            bytes32 messageId,
-            bytes32 orderId,
-            bytes32 orderSender,
-            bytes32 tokenIn,
-            uint128 amountInToRefund
-        )
+        returns (bytes32 messageId, uint128 index, bytes32 orderId, bytes32 orderSender, bytes32 tokenIn, uint128 amountInToRefund)
     {
-        uint256 offset = HEADER_LENGTH - MESSAGE_ID_LENGTH;
+        uint256 offset = OFFSET;
 
         (messageId, offset) = payload.asBytes32Unchecked(offset);
+        (index, offset) = payload.asUint128Unchecked(offset);
         (orderId, offset) = payload.asBytes32Unchecked(offset);
         (orderSender, offset) = payload.asBytes32Unchecked(offset);
         (tokenIn, offset) = payload.asBytes32Unchecked(offset);
@@ -388,20 +395,21 @@ library PayloadEncoder {
         uint32 destinationChainId = 0;
         bytes32 destinationPeer = bytes32(0);
         bytes32 messageId = bytes32(0);
+        uint128 index = 0;
         if (payloadType == PayloadType.TokenTransfer) {
-            return encodeTokenTransfer(destinationChainId, destinationPeer, messageId, 0, bytes32(0), address(0), bytes32(0), 0);
+            return encodeTokenTransfer(destinationChainId, destinationPeer, messageId, index, 0, bytes32(0), address(0), bytes32(0));
         } else if (payloadType == PayloadType.Index) {
-            return encodeIndex(destinationChainId, destinationPeer, messageId, 0);
+            return encodeIndex(destinationChainId, destinationPeer, messageId, index);
         } else if (payloadType == PayloadType.RegistrarKey) {
-            return encodeRegistrarKey(destinationChainId, destinationPeer, messageId, bytes32(0), bytes32(0));
+            return encodeRegistrarKey(destinationChainId, destinationPeer, messageId, index, bytes32(0), bytes32(0));
         } else if (payloadType == PayloadType.RegistrarList) {
-            return encodeRegistrarList(destinationChainId, destinationPeer, messageId, bytes32(0), address(0), false);
+            return encodeRegistrarList(destinationChainId, destinationPeer, messageId, index, bytes32(0), address(0), false);
         } else if (payloadType == PayloadType.FillReport) {
-            return encodeFillReport(destinationChainId, destinationPeer, messageId, bytes32(0), 0, 0, bytes32(0), bytes32(0));
+            return encodeFillReport(destinationChainId, destinationPeer, messageId, index, bytes32(0), 0, 0, bytes32(0), bytes32(0));
         } else if (payloadType == PayloadType.EarnerMerkleRoot) {
-            return encodeEarnerMerkleRoot(destinationChainId, destinationPeer, messageId, 0, bytes32(0));
+            return encodeEarnerMerkleRoot(destinationChainId, destinationPeer, messageId, index, bytes32(0));
         } else if (payloadType == PayloadType.CancelReport) {
-            return encodeCancelReport(destinationChainId, destinationPeer, messageId, bytes32(0), bytes32(0), bytes32(0), uint128(0));
+            return encodeCancelReport(destinationChainId, destinationPeer, messageId, index, bytes32(0), bytes32(0), bytes32(0), uint128(0));
         }
 
         revert InvalidPayloadType(uint8(payloadType));

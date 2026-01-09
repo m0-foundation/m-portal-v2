@@ -19,15 +19,17 @@ interface ISpokePortal is IPortal {
     /// @notice Emitted when the Registrar key is received from the Hub.
     /// @param  key       The Registrar key of some value.
     /// @param  value     The value.
+    /// @param  index     The $M token index.
     /// @param  messageId The unique ID of the message.
-    event RegistrarKeyReceived(bytes32 indexed key, bytes32 value, bytes32 messageId);
+    event RegistrarKeyReceived(bytes32 indexed key, bytes32 value, uint128 index, bytes32 messageId);
 
     /// @notice Emitted when the Registrar list status is received from the Hub.
     /// @param  listName  The name of the list.
     /// @param  account   The account.
     /// @param  add       Indicates if the account is added or removed from the list.
+    /// @param  index     The $M token index.
     /// @param  messageId The unique ID of the message.
-    event RegistrarListUpdateReceived(bytes32 indexed listName, address indexed account, bool add, bytes32 messageId);
+    event RegistrarListUpdateReceived(bytes32 indexed listName, address indexed account, bool add, uint128 index, bytes32 messageId);
 
     /// @notice Emitted when cross-Spoke token transfer is enabled for the specified Spoke.
     /// @param  spokeChainId The ID of the Spoke chain.

@@ -294,11 +294,12 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         bytes32 value = IRegistrarLike(registrar).get(key);
         bytes32 destinationPeer = IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId);
         messageId = _getMessageId(destinationChainId);
-        bytes memory payload = PayloadEncoder.encodeRegistrarKey(destinationChainId, destinationPeer, messageId, key, value);
+        uint128 index = _currentIndex();
+        bytes memory payload = PayloadEncoder.encodeRegistrarKey(destinationChainId, destinationPeer, messageId, index, key, value);
 
         _sendMessage(destinationChainId, PayloadType.RegistrarKey, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
 
-        emit RegistrarKeySent(destinationChainId, key, value, bridgeAdapter, messageId);
+        emit RegistrarKeySent(destinationChainId, key, value, index, bridgeAdapter, messageId);
     }
 
     /// @dev Sends the Registrar list status for an account to the destination chain.
@@ -315,11 +316,13 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         bool status = IRegistrarLike(registrar).listContains(listName, account);
         bytes32 destinationPeer = IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId);
         messageId = _getMessageId(destinationChainId);
-        bytes memory payload = PayloadEncoder.encodeRegistrarList(destinationChainId, destinationPeer, messageId, listName, account, status);
+        uint128 index = _currentIndex();
+        bytes memory payload =
+            PayloadEncoder.encodeRegistrarList(destinationChainId, destinationPeer, messageId, index, listName, account, status);
 
         _sendMessage(destinationChainId, PayloadType.RegistrarList, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
 
-        emit RegistrarListStatusSent(destinationChainId, listName, account, status, bridgeAdapter, messageId);
+        emit RegistrarListStatusSent(destinationChainId, listName, account, status, index, bridgeAdapter, messageId);
     }
 
     /// @dev Sends the Earner Merkle Root to the destination chain.

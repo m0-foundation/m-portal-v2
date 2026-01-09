@@ -56,7 +56,7 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
     /// @inheritdoc ISpokePortal
     function initialize(address owner, address pauser, address operator, bool crossSpokeTransferEnabled) external initializer {
         _initialize(owner, pauser, operator);
-        
+
         if (crossSpokeTransferEnabled) {
             _enableCrossSpokeTokenTransfer(currentChainId);
         }
@@ -100,33 +100,41 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
     function _updateMTokenIndex(bytes memory payload) private {
         (bytes32 messageId, uint128 index) = payload.decodeIndex();
 
-        if (index > _currentIndex()) {
-            ISpokeMTokenLike(mToken).updateIndex(index);
-        }
+        _updateMTokenIndex(index);
 
         emit MTokenIndexReceived(index, messageId);
     }
 
+    /// @notice Updates $M Token index to the specified index if it's greater than the current one.
+    function _updateMTokenIndex(uint128 index) internal override {
+        if (index > _currentIndex()) {
+            ISpokeMTokenLike(mToken).updateIndex(index);
+        }
+    }
+
     /// @notice Sets a Registrar key received from the Hub chain.
     function _setRegistrarKey(bytes memory payload_) private {
-        (bytes32 messageId, bytes32 key, bytes32 value) = payload_.decodeRegistrarKey();
+        (bytes32 messageId, uint128 index, bytes32 key, bytes32 value) = payload_.decodeRegistrarKey();
 
         IRegistrarLike(registrar).setKey(key, value);
+        _updateMTokenIndex(index);
 
-        emit RegistrarKeyReceived(key, value, messageId);
+        emit RegistrarKeyReceived(key, value, index, messageId);
     }
 
     /// @notice Adds or removes an account from the Registrar List based on the message from the Hub chain.
     function _updateRegistrarList(bytes memory payload_) private {
-        (bytes32 messageId, bytes32 listName, address account, bool add) = payload_.decodeRegistrarList();
+        (bytes32 messageId, uint128 index, bytes32 listName, address account, bool add) = payload_.decodeRegistrarList();
 
-        emit RegistrarListUpdateReceived(listName, account, add, messageId);
+        emit RegistrarListUpdateReceived(listName, account, add, index, messageId);
 
         if (add) {
             IRegistrarLike(registrar).addToList(listName, account);
         } else {
             IRegistrarLike(registrar).removeFromList(listName, account);
         }
+
+        _updateMTokenIndex(index);
     }
 
     /// @dev Mints $M Token to the `recipient`.

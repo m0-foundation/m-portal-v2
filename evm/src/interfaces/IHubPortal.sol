@@ -30,15 +30,19 @@ interface IHubPortal is IPortal {
     /// @param  destinationChainId The chain Id of the destination chain.
     /// @param  key                The key that was sent.
     /// @param  value              The value that was sent.
+    /// @param  index              The $M token index.
     /// @param  bridgeAdapter      The address of the bridge adapter used to send the message.
     /// @param  messageId          The unique ID of the sent message.
-    event RegistrarKeySent(uint32 indexed destinationChainId, bytes32 indexed key, bytes32 value, address bridgeAdapter, bytes32 messageId);
+    event RegistrarKeySent(
+        uint32 indexed destinationChainId, bytes32 indexed key, bytes32 value, uint128 index, address bridgeAdapter, bytes32 messageId
+    );
 
     /// @notice Emitted when the Registrar list status for an account is sent to a destination chain.
     /// @param  destinationChainId The chain Id of the destination chain.
     /// @param  listName           The name of the list.
     /// @param  account            The account.
     /// @param  status             The status of the account in the list.
+    /// @param  index              The $M token index.
     /// @param  bridgeAdapter      The address of the bridge adapter used to send the message.
     /// @param  messageId          The unique ID of the sent message.
     event RegistrarListStatusSent(
@@ -46,6 +50,7 @@ interface IHubPortal is IPortal {
         bytes32 indexed listName,
         address indexed account,
         bool status,
+        uint128 index,
         address bridgeAdapter,
         bytes32 messageId
     );

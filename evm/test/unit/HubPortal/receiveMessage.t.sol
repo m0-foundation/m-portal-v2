@@ -33,13 +33,6 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
         vm.deal(bridgeUser, 1 ether);
     }
 
-    /// @dev Helper to enable earning with a specific index
-    function _enableEarningWithIndex(uint128 _index) internal {
-        mToken.setCurrentIndex(_index);
-        registrar.setListContains(EARNERS_LIST, address(hubPortal), true);
-        hubPortal.enableEarning();
-    }
-
     /// @dev Helper to bridge tokens to an isolated spoke (increases principal)
     function _bridgeTokensToSpoke(uint256 _amount) internal {
         mToken.mint(bridgeUser, _amount);
@@ -60,11 +53,11 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
             SPOKE_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
+            index,
             amount,
             address(mToken).toBytes32(),
             sender,
-            recipient.toBytes32(),
-            index
+            recipient.toBytes32()
         );
 
         vm.expectEmit();
@@ -85,11 +78,11 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
             SPOKE_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
+            index,
             amount,
             address(wrappedMToken).toBytes32(),
             sender,
-            recipient.toBytes32(),
-            index
+            recipient.toBytes32()
         );
 
         vm.expectEmit();
@@ -112,6 +105,7 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
             SPOKE_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
+            index,
             orderId,
             amountInToRelease,
             amountOutFilled,
@@ -137,7 +131,9 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
         );
 
         vm.expectEmit();
-        emit IPortal.FillReportReceived(SPOKE_CHAIN_ID, orderId, amountInToRelease, amountOutFilled, originRecipient, tokenIn, messageId);
+        emit IPortal.FillReportReceived(
+            SPOKE_CHAIN_ID, orderId, amountInToRelease, amountOutFilled, originRecipient, tokenIn, index, messageId
+        );
 
         vm.prank(address(bridgeAdapter));
         hubPortal.receiveMessage(SPOKE_CHAIN_ID, payload);
@@ -150,13 +146,7 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
         uint128 amountInToRefund = 1000e6;
 
         bytes memory payload = PayloadEncoder.encodeCancelReport(
-            SPOKE_CHAIN_ID,
-            address(bridgeAdapter).toBytes32(),
-            messageId,
-            orderId,
-            originSender,
-            tokenIn,
-            amountInToRefund
+            SPOKE_CHAIN_ID, address(bridgeAdapter).toBytes32(), messageId, index, orderId, originSender, tokenIn, amountInToRefund
         );
 
         vm.expectCall(
@@ -166,17 +156,14 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
                 (
                     SPOKE_CHAIN_ID,
                     IOrderBookLike.CancelReport({
-                        orderId: orderId,
-                        originSender: originSender,
-                        tokenIn: tokenIn,
-                        amountInToRefund: amountInToRefund
+                        orderId: orderId, originSender: originSender, tokenIn: tokenIn, amountInToRefund: amountInToRefund
                     })
                 )
             )
         );
 
         vm.expectEmit();
-        emit IPortal.CancelReportReceived(SPOKE_CHAIN_ID, orderId, originSender, tokenIn, amountInToRefund, messageId);
+        emit IPortal.CancelReportReceived(SPOKE_CHAIN_ID, orderId, originSender, tokenIn, amountInToRefund, index, messageId);
 
         vm.prank(address(bridgeAdapter));
         hubPortal.receiveMessage(SPOKE_CHAIN_ID, payload);
@@ -198,11 +185,11 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
             SPOKE_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
+            index,
             amount,
             invalidWrappedToken.toBytes32(),
             sender,
-            recipient.toBytes32(),
-            index
+            recipient.toBytes32()
         );
 
         vm.expectEmit();
@@ -225,11 +212,11 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
             SPOKE_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
+            index,
             amount,
             address(mToken).toBytes32(),
             sender,
-            recipient.toBytes32(),
-            index
+            recipient.toBytes32()
         );
 
         vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, SPOKE_CHAIN_ID, unsupportedAdapter));
@@ -273,11 +260,11 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
             SPOKE_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
+            testIndex,
             amount,
             address(mToken).toBytes32(),
             sender,
-            recipient.toBytes32(),
-            testIndex
+            recipient.toBytes32()
         );
 
         vm.prank(address(bridgeAdapter));
@@ -296,11 +283,11 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
             SPOKE_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
+            testIndex,
             amount,
             address(mToken).toBytes32(),
             sender,
-            recipient.toBytes32(),
-            testIndex
+            recipient.toBytes32()
         );
 
         vm.prank(address(bridgeAdapter));
@@ -323,11 +310,11 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
             SPOKE_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
+            testIndex,
             receiveAmount,
             address(mToken).toBytes32(),
             sender,
-            recipient.toBytes32(),
-            testIndex
+            recipient.toBytes32()
         );
 
         vm.prank(address(bridgeAdapter));
@@ -350,11 +337,11 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
             SPOKE_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
+            index,
             amount,
             address(mToken).toBytes32(),
             sender,
-            recipient.toBytes32(),
-            index
+            recipient.toBytes32()
         );
 
         vm.prank(address(bridgeAdapter));
@@ -374,11 +361,11 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
             SPOKE_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
+            testIndex,
             amount,
             address(mToken).toBytes32(),
             sender,
-            recipient.toBytes32(),
-            testIndex
+            recipient.toBytes32()
         );
 
         vm.expectRevert(IHubPortal.InsufficientBridgedBalance.selector);
@@ -395,11 +382,11 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
             SPOKE_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
+            testIndex,
             amount,
             address(mToken).toBytes32(),
             sender,
-            recipient.toBytes32(),
-            testIndex
+            recipient.toBytes32()
         );
 
         vm.expectRevert(IHubPortal.InsufficientBridgedBalance.selector);
@@ -431,11 +418,11 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
             SPOKE_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
+            receiveIndex,
             receiveAmount,
             address(mToken).toBytes32(),
             sender,
-            recipient.toBytes32(),
-            receiveIndex
+            recipient.toBytes32()
         );
 
         vm.prank(address(bridgeAdapter));

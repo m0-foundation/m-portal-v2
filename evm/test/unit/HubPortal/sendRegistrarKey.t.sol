@@ -17,11 +17,17 @@ contract SendRegistrarKeyUnitTest is HubPortalUnitTestBase {
     bytes internal bridgeAdapterArgs = "";
     bytes32 internal testKey = bytes32("TEST_KEY");
     bytes32 internal testValue = bytes32("TEST_VALUE");
+    uint128 internal index = 1_100_000_068_703;
+
+    function setUp() public override {
+        super.setUp();
+        _enableEarningWithIndex(index);
+    }
 
     function test_sendRegistrarKey_withDefaultAdapter() external {
         uint256 fee = 1;
         bytes32 messageId = _getMessageId();
-        bytes memory payload = PayloadEncoder.encodeRegistrarKey(SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, testKey, testValue);
+        bytes memory payload = PayloadEncoder.encodeRegistrarKey(SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, index, testKey, testValue);
         address defaultBridgeAdapter = hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID);
 
         registrar.set(testKey, testValue);
@@ -31,7 +37,7 @@ contract SendRegistrarKeyUnitTest is HubPortalUnitTestBase {
             abi.encodeCall(IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, KEY_UPDATE_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs))
         );
         vm.expectEmit();
-        emit IHubPortal.RegistrarKeySent(SPOKE_CHAIN_ID, testKey, testValue, defaultBridgeAdapter, messageId);
+        emit IHubPortal.RegistrarKeySent(SPOKE_CHAIN_ID, testKey, testValue, index, defaultBridgeAdapter, messageId);
 
         vm.prank(user);
         hubPortal.sendRegistrarKey{ value: fee }(SPOKE_CHAIN_ID, testKey, refundAddress, bridgeAdapterArgs);
@@ -40,7 +46,7 @@ contract SendRegistrarKeyUnitTest is HubPortalUnitTestBase {
     function test_sendRegistrarKey_withSpecificAdapter() external {
         uint256 fee = 1;
         bytes32 messageId = _getMessageId();
-        bytes memory payload = PayloadEncoder.encodeRegistrarKey(SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, testKey, testValue);
+        bytes memory payload = PayloadEncoder.encodeRegistrarKey(SPOKE_CHAIN_ID, spokeBridgeAdapter, messageId, index, testKey, testValue);
 
         // Deploy a new mock adapter
         MockBridgeAdapter customAdapter = new MockBridgeAdapter();
@@ -59,7 +65,7 @@ contract SendRegistrarKeyUnitTest is HubPortalUnitTestBase {
             abi.encodeCall(IBridgeAdapter.sendMessage, (SPOKE_CHAIN_ID, KEY_UPDATE_GAS_LIMIT, refundAddress, payload, bridgeAdapterArgs))
         );
         vm.expectEmit();
-        emit IHubPortal.RegistrarKeySent(SPOKE_CHAIN_ID, testKey, testValue, address(customAdapter), messageId);
+        emit IHubPortal.RegistrarKeySent(SPOKE_CHAIN_ID, testKey, testValue, index, address(customAdapter), messageId);
 
         vm.prank(user);
         hubPortal.sendRegistrarKey{ value: fee }(SPOKE_CHAIN_ID, testKey, refundAddress, address(customAdapter), bridgeAdapterArgs);

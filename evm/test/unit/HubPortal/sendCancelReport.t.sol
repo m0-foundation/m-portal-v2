@@ -15,6 +15,12 @@ contract SendCancelReportUnitTest is HubPortalUnitTestBase {
 
     bytes32 internal refundAddress = makeAddr("refundAddress").toBytes32();
     bytes internal bridgeAdapterArgs = "";
+    uint128 internal index = 1_100_000_068_703;
+
+    function setUp() public override {
+        super.setUp();
+        _enableEarningWithIndex(index);
+    }
 
     IOrderBookLike.CancelReport internal testReport = IOrderBookLike.CancelReport({
         orderId: bytes32(uint256(1)),
@@ -30,6 +36,7 @@ contract SendCancelReportUnitTest is HubPortalUnitTestBase {
             SPOKE_CHAIN_ID,
             spokeBridgeAdapter,
             messageId,
+            index,
             testReport.orderId,
             testReport.originSender,
             testReport.tokenIn,
@@ -48,6 +55,7 @@ contract SendCancelReportUnitTest is HubPortalUnitTestBase {
             testReport.originSender,
             testReport.tokenIn,
             testReport.amountInToRefund,
+            index,
             defaultBridgeAdapter,
             messageId
         );
@@ -63,6 +71,7 @@ contract SendCancelReportUnitTest is HubPortalUnitTestBase {
             SPOKE_CHAIN_ID,
             spokeBridgeAdapter,
             messageId,
+            index,
             testReport.orderId,
             testReport.originSender,
             testReport.tokenIn,
@@ -90,6 +99,7 @@ contract SendCancelReportUnitTest is HubPortalUnitTestBase {
             testReport.originSender,
             testReport.tokenIn,
             testReport.amountInToRefund,
+            index,
             address(customAdapter),
             messageId
         );

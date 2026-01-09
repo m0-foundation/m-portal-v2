@@ -15,6 +15,7 @@ contract SendFillReportUnitTest is HubPortalUnitTestBase {
 
     bytes32 internal refundAddress = makeAddr("refundAddress").toBytes32();
     bytes internal bridgeAdapterArgs = "";
+    uint128 internal index = 1_100_000_068_703;
 
     IOrderBookLike.FillReport internal testReport = IOrderBookLike.FillReport({
         orderId: bytes32(uint256(1)),
@@ -24,6 +25,11 @@ contract SendFillReportUnitTest is HubPortalUnitTestBase {
         tokenIn: makeAddr("tokenIn").toBytes32()
     });
 
+    function setUp() public override {
+        super.setUp();
+        _enableEarningWithIndex(index);
+    }
+
     function test_sendFillReport_withDefaultAdapter() external {
         uint256 fee = 1;
         bytes32 messageId = _getMessageId();
@@ -31,6 +37,7 @@ contract SendFillReportUnitTest is HubPortalUnitTestBase {
             SPOKE_CHAIN_ID,
             spokeBridgeAdapter,
             messageId,
+            index,
             testReport.orderId,
             testReport.amountInToRelease,
             testReport.amountOutFilled,
@@ -51,6 +58,7 @@ contract SendFillReportUnitTest is HubPortalUnitTestBase {
             testReport.amountOutFilled,
             testReport.originRecipient,
             testReport.tokenIn,
+            index,
             defaultBridgeAdapter,
             messageId
         );
@@ -66,6 +74,7 @@ contract SendFillReportUnitTest is HubPortalUnitTestBase {
             SPOKE_CHAIN_ID,
             spokeBridgeAdapter,
             messageId,
+            index,
             testReport.orderId,
             testReport.amountInToRelease,
             testReport.amountOutFilled,
@@ -95,6 +104,7 @@ contract SendFillReportUnitTest is HubPortalUnitTestBase {
             testReport.amountOutFilled,
             testReport.originRecipient,
             testReport.tokenIn,
+            index,
             address(customAdapter),
             messageId
         );
