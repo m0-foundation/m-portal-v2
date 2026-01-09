@@ -216,6 +216,7 @@ contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {
         bytes32 orderId = bytes32("orderId");
         bytes32 originSender = sender.toBytes32();
         bytes32 tokenIn = address(mToken).toBytes32();
+        uint128 amountInToRefund = 1000e6;
 
         bytes memory payload = PayloadEncoder.encodeCancelReport(
             HUB_CHAIN_ID,
@@ -223,7 +224,8 @@ contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {
             messageId,
             orderId,
             originSender,
-            tokenIn
+            tokenIn,
+            amountInToRefund
         );
 
         vm.expectCall(
@@ -235,14 +237,15 @@ contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {
                     IOrderBookLike.CancelReport({
                         orderId: orderId,
                         originSender: originSender,
-                        tokenIn: tokenIn
+                        tokenIn: tokenIn,
+                        amountInToRefund: amountInToRefund
                     })
                 )
             )
         );
 
         vm.expectEmit();
-        emit IPortal.CancelReportReceived(HUB_CHAIN_ID, orderId, originSender, tokenIn, messageId);
+        emit IPortal.CancelReportReceived(HUB_CHAIN_ID, orderId, originSender, tokenIn, amountInToRefund, messageId);
 
         vm.prank(address(bridgeAdapter));
         spokePortal.receiveMessage(HUB_CHAIN_ID, payload);
