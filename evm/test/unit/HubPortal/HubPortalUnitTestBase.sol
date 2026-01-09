@@ -137,4 +137,10 @@ abstract contract HubPortalUnitTestBase is Test {
         uint256 nonce = hubPortal.getNonce();
         return keccak256(abi.encode(HUB_CHAIN_ID, SPOKE_CHAIN_ID, nonce++));
     }
+
+    function _enableEarningWithIndex(uint128 _index) internal {
+        mToken.setCurrentIndex(_index);
+        registrar.setListContains(EARNERS_LIST, address(hubPortal), true);
+        hubPortal.enableEarning();
+    }
 }

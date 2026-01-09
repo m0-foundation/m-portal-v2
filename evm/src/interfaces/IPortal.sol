@@ -60,6 +60,7 @@ interface IPortal {
     /// @param amountOutFilled    The amount of output token that was filled on the destination chain
     /// @param originRecipient    The address on the origin chain that should receive released funds
     /// @param tokenIn            The address of the input token on the origin chain
+    /// @param index              $M token index.
     /// @param bridgeAdapter      The address of the bridge adapter used to send the message.
     /// @param messageId          The unique identifier for the sent message.
     event FillReportSent(
@@ -69,6 +70,7 @@ interface IPortal {
         uint128 amountOutFilled,
         bytes32 originRecipient,
         bytes32 tokenIn,
+        uint128 index,
         address bridgeAdapter,
         bytes32 messageId
     );
@@ -80,6 +82,7 @@ interface IPortal {
     /// @param amountOutFilled    The amount of output token that was filled on the destination chain
     /// @param originRecipient    The address on the origin chain that should receive released funds
     /// @param tokenIn            The address of the input token on the origin chain
+    /// @param index              $M token index.
     /// @param messageId          The unique identifier for the message.
     event FillReportReceived(
         uint32 indexed sourceChainId,
@@ -88,6 +91,7 @@ interface IPortal {
         uint128 amountOutFilled,
         bytes32 originRecipient,
         bytes32 tokenIn,
+        uint128 index,
         bytes32 messageId
     );
 
@@ -97,6 +101,7 @@ interface IPortal {
     /// @param originSender       The address on the origin chain that created the order.
     /// @param tokenIn            The address of the input token on the origin chain.
     /// @param amountInToRefund   The amount of input token to refund to the origin sender.
+    /// @param index              $M token index.
     /// @param bridgeAdapter      The address of the bridge adapter used to send the message.
     /// @param messageId          The unique identifier for the sent message.
     event CancelReportSent(
@@ -105,6 +110,7 @@ interface IPortal {
         bytes32 originSender,
         bytes32 tokenIn,
         uint128 amountInToRefund,
+        uint128 index,
         address bridgeAdapter,
         bytes32 messageId
     );
@@ -115,6 +121,7 @@ interface IPortal {
     /// @param originSender  The address on the origin chain that created the order.
     /// @param tokenIn       The address of the input token on the origin chain.
     /// @param amountInToRefund The amount of input token to refund to the origin sender.
+    /// @param index         $M token index.
     /// @param messageId     The unique identifier for the message.
     event CancelReportReceived(
         uint32 indexed sourceChainId,
@@ -122,6 +129,7 @@ interface IPortal {
         bytes32 originSender,
         bytes32 tokenIn,
         uint128 amountInToRefund,
+        uint128 index,
         bytes32 messageId
     );
 

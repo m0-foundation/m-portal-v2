@@ -12,6 +12,7 @@ contract PayloadEncoderTest is Test {
     uint32 DESTINATION_CHAIN_ID = 1;
     bytes32 DESTINATION_PEER = "peer";
     bytes32 MESSAGE_ID = "message id";
+    uint128 INDEX = 1.2e12;
 
     /// forge-config: default.allow_internal_expect_revert = true
     function test_decodePayloadType_invalidPayloadLength() external {
@@ -23,32 +24,32 @@ contract PayloadEncoderTest is Test {
 
     /// forge-config: default.allow_internal_expect_revert = true
     function test_decodePayloadType_invalidPayloadType() external {
-        bytes memory payload = abi.encodePacked(uint8(100), DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID);
+        bytes memory payload = abi.encodePacked(uint8(100), DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, INDEX);
 
         vm.expectRevert(abi.encodeWithSelector(PayloadEncoder.InvalidPayloadType.selector, 100));
         PayloadEncoder.decodePayloadType(payload);
     }
 
     function test_decodePayloadType() external view {
-        bytes memory payload = abi.encodePacked(PayloadType.TokenTransfer, DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID);
+        bytes memory payload = abi.encodePacked(PayloadType.TokenTransfer, DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, INDEX);
         assertEq(uint8(PayloadEncoder.decodePayloadType(payload)), uint8(PayloadType.TokenTransfer));
 
-        payload = abi.encodePacked(PayloadType.Index, DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID);
+        payload = abi.encodePacked(PayloadType.Index, DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, INDEX);
         assertEq(uint8(PayloadEncoder.decodePayloadType(payload)), uint8(PayloadType.Index));
 
-        payload = abi.encodePacked(PayloadType.RegistrarKey, DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID);
+        payload = abi.encodePacked(PayloadType.RegistrarKey, DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, INDEX);
         assertEq(uint8(PayloadEncoder.decodePayloadType(payload)), uint8(PayloadType.RegistrarKey));
 
-        payload = abi.encodePacked(PayloadType.RegistrarList, DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID);
+        payload = abi.encodePacked(PayloadType.RegistrarList, DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, INDEX);
         assertEq(uint8(PayloadEncoder.decodePayloadType(payload)), uint8(PayloadType.RegistrarList));
 
-        payload = abi.encodePacked(PayloadType.FillReport, DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID);
+        payload = abi.encodePacked(PayloadType.FillReport, DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, INDEX);
         assertEq(uint8(PayloadEncoder.decodePayloadType(payload)), uint8(PayloadType.FillReport));
 
-        payload = abi.encodePacked(PayloadType.EarnerMerkleRoot, DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID);
+        payload = abi.encodePacked(PayloadType.EarnerMerkleRoot, DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, INDEX);
         assertEq(uint8(PayloadEncoder.decodePayloadType(payload)), uint8(PayloadType.EarnerMerkleRoot));
 
-        payload = abi.encodePacked(PayloadType.CancelReport, DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID);
+        payload = abi.encodePacked(PayloadType.CancelReport, DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, INDEX);
         assertEq(uint8(PayloadEncoder.decodePayloadType(payload)), uint8(PayloadType.CancelReport));
     }
 
@@ -84,7 +85,7 @@ contract PayloadEncoderTest is Test {
         uint128 index = 1.2e12;
 
         bytes memory payload =
-            PayloadEncoder.encodeTokenTransfer(DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, amount, token, sender, recipient, index);
+            PayloadEncoder.encodeTokenTransfer(DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, index, amount, token, sender, recipient);
 
         assertEq(
             payload,
@@ -93,11 +94,11 @@ contract PayloadEncoderTest is Test {
                 DESTINATION_CHAIN_ID,
                 DESTINATION_PEER,
                 MESSAGE_ID,
+                index,
                 amount.toUint128(),
                 token,
                 sender.toBytes32(),
-                recipient,
-                index
+                recipient
             )
         );
     }
@@ -113,7 +114,7 @@ contract PayloadEncoderTest is Test {
         vm.assume(amount < type(uint128).max);
         vm.assume(index < type(uint128).max);
         bytes memory payload =
-            PayloadEncoder.encodeTokenTransfer(DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, amount, token, sender, recipient, index);
+            PayloadEncoder.encodeTokenTransfer(DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, index, amount, token, sender, recipient);
         assertEq(
             payload,
             abi.encodePacked(
@@ -121,11 +122,11 @@ contract PayloadEncoderTest is Test {
                 DESTINATION_CHAIN_ID,
                 DESTINATION_PEER,
                 messageId,
+                index,
                 amount.toUint128(),
                 token,
                 sender.toBytes32(),
-                recipient,
-                index
+                recipient
             )
         );
     }
@@ -139,24 +140,24 @@ contract PayloadEncoderTest is Test {
         uint128 index = 1.2e12;
 
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
-            DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, amount, token.toBytes32(), sender, recipient.toBytes32(), index
+            DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, index, amount, token.toBytes32(), sender, recipient.toBytes32()
         );
 
         (
             bytes32 decodedMessageId,
+            uint128 decodedIndex,
             uint256 decodedAmount,
             address decodedToken,
             bytes32 decodedSender,
-            address decodedRecipient,
-            uint128 decodedIndex
+            address decodedRecipient
         ) = PayloadEncoder.decodeTokenTransfer(payload);
 
         assertEq(decodedMessageId, messageId);
+        assertEq(decodedIndex, index);
         assertEq(decodedAmount, amount);
         assertEq(decodedToken, token);
         assertEq(decodedSender, sender.toBytes32());
         assertEq(decodedRecipient, recipient);
-        assertEq(decodedIndex, index);
     }
 
     function testFuzz_decodeTokenTransfer(
@@ -171,23 +172,23 @@ contract PayloadEncoderTest is Test {
         vm.assume(index < type(uint128).max);
 
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
-            DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, amount, token.toBytes32(), sender, recipient.toBytes32(), index
+            DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, index, amount, token.toBytes32(), sender, recipient.toBytes32()
         );
         (
             bytes32 decodedMessageId,
+            uint128 decodedIndex,
             uint256 decodedAmount,
             address decodedToken,
             bytes32 decodedSender,
-            address decodedRecipient,
-            uint128 decodedIndex
+            address decodedRecipient
         ) = PayloadEncoder.decodeTokenTransfer(payload);
 
+        assertEq(decodedMessageId, messageId);
+        assertEq(decodedIndex, index);
         assertEq(decodedAmount, amount);
         assertEq(decodedToken, token);
         assertEq(decodedSender, sender.toBytes32());
         assertEq(decodedRecipient, recipient);
-        assertEq(decodedIndex, index);
-        assertEq(decodedMessageId, messageId);
     }
 
     function test_encodeIndex() external view {
@@ -228,36 +229,41 @@ contract PayloadEncoderTest is Test {
         bytes32 key = "key";
         bytes32 value = "value";
 
-        bytes memory payload = PayloadEncoder.encodeRegistrarKey(DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, key, value);
+        bytes memory payload = PayloadEncoder.encodeRegistrarKey(DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, INDEX, key, value);
 
-        assertEq(payload, abi.encodePacked(PayloadType.RegistrarKey, DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, key, value));
+        assertEq(payload, abi.encodePacked(PayloadType.RegistrarKey, DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, INDEX, key, value));
     }
 
-    function testFuzz_encodeKey(bytes32 key, bytes32 value, bytes32 messageId) external view {
-        bytes memory payload = PayloadEncoder.encodeRegistrarKey(DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, key, value);
+    function testFuzz_encodeKey(bytes32 key, bytes32 value, bytes32 messageId, uint128 index) external view {
+        bytes memory payload = PayloadEncoder.encodeRegistrarKey(DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, index, key, value);
 
-        assertEq(payload, abi.encodePacked(PayloadType.RegistrarKey, DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, key, value));
+        assertEq(payload, abi.encodePacked(PayloadType.RegistrarKey, DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, index, key, value));
     }
 
     function test_decodeKey() external view {
         bytes32 messageId = "messageId";
         bytes32 key = "key";
         bytes32 value = "value";
-        bytes memory payload = PayloadEncoder.encodeRegistrarKey(DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, key, value);
+        uint128 index = 1.2e12;
+        bytes memory payload = PayloadEncoder.encodeRegistrarKey(DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, index, key, value);
 
-        (bytes32 decodedMessageId, bytes32 decodedKey, bytes32 decodedValue) = PayloadEncoder.decodeRegistrarKey(payload);
+        (bytes32 decodedMessageId, uint128 decodedIndex, bytes32 decodedKey, bytes32 decodedValue) =
+            PayloadEncoder.decodeRegistrarKey(payload);
 
         assertEq(decodedMessageId, messageId);
+        assertEq(decodedIndex, index);
         assertEq(decodedKey, key);
         assertEq(decodedValue, value);
     }
 
-    function testFuzz_decodeKey(bytes32 messageId, bytes32 key, bytes32 value) external view {
-        bytes memory payload = PayloadEncoder.encodeRegistrarKey(DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, key, value);
+    function testFuzz_decodeKey(bytes32 messageId, uint128 index, bytes32 key, bytes32 value) external view {
+        bytes memory payload = PayloadEncoder.encodeRegistrarKey(DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, index, key, value);
 
-        (bytes32 decodedMessageId, bytes32 decodedKey, bytes32 decodedValue) = PayloadEncoder.decodeRegistrarKey(payload);
+        (bytes32 decodedMessageId, uint128 decodedIndex, bytes32 decodedKey, bytes32 decodedValue) =
+            PayloadEncoder.decodeRegistrarKey(payload);
 
         assertEq(decodedMessageId, messageId);
+        assertEq(decodedIndex, index);
         assertEq(decodedKey, key);
         assertEq(decodedValue, value);
     }
@@ -267,15 +273,19 @@ contract PayloadEncoderTest is Test {
         address account = makeAddr("account");
         bool add = true;
         bytes memory payload =
-            abi.encodePacked(PayloadType.RegistrarList, DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, listName, account, add);
+            abi.encodePacked(PayloadType.RegistrarList, DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, INDEX, listName, account, add);
 
-        assertEq(PayloadEncoder.encodeRegistrarList(DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, listName, account, add), payload);
+        assertEq(
+            PayloadEncoder.encodeRegistrarList(DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, INDEX, listName, account, add), payload
+        );
     }
 
-    function testFuzz_encodeListUpdate(bytes32 messageId, bytes32 listName, address account, bool add) external view {
-        bytes memory payload = PayloadEncoder.encodeRegistrarList(DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, listName, account, add);
+    function testFuzz_encodeListUpdate(bytes32 messageId, bytes32 listName, address account, bool add, uint128 index) external view {
+        bytes memory payload =
+            PayloadEncoder.encodeRegistrarList(DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, index, listName, account, add);
         assertEq(
-            payload, abi.encodePacked(PayloadType.RegistrarList, DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, listName, account, add)
+            payload,
+            abi.encodePacked(PayloadType.RegistrarList, DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, index, listName, account, add)
         );
     }
 
@@ -284,22 +294,27 @@ contract PayloadEncoderTest is Test {
         bytes32 listName = "list";
         address account = makeAddr("account");
         bool add = true;
-        bytes memory payload = PayloadEncoder.encodeRegistrarList(DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, listName, account, add);
-        (bytes32 decodedMessageId, bytes32 decodedListName, address decodedAccount, bool decodedStatus) =
+        uint128 index = 1.2e12;
+        bytes memory payload =
+            PayloadEncoder.encodeRegistrarList(DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, index, listName, account, add);
+        (bytes32 decodedMessageId, uint128 decodedIndex, bytes32 decodedListName, address decodedAccount, bool decodedStatus) =
             PayloadEncoder.decodeRegistrarList(payload);
 
         assertEq(decodedMessageId, messageId);
+        assertEq(decodedIndex, index);
         assertEq(decodedListName, listName);
         assertEq(decodedAccount, account);
         assertEq(decodedStatus, add);
     }
 
-    function testFuzz_decodeListUpdate(bytes32 messageId, bytes32 listName, address account, bool add) external view {
-        bytes memory payload = PayloadEncoder.encodeRegistrarList(DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, listName, account, add);
-        (bytes32 decodedMessageId, bytes32 decodedListName, address decodedAccount, bool decodedStatus) =
+    function testFuzz_decodeListUpdate(bytes32 messageId, bytes32 listName, address account, bool add, uint128 index) external view {
+        bytes memory payload =
+            PayloadEncoder.encodeRegistrarList(DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, index, listName, account, add);
+        (bytes32 decodedMessageId, uint128 decodedIndex, bytes32 decodedListName, address decodedAccount, bool decodedStatus) =
             PayloadEncoder.decodeRegistrarList(payload);
 
         assertEq(decodedMessageId, messageId);
+        assertEq(decodedIndex, index);
         assertEq(decodedListName, listName);
         assertEq(decodedAccount, account);
         assertEq(decodedStatus, add);
@@ -316,6 +331,7 @@ contract PayloadEncoderTest is Test {
             DESTINATION_CHAIN_ID,
             DESTINATION_PEER,
             MESSAGE_ID,
+            INDEX,
             orderId,
             amountInToRelease,
             amountOutFilled,
@@ -325,24 +341,32 @@ contract PayloadEncoderTest is Test {
 
         assertEq(
             PayloadEncoder.encodeFillReport(
-                DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, orderId, amountInToRelease, amountOutFilled, originRecipient, tokenIn
+                DESTINATION_CHAIN_ID,
+                DESTINATION_PEER,
+                MESSAGE_ID,
+                INDEX,
+                orderId,
+                amountInToRelease,
+                amountOutFilled,
+                originRecipient,
+                tokenIn
             ),
             payload
         );
     }
 
     function test_decodeFillReport() external view {
-        bytes32 messageId = "messageId";
         bytes32 orderId = "1";
         uint128 amountInToRelease = 100;
         uint128 amountOutFilled = 100;
         bytes32 originRecipient = "recipient";
         bytes32 tokenIn = "tokenIn";
         bytes memory payload = PayloadEncoder.encodeFillReport(
-            DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, orderId, amountInToRelease, amountOutFilled, originRecipient, tokenIn
+            DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, INDEX, orderId, amountInToRelease, amountOutFilled, originRecipient, tokenIn
         );
         (
             bytes32 decodedMessageId,
+            uint128 decodedIndex,
             bytes32 decodedOrderId,
             uint128 decodedAmountInToRelease,
             uint128 decodedAmountOutFilled,
@@ -350,7 +374,8 @@ contract PayloadEncoderTest is Test {
             bytes32 decodedTokenIn
         ) = PayloadEncoder.decodeFillReport(payload);
 
-        assertEq(decodedMessageId, messageId);
+        assertEq(decodedMessageId, MESSAGE_ID);
+        assertEq(decodedIndex, INDEX);
         assertEq(decodedOrderId, orderId);
         assertEq(decodedAmountInToRelease, amountInToRelease);
         assertEq(decodedAmountOutFilled, amountOutFilled);
@@ -359,7 +384,7 @@ contract PayloadEncoderTest is Test {
     }
 
     function testFuzz_decodeFillReport(
-        bytes32 messageId,
+        uint128 index,
         bytes32 orderId,
         uint128 amountInToRelease,
         uint128 amountOutFilled,
@@ -369,10 +394,11 @@ contract PayloadEncoderTest is Test {
         vm.assume(amountInToRelease < type(uint128).max);
         vm.assume(amountOutFilled < type(uint128).max);
         bytes memory payload = PayloadEncoder.encodeFillReport(
-            DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, orderId, amountInToRelease, amountOutFilled, originRecipient, tokenIn
+            DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, index, orderId, amountInToRelease, amountOutFilled, originRecipient, tokenIn
         );
         (
-            bytes32 decodedMessageId,
+            ,
+            uint128 decodedIndex,
             bytes32 decodedOrderId,
             uint128 decodedAmountInToRelease,
             uint128 decodedAmountOutFilled,
@@ -380,7 +406,7 @@ contract PayloadEncoderTest is Test {
             bytes32 decodedTokenIn
         ) = PayloadEncoder.decodeFillReport(payload);
 
-        assertEq(decodedMessageId, messageId);
+        assertEq(decodedIndex, index);
         assertEq(decodedOrderId, orderId);
         assertEq(decodedAmountInToRelease, amountInToRelease);
         assertEq(decodedAmountOutFilled, amountOutFilled);
@@ -446,7 +472,7 @@ contract PayloadEncoderTest is Test {
         bytes32 tokenIn = "tokenIn";
         uint128 amountInToRefund = 1000e6;
         bytes memory payload = PayloadEncoder.encodeCancelReport(
-            DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, orderId, orderSender, tokenIn, amountInToRefund
+            DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, INDEX, orderId, orderSender, tokenIn, amountInToRefund
         );
 
         assertEq(
@@ -456,6 +482,7 @@ contract PayloadEncoderTest is Test {
                 DESTINATION_CHAIN_ID,
                 DESTINATION_PEER,
                 MESSAGE_ID,
+                INDEX,
                 orderId,
                 orderSender,
                 tokenIn,
@@ -466,19 +493,28 @@ contract PayloadEncoderTest is Test {
 
     function testFuzz_encodeCancelReport(
         bytes32 messageId,
+        uint128 index,
         bytes32 orderId,
         bytes32 orderSender,
         bytes32 tokenIn,
         uint128 amountInToRefund
     ) external view {
         bytes memory payload = PayloadEncoder.encodeCancelReport(
-            DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, orderId, orderSender, tokenIn, amountInToRefund
+            DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, index, orderId, orderSender, tokenIn, amountInToRefund
         );
 
         assertEq(
             payload,
             abi.encodePacked(
-                PayloadType.CancelReport, DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, orderId, orderSender, tokenIn, amountInToRefund
+                PayloadType.CancelReport,
+                DESTINATION_CHAIN_ID,
+                DESTINATION_PEER,
+                messageId,
+                index,
+                orderId,
+                orderSender,
+                tokenIn,
+                amountInToRefund
             )
         );
     }
@@ -489,12 +525,14 @@ contract PayloadEncoderTest is Test {
         bytes32 orderSender = "sender";
         bytes32 tokenIn = "tokenIn";
         uint128 amountInToRefund = 1000e6;
+        uint128 index = 1.2e12;
         bytes memory payload = PayloadEncoder.encodeCancelReport(
-            DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, orderId, orderSender, tokenIn, amountInToRefund
+            DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, index, orderId, orderSender, tokenIn, amountInToRefund
         );
 
         (
             bytes32 decodedMessageId,
+            uint128 decodedIndex,
             bytes32 decodedOrderId,
             bytes32 decodedOrderSender,
             bytes32 decodedTokenIn,
@@ -502,6 +540,7 @@ contract PayloadEncoderTest is Test {
         ) = PayloadEncoder.decodeCancelReport(payload);
 
         assertEq(decodedMessageId, messageId);
+        assertEq(decodedIndex, index);
         assertEq(decodedOrderId, orderId);
         assertEq(decodedOrderSender, orderSender);
         assertEq(decodedTokenIn, tokenIn);
@@ -510,17 +549,19 @@ contract PayloadEncoderTest is Test {
 
     function testFuzz_decodeCancelReport(
         bytes32 messageId,
+        uint128 index,
         bytes32 orderId,
         bytes32 orderSender,
         bytes32 tokenIn,
         uint128 amountInToRefund
     ) external view {
         bytes memory payload = PayloadEncoder.encodeCancelReport(
-            DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, orderId, orderSender, tokenIn, amountInToRefund
+            DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, index, orderId, orderSender, tokenIn, amountInToRefund
         );
 
         (
             bytes32 decodedMessageId,
+            uint128 decodedIndex,
             bytes32 decodedOrderId,
             bytes32 decodedOrderSender,
             bytes32 decodedTokenIn,
@@ -528,6 +569,7 @@ contract PayloadEncoderTest is Test {
         ) = PayloadEncoder.decodeCancelReport(payload);
 
         assertEq(decodedMessageId, messageId);
+        assertEq(decodedIndex, index);
         assertEq(decodedOrderId, orderId);
         assertEq(decodedOrderSender, orderSender);
         assertEq(decodedTokenIn, tokenIn);
