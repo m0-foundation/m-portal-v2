@@ -58,7 +58,7 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
         _initialize(owner, pauser, operator);
 
         if (crossSpokeTransferEnabled) {
-            _enableCrossSpokeTokenTransfer(currentChainId);
+            _enableCrossSpokeTokenTransfer(currentChainId());
         }
     }
 
@@ -178,7 +178,7 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
         SpokePortalStorageStruct storage $ = _getSpokePortalStorageLocation();
 
         // Current chain is isolated, disallow sending tokens to any other Spoke
-        if (!$.crossSpokeTokenTransferEnabled[currentChainId]) revert CrossSpokeTokenTransferDisabled(currentChainId);
+        if (!$.crossSpokeTokenTransferEnabled[currentChainId()]) revert CrossSpokeTokenTransferDisabled(currentChainId());
 
         // Destination chain is isolated, disallow sending tokens to that Spoke
         if (!$.crossSpokeTokenTransferEnabled[destinationChainId]) revert CrossSpokeTokenTransferDisabled(destinationChainId);
