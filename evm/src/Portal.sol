@@ -75,9 +75,6 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     /// @inheritdoc IPortal
     address public immutable orderBook;
 
-    /// @inheritdoc IPortal
-    uint32 public immutable currentChainId;
-
     /// @dev Modifier to make a function callable only when sending messages is not paused.
     modifier whenSendNotPaused() {
         if (sendPaused()) revert SendingPaused();
@@ -103,9 +100,6 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         if ((registrar = registrar_) == address(0)) revert ZeroRegistrar();
         if ((swapFacility = swapFacility_) == address(0)) revert ZeroSwapFacility();
         if ((orderBook = orderBook_) == address(0)) revert ZeroOrderBook();
-
-        // NOTE: For most EVM chains, ID fits into uint32
-        currentChainId = block.chainid.toUint32();
     }
 
     /// @notice Initializes the Proxy's storage
@@ -351,6 +345,12 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     ///////////////////////////////////////////////////////////////////////////
 
     /// @inheritdoc IPortal
+    /// @dev Using block.chainid directly to prevent a replay attack if a chain undergoes a contentious hard fork.
+    function currentChainId() public view returns (uint32) {
+        // NOTE: For most EVM chains, ID fits into uint32
+        return block.chainid.toUint32();
+    }
+
     function getNonce() external view returns (uint256) {
         PortalStorageStruct storage $ = _getPortalStorageLocation();
         return $.nonce;
@@ -762,7 +762,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     /// @dev Generates a unique across all chains message ID.
     /// @param destinationChainId The ID of the destination chain.
     function _getMessageId(uint32 destinationChainId) internal returns (bytes32) {
-        return keccak256(abi.encode(currentChainId, destinationChainId, _getPortalStorageLocation().nonce++));
+        return keccak256(abi.encode(currentChainId(), destinationChainId, _getPortalStorageLocation().nonce++));
     }
 
     /// @dev   Overridden in SpokePortal to handle custom payload messages.
@@ -822,7 +822,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     }
 
     function _revertIfInvalidDestinationChain(uint32 destinationChainId) internal view {
-        if (destinationChainId == currentChainId) revert InvalidDestinationChain(destinationChainId);
+        if (destinationChainId == currentChainId()) revert InvalidDestinationChain(destinationChainId);
     }
 
     function _revertIfZeroSourceToken(address sourceToken) internal pure {
