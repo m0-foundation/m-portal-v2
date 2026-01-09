@@ -29,10 +29,12 @@ interface IOrderBookLike {
     /// @param orderId The ID of the order being reported
     /// @param originSender The address on the origin chain that created the order
     /// @param tokenIn The address of the input token on the origin chain
+    /// @param amountInToRefund The amount of input token to refund to the origin sender
     struct CancelReport {
         bytes32 orderId;
         bytes32 originSender;
         bytes32 tokenIn;
+        uint128 amountInToRefund;
     }
 
     /**

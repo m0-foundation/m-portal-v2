@@ -339,7 +339,8 @@ library PayloadEncoder {
         bytes32 messageId,
         bytes32 orderId,
         bytes32 orderSender,
-        bytes32 tokenIn
+        bytes32 tokenIn,
+        uint128 amountInToRefund
     ) internal pure returns (bytes memory) {
         return abi.encodePacked(
             PayloadType.CancelReport,
@@ -348,7 +349,8 @@ library PayloadEncoder {
             messageId,
             orderId,
             orderSender,
-            tokenIn
+            tokenIn,
+            amountInToRefund
         );
     }
 
@@ -365,7 +367,8 @@ library PayloadEncoder {
             bytes32 messageId,
             bytes32 orderId,
             bytes32 orderSender,
-            bytes32 tokenIn
+            bytes32 tokenIn,
+            uint128 amountInToRefund
         )
     {
         uint256 offset = HEADER_LENGTH - MESSAGE_ID_LENGTH;
@@ -374,6 +377,7 @@ library PayloadEncoder {
         (orderId, offset) = payload.asBytes32Unchecked(offset);
         (orderSender, offset) = payload.asBytes32Unchecked(offset);
         (tokenIn, offset) = payload.asBytes32Unchecked(offset);
+        (amountInToRefund, offset) = payload.asUint128Unchecked(offset);
 
         payload.checkLength(offset);
     }
@@ -397,7 +401,7 @@ library PayloadEncoder {
         } else if (payloadType == PayloadType.EarnerMerkleRoot) {
             return encodeEarnerMerkleRoot(destinationChainId, destinationPeer, messageId, 0, bytes32(0));
         } else if (payloadType == PayloadType.CancelReport) {
-            return encodeCancelReport(destinationChainId, destinationPeer, messageId, bytes32(0), bytes32(0), bytes32(0));
+            return encodeCancelReport(destinationChainId, destinationPeer, messageId, bytes32(0), bytes32(0), bytes32(0), uint128(0));
         }
 
         revert InvalidPayloadType(uint8(payloadType));

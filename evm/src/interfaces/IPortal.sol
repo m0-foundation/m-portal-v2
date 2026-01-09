@@ -96,6 +96,7 @@ interface IPortal {
     /// @param orderId            The ID of the order being reported.
     /// @param originSender       The address on the origin chain that created the order.
     /// @param tokenIn            The address of the input token on the origin chain.
+    /// @param amountInToRefund   The amount of input token to refund to the origin sender.
     /// @param bridgeAdapter      The address of the bridge adapter used to send the message.
     /// @param messageId          The unique identifier for the sent message.
     event CancelReportSent(
@@ -103,6 +104,7 @@ interface IPortal {
         bytes32 indexed orderId,
         bytes32 originSender,
         bytes32 tokenIn,
+        uint128 amountInToRefund,
         address bridgeAdapter,
         bytes32 messageId
     );
@@ -112,11 +114,14 @@ interface IPortal {
     /// @param orderId       The ID of the order being reported.
     /// @param originSender  The address on the origin chain that created the order.
     /// @param tokenIn       The address of the input token on the origin chain.
+    /// @param amountInToRefund The amount of input token to refund to the origin sender.
+    /// @param messageId     The unique identifier for the message.
     event CancelReportReceived(
         uint32 indexed sourceChainId,
         bytes32 indexed orderId,
         bytes32 originSender,
         bytes32 tokenIn,
+        uint128 amountInToRefund,
         bytes32 messageId
     );
 
