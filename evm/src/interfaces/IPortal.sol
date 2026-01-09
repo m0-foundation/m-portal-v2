@@ -41,7 +41,7 @@ interface IPortal {
     /// @param  sender           The account sending tokens.
     /// @param  recipient        The account receiving tokens.
     /// @param  amount           The amount of tokens.
-    /// @param  index            The $M token index
+    /// @param  index            $M token index received from the source chain.
     /// @param  messageId        The unique ID of the message.
     event TokenReceived(
         uint32 sourceChainId,
@@ -82,7 +82,7 @@ interface IPortal {
     /// @param amountOutFilled    The amount of output token that was filled on the destination chain
     /// @param originRecipient    The address on the origin chain that should receive released funds
     /// @param tokenIn            The address of the input token on the origin chain
-    /// @param index              $M token index.
+    /// @param index              $M token index received from the source chain.
     /// @param messageId          The unique identifier for the message.
     event FillReportReceived(
         uint32 indexed sourceChainId,
@@ -121,7 +121,7 @@ interface IPortal {
     /// @param originSender  The address on the origin chain that created the order.
     /// @param tokenIn       The address of the input token on the origin chain.
     /// @param amountInToRefund The amount of input token to refund to the origin sender.
-    /// @param index         $M token index.
+    /// @param index         $M token index received from the source chain.
     /// @param messageId     The unique identifier for the message.
     event CancelReportReceived(
         uint32 indexed sourceChainId,
