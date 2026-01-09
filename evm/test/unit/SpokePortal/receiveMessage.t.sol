@@ -324,11 +324,11 @@ contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {
             HUB_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
+            index,
             amount,
             address(mToken).toBytes32(),
             sender,
-            recipient.toBytes32(),
-            index
+            recipient.toBytes32()
         );
 
         vm.expectRevert(IPortal.ReceivingPaused.selector);
