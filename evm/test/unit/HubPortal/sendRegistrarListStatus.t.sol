@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { PausableUpgradeable } from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol";
-
 import { IBridgeAdapter } from "../../../src/interfaces/IBridgeAdapter.sol";
 import { IHubPortal } from "../../../src/interfaces/IHubPortal.sol";
 import { IPortal } from "../../../src/interfaces/IPortal.sol";
@@ -96,9 +94,9 @@ contract SendRegistrarListStatusUnitTest is HubPortalUnitTestBase {
 
     function test_sendRegistrarListStatus_revertsIfPaused() external {
         vm.prank(pauser);
-        hubPortal.pause();
+        hubPortal.pauseSend();
 
-        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
+        vm.expectRevert(IPortal.SendingPaused.selector);
         hubPortal.sendRegistrarListStatus(SPOKE_CHAIN_ID, testListName, testAccount, refundAddress, bridgeAdapterArgs);
     }
 

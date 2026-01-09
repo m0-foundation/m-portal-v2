@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { PausableUpgradeable } from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol";
-
 import { IBridgeAdapter } from "../../../src/interfaces/IBridgeAdapter.sol";
 import { IPortal } from "../../../src/interfaces/IPortal.sol";
 import { IOrderBookLike } from "../../../src/interfaces/IOrderBookLike.sol";
@@ -102,9 +100,9 @@ contract SendCancelReportUnitTest is HubPortalUnitTestBase {
 
     function test_sendCancelReport_revertsIfPaused() external {
         vm.prank(pauser);
-        hubPortal.pause();
+        hubPortal.pauseSend();
 
-        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
+        vm.expectRevert(IPortal.SendingPaused.selector);
         vm.prank(address(mockOrderBook));
         hubPortal.sendCancelReport(SPOKE_CHAIN_ID, testReport, refundAddress, bridgeAdapterArgs);
     }

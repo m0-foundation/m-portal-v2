@@ -10,7 +10,6 @@ import {
 import {
     AccessControlUpgradeable
 } from "../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
-import { PausableUpgradeable } from "../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol";
 import { UUPSUpgradeable } from "../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import { IBridgeAdapter } from "./interfaces/IBridgeAdapter.sol";
@@ -40,6 +39,10 @@ abstract contract PortalStorageLayout {
         /// @notice Supported bridging paths for cross-chain transfers.
         mapping(address sourceToken => mapping(uint32 destinationChainId => mapping(bytes32 destinationToken => bool supported)))
             supportedBridgingPath;
+        /// @notice Indicates whether sending cross-chain messages is paused.
+        bool sendPaused;
+        /// @notice Indicates whether receiving cross-chain messages is paused.
+        bool receivePaused;
     }
 
     // keccak256(abi.encode(uint256(keccak256("M0.storage.Portal")) - 1)) & ~bytes32(uint256(0xff))
@@ -52,7 +55,7 @@ abstract contract PortalStorageLayout {
     }
 }
 
-abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, PausableUpgradeable, ReentrancyLock, UUPSUpgradeable, IPortal {
+abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, ReentrancyLock, UUPSUpgradeable, IPortal {
     using TypeConverter for *;
     using PayloadEncoder for bytes;
     using SafeERC20 for IERC20;
@@ -74,6 +77,18 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
 
     /// @inheritdoc IPortal
     uint32 public immutable currentChainId;
+
+    /// @dev Modifier to make a function callable only when sending messages is not paused.
+    modifier whenSendNotPaused() {
+        if (sendPaused()) revert SendingPaused();
+        _;
+    }
+
+    /// @dev Modifier to make a function callable only when receiving messages is not paused.
+    modifier whenReceiveNotPaused() {
+        if (receivePaused()) revert ReceivingPaused();
+        _;
+    }
 
     /// @notice Constructs the Implementation contract
     /// @dev    Sets immutable storage.
@@ -120,7 +135,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         bytes32 recipient,
         bytes32 refundAddress,
         bytes calldata bridgeAdapterArgs
-    ) external payable whenNotPaused whenNotLocked returns (bytes32 messageId) {
+    ) external payable whenSendNotPaused whenNotLocked returns (bytes32 messageId) {
         address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
         _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
 
@@ -139,7 +154,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         bytes32 refundAddress,
         address bridgeAdapter,
         bytes calldata bridgeAdapterArgs
-    ) external payable whenNotPaused whenNotLocked returns (bytes32 messageId) {
+    ) external payable whenSendNotPaused whenNotLocked returns (bytes32 messageId) {
         _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
         return
@@ -154,7 +169,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         IOrderBookLike.FillReport calldata report,
         bytes32 refundAddress,
         bytes calldata bridgeAdapterArgs
-    ) external payable whenNotPaused whenNotLocked returns (bytes32 messageId) {
+    ) external payable whenSendNotPaused whenNotLocked returns (bytes32 messageId) {
         address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
         _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
 
@@ -168,7 +183,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         bytes32 refundAddress,
         address bridgeAdapter,
         bytes calldata bridgeAdapterArgs
-    ) external payable whenNotPaused whenNotLocked returns (bytes32 messageId) {
+    ) external payable whenSendNotPaused whenNotLocked returns (bytes32 messageId) {
         _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
         return _sendFillReport(destinationChainId, report, refundAddress, bridgeAdapter, bridgeAdapterArgs);
@@ -180,7 +195,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         IOrderBookLike.CancelReport calldata report,
         bytes32 refundAddress,
         bytes calldata bridgeAdapterArgs
-    ) external payable whenNotPaused whenNotLocked returns (bytes32 messageId) {
+    ) external payable whenSendNotPaused whenNotLocked returns (bytes32 messageId) {
         address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
         _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
 
@@ -194,14 +209,14 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         bytes32 refundAddress,
         address bridgeAdapter,
         bytes calldata bridgeAdapterArgs
-    ) external payable whenNotPaused whenNotLocked returns (bytes32 messageId) {
+    ) external payable whenSendNotPaused whenNotLocked returns (bytes32 messageId) {
         _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
         return _sendCancelReport(destinationChainId, report, refundAddress, bridgeAdapter, bridgeAdapterArgs);
     }
 
     /// @inheritdoc IPortal
-    function receiveMessage(uint32 sourceChainId, bytes calldata payload) external {
+    function receiveMessage(uint32 sourceChainId, bytes calldata payload) external whenReceiveNotPaused {
         _revertIfUnsupportedBridgeAdapter(sourceChainId, msg.sender);
 
         PayloadType payloadType = payload.decodePayloadType();
@@ -300,13 +315,35 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) { }
 
     /// @inheritdoc IPortal
-    function pause() public onlyRole(PAUSER_ROLE) {
-        _pause();
+    function pauseSend() public onlyRole(PAUSER_ROLE) {
+        _pauseSend();
     }
 
     /// @inheritdoc IPortal
-    function unpause() public onlyRole(PAUSER_ROLE) {
-        _unpause();
+    function unpauseSend() public onlyRole(PAUSER_ROLE) {
+        _unpauseSend();
+    }
+
+    /// @inheritdoc IPortal
+    function pauseReceive() public onlyRole(PAUSER_ROLE) {
+        _pauseReceive();
+    }
+
+    /// @inheritdoc IPortal
+    function unpauseReceive() public onlyRole(PAUSER_ROLE) {
+        _unpauseReceive();
+    }
+
+    /// @inheritdoc IPortal
+    function pauseAll() public onlyRole(PAUSER_ROLE) {
+        _pauseSend();
+        _pauseReceive();
+    }
+
+    /// @inheritdoc IPortal
+    function unpauseAll() public onlyRole(PAUSER_ROLE) {
+        _unpauseSend();
+        _unpauseReceive();
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -366,6 +403,16 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
         return _quote(destinationChainId, payloadType, bridgeAdapter);
+    }
+
+    /// @inheritdoc IPortal
+    function sendPaused() public view returns (bool) {
+        return _getPortalStorageLocation().sendPaused;
+    }
+
+    /// @inheritdoc IPortal
+    function receivePaused() public view returns (bool) {
+        return _getPortalStorageLocation().receivePaused;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -554,13 +601,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
         _sendMessage(destinationChainId, PayloadType.CancelReport, refundAddress, payload, bridgeAdapter, bridgeAdapterArgs);
 
         emit CancelReportSent(
-            destinationChainId,
-            report.orderId,
-            report.originSender,
-            report.tokenIn,
-            report.amountInToRefund,
-            bridgeAdapter,
-            messageId
+            destinationChainId, report.orderId, report.originSender, report.tokenIn, report.amountInToRefund, bridgeAdapter, messageId
         );
     }
 
@@ -634,21 +675,49 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Pausa
     /// @param sourceChainId The ID of the source chain.
     /// @param payload       The message payload.
     function _receiveCancelReport(uint32 sourceChainId, bytes memory payload) private {
-        (bytes32 messageId, bytes32 orderId, bytes32 orderSender, bytes32 tokenIn, uint128 amountInToRefund) =
-            payload.decodeCancelReport();
+        (bytes32 messageId, bytes32 orderId, bytes32 orderSender, bytes32 tokenIn, uint128 amountInToRefund) = payload.decodeCancelReport();
 
         IOrderBookLike(orderBook)
             .reportCancel(
                 sourceChainId,
                 IOrderBookLike.CancelReport({
-                    orderId: orderId,
-                    originSender: orderSender,
-                    tokenIn: tokenIn,
-                    amountInToRefund: amountInToRefund
+                    orderId: orderId, originSender: orderSender, tokenIn: tokenIn, amountInToRefund: amountInToRefund
                 })
             );
 
         emit CancelReportReceived(sourceChainId, orderId, orderSender, tokenIn, amountInToRefund, messageId);
+    }
+
+    /// @dev Pauses sending cross-chain messages.
+    function _pauseSend() private {
+        PortalStorageStruct storage $ = _getPortalStorageLocation();
+        if ($.sendPaused) return;
+        $.sendPaused = true;
+        emit SendPaused();
+    }
+
+    /// @dev Unpauses sending cross-chain messages.
+    function _unpauseSend() private {
+        PortalStorageStruct storage $ = _getPortalStorageLocation();
+        if (!$.sendPaused) return;
+        $.sendPaused = false;
+        emit SendUnpaused();
+    }
+
+    /// @dev Pauses receiving cross-chain messages.
+    function _pauseReceive() private {
+        PortalStorageStruct storage $ = _getPortalStorageLocation();
+        if ($.receivePaused) return;
+        $.receivePaused = true;
+        emit ReceivePaused();
+    }
+
+    /// @dev Unpauses receiving cross-chain messages.
+    function _unpauseReceive() private {
+        PortalStorageStruct storage $ = _getPortalStorageLocation();
+        if (!$.receivePaused) return;
+        $.receivePaused = false;
+        emit ReceiveUnpaused();
     }
 
     /// @dev Generates a unique across all chains message ID.

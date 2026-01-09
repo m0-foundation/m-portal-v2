@@ -157,6 +157,18 @@ interface IPortal {
     /// @param  supported          `True` if the bridge adapter is supported, `false` otherwise.
     event SupportedBridgeAdapterSet(uint32 indexed destinationChainId, address indexed bridgeAdapter, bool supported);
 
+    /// @notice Emitted when sending is paused.
+    event SendPaused();
+
+    /// @notice Emitted when sending is unpaused.
+    event SendUnpaused();
+
+    /// @notice Emitted when receiving is paused.
+    event ReceivePaused();
+
+    /// @notice Emitted when receiving is unpaused.
+    event ReceiveUnpaused();
+
     ///////////////////////////////////////////////////////////////////////////
     //                             CUSTOM ERRORS                             //
     ///////////////////////////////////////////////////////////////////////////
@@ -224,6 +236,12 @@ interface IPortal {
     /// @notice Thrown in `sendToken` function when the actual amount received is less than the specified amount.
     error InsufficientAmountReceived(uint256 specifiedAmount, uint256 actualAmount);
 
+    /// @notice Thrown when sending is paused.
+    error SendingPaused();
+
+    /// @notice Thrown when receiving is paused.
+    error ReceivingPaused();
+
     ///////////////////////////////////////////////////////////////////////////
     //                          VIEW/PURE FUNCTIONS                          //
     ///////////////////////////////////////////////////////////////////////////
@@ -285,6 +303,12 @@ interface IPortal {
     /// @param  payloadType        The payload type: TokenTransfer = 0, Index = 1, RegistrarKey = 2, RegistrarList = 3, FillReport = 4
     /// @param  bridgeAdapter      The address of the bridge adapter.
     function quote(uint32 destinationChainId, PayloadType payloadType, address bridgeAdapter) external view returns (uint256);
+
+    /// @notice Indicates whether sending cross-chain messages is paused.
+    function sendPaused() external view returns (bool);
+
+    /// @notice Indicates whether receiving cross-chain messages is paused.
+    function receivePaused() external view returns (bool);
 
     ///////////////////////////////////////////////////////////////////////////
     //                         INTERACTIVE FUNCTIONS                         //
@@ -418,9 +442,21 @@ interface IPortal {
     /// @param  payload       The message payload.
     function receiveMessage(uint32 sourceChainId, bytes calldata payload) external;
 
-    /// @notice Stop the contract.
-    function pause() external;
+    /// @notice Pauses sending cross-chain messages.
+    function pauseSend() external;
 
-    /// @notice Resume the contract.
-    function unpause() external;
+    /// @notice Unpauses sending cross-chain messages.
+    function unpauseSend() external;
+
+    /// @notice Pauses receiving cross-chain messages.
+    function pauseReceive() external;
+
+    /// @notice Unpauses receiving cross-chain messages.
+    function unpauseReceive() external;
+
+    /// @notice Pauses both sending and receiving cross-chain messages.
+    function pauseAll() external;
+
+    /// @notice Unpauses both sending and receiving cross-chain messages.
+    function unpauseAll() external;
 }

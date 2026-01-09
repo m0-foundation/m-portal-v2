@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { PausableUpgradeable } from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol";
-
 import { IBridgeAdapter } from "../../../src/interfaces/IBridgeAdapter.sol";
 import { IPortal } from "../../../src/interfaces/IPortal.sol";
 import { ISpokePortal } from "../../../src/interfaces/ISpokePortal.sol";
@@ -131,9 +129,9 @@ contract SendTokenUnitTest is SpokePortalUnitTestBase {
 
     function test_sendToken_revertsIfPaused() external {
         vm.prank(pauser);
-        spokePortal.pause();
+        spokePortal.pauseSend();
 
-        vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
+        vm.expectRevert(IPortal.SendingPaused.selector);
         vm.prank(user);
         spokePortal.sendToken(amount, address(mToken), HUB_CHAIN_ID, hubMToken, recipient, refundAddress, bridgeAdapterArgs);
     }

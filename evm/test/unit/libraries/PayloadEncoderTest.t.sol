@@ -445,8 +445,9 @@ contract PayloadEncoderTest is Test {
         bytes32 orderSender = "sender";
         bytes32 tokenIn = "tokenIn";
         uint128 amountInToRefund = 1000e6;
-        bytes memory payload =
-            PayloadEncoder.encodeCancelReport(DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, orderId, orderSender, tokenIn, amountInToRefund);
+        bytes memory payload = PayloadEncoder.encodeCancelReport(
+            DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, orderId, orderSender, tokenIn, amountInToRefund
+        );
 
         assertEq(
             payload,
@@ -470,20 +471,14 @@ contract PayloadEncoderTest is Test {
         bytes32 tokenIn,
         uint128 amountInToRefund
     ) external view {
-        bytes memory payload =
-            PayloadEncoder.encodeCancelReport(DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, orderId, orderSender, tokenIn, amountInToRefund);
+        bytes memory payload = PayloadEncoder.encodeCancelReport(
+            DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, orderId, orderSender, tokenIn, amountInToRefund
+        );
 
         assertEq(
             payload,
             abi.encodePacked(
-                PayloadType.CancelReport,
-                DESTINATION_CHAIN_ID,
-                DESTINATION_PEER,
-                messageId,
-                orderId,
-                orderSender,
-                tokenIn,
-                amountInToRefund
+                PayloadType.CancelReport, DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, orderId, orderSender, tokenIn, amountInToRefund
             )
         );
     }
@@ -494,11 +489,17 @@ contract PayloadEncoderTest is Test {
         bytes32 orderSender = "sender";
         bytes32 tokenIn = "tokenIn";
         uint128 amountInToRefund = 1000e6;
-        bytes memory payload =
-            PayloadEncoder.encodeCancelReport(DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, orderId, orderSender, tokenIn, amountInToRefund);
+        bytes memory payload = PayloadEncoder.encodeCancelReport(
+            DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, orderId, orderSender, tokenIn, amountInToRefund
+        );
 
-        (bytes32 decodedMessageId, bytes32 decodedOrderId, bytes32 decodedOrderSender, bytes32 decodedTokenIn, uint128 decodedAmountInToRefund) =
-            PayloadEncoder.decodeCancelReport(payload);
+        (
+            bytes32 decodedMessageId,
+            bytes32 decodedOrderId,
+            bytes32 decodedOrderSender,
+            bytes32 decodedTokenIn,
+            uint128 decodedAmountInToRefund
+        ) = PayloadEncoder.decodeCancelReport(payload);
 
         assertEq(decodedMessageId, messageId);
         assertEq(decodedOrderId, orderId);
@@ -514,11 +515,17 @@ contract PayloadEncoderTest is Test {
         bytes32 tokenIn,
         uint128 amountInToRefund
     ) external view {
-        bytes memory payload =
-            PayloadEncoder.encodeCancelReport(DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, orderId, orderSender, tokenIn, amountInToRefund);
+        bytes memory payload = PayloadEncoder.encodeCancelReport(
+            DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, orderId, orderSender, tokenIn, amountInToRefund
+        );
 
-        (bytes32 decodedMessageId, bytes32 decodedOrderId, bytes32 decodedOrderSender, bytes32 decodedTokenIn, uint128 decodedAmountInToRefund) =
-            PayloadEncoder.decodeCancelReport(payload);
+        (
+            bytes32 decodedMessageId,
+            bytes32 decodedOrderId,
+            bytes32 decodedOrderSender,
+            bytes32 decodedTokenIn,
+            uint128 decodedAmountInToRefund
+        ) = PayloadEncoder.decodeCancelReport(payload);
 
         assertEq(decodedMessageId, messageId);
         assertEq(decodedOrderId, orderId);
