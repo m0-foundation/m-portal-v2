@@ -265,7 +265,7 @@ interface IPortal {
     /// @notice The current index of the Portal's earning mechanism.
     function currentIndex() external view returns (uint128);
 
-    /// @notice The address of the original caller of `transfer` function.
+    /// @notice The address of the original caller of `sendToken` function.
     function msgSender() external view returns (address);
 
     /// @notice Returns the fee for delivering a cross-chain message using the default bridge adapter.
