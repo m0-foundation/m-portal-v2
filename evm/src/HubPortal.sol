@@ -85,7 +85,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         uint32 destinationChainId,
         bytes32 refundAddress,
         bytes calldata bridgeAdapterArgs
-    ) external payable whenNotPaused returns (bytes32 messageId) {
+    ) external payable whenSendNotPaused returns (bytes32 messageId) {
         address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
         _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
 
@@ -98,7 +98,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         bytes32 refundAddress,
         address bridgeAdapter,
         bytes calldata bridgeAdapterArgs
-    ) external payable whenNotPaused returns (bytes32 messageId) {
+    ) external payable whenSendNotPaused returns (bytes32 messageId) {
         _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
         return _sendMTokenIndex(destinationChainId, refundAddress, bridgeAdapter, bridgeAdapterArgs);
@@ -110,7 +110,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         bytes32 key,
         bytes32 refundAddress,
         bytes calldata bridgeAdapterArgs
-    ) external payable whenNotPaused returns (bytes32 messageId) {
+    ) external payable whenSendNotPaused returns (bytes32 messageId) {
         address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
         _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
 
@@ -124,7 +124,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         bytes32 refundAddress,
         address bridgeAdapter,
         bytes calldata bridgeAdapterArgs
-    ) external payable whenNotPaused returns (bytes32 messageId) {
+    ) external payable whenSendNotPaused returns (bytes32 messageId) {
         _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
         return _sendRegistrarKey(destinationChainId, key, refundAddress, bridgeAdapter, bridgeAdapterArgs);
@@ -137,7 +137,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         address account,
         bytes32 refundAddress,
         bytes calldata bridgeAdapterArgs
-    ) external payable whenNotPaused returns (bytes32 messageId) {
+    ) external payable whenSendNotPaused returns (bytes32 messageId) {
         address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
         _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
 
@@ -152,7 +152,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         bytes32 refundAddress,
         address bridgeAdapter,
         bytes calldata bridgeAdapterArgs
-    ) external payable whenNotPaused returns (bytes32 messageId) {
+    ) external payable whenSendNotPaused returns (bytes32 messageId) {
         _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
         return _sendRegistrarListStatus(destinationChainId, listName, account, refundAddress, bridgeAdapter, bridgeAdapterArgs);
@@ -163,7 +163,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         uint32 destinationChainId,
         bytes32 refundAddress,
         bytes calldata bridgeAdapterArgs
-    ) external payable returns (bytes32 messageId) {
+    ) external payable whenSendNotPaused returns (bytes32 messageId) {
         address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
         _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
 
@@ -176,7 +176,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         bytes32 refundAddress,
         address bridgeAdapter,
         bytes calldata bridgeAdapterArgs
-    ) external payable returns (bytes32 messageId) {
+    ) external payable whenSendNotPaused returns (bytes32 messageId) {
         _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
         return _sendEarnersMerkleRoot(destinationChainId, refundAddress, bridgeAdapter, bridgeAdapterArgs);

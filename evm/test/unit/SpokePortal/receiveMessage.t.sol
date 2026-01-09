@@ -303,4 +303,25 @@ contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {
         vm.prank(unsupportedAdapter);
         spokePortal.receiveMessage(HUB_CHAIN_ID, payload);
     }
+
+    function test_receiveMessage_revertsIfReceivePaused() external {
+        vm.prank(pauser);
+        spokePortal.pauseReceive();
+
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            HUB_CHAIN_ID,
+            address(bridgeAdapter).toBytes32(),
+            messageId,
+            amount,
+            address(mToken).toBytes32(),
+            sender,
+            recipient.toBytes32(),
+            index
+        );
+
+        vm.expectRevert(IPortal.ReceivingPaused.selector);
+
+        vm.prank(address(bridgeAdapter));
+        spokePortal.receiveMessage(HUB_CHAIN_ID, payload);
+    }
 }

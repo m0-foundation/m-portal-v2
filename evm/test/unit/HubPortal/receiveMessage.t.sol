@@ -238,6 +238,27 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
         hubPortal.receiveMessage(SPOKE_CHAIN_ID, payload);
     }
 
+    function test_receiveMessage_revertsIfReceivePaused() external {
+        vm.prank(pauser);
+        hubPortal.pauseReceive();
+
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            SPOKE_CHAIN_ID,
+            address(bridgeAdapter).toBytes32(),
+            messageId,
+            amount,
+            address(mToken).toBytes32(),
+            sender,
+            recipient.toBytes32(),
+            index
+        );
+
+        vm.expectRevert(IPortal.ReceivingPaused.selector);
+
+        vm.prank(address(bridgeAdapter));
+        hubPortal.receiveMessage(SPOKE_CHAIN_ID, payload);
+    }
+
     // ==================== PRINCIPAL DECREASE TESTS ====================
 
     function test_receiveMessage_decreasesPrincipalForIsolatedSpoke() external {
