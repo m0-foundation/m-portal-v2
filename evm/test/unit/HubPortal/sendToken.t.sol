@@ -170,7 +170,7 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
     function test_sendToken_revertsIfNoBridgeAdapterSet() external {
         uint32 unconfiguredChain = 999;
 
-        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, unconfiguredChain));
+        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, unconfiguredChain, address(0)));
         vm.prank(user);
         hubPortal.sendToken(amount, address(mToken), unconfiguredChain, spokeMToken, recipient, refundAddress, bridgeAdapterArgs);
     }
@@ -186,11 +186,11 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
         );
     }
 
-    function test_sendToken_revertsIfInvalidDestinationChain() external {
+    function test_sendToken_revertsIfSentToSelf() external {
         vm.startPrank(user);
         mToken.approve(address(hubPortal), amount);
 
-        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, HUB_CHAIN_ID));
+        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, HUB_CHAIN_ID, address(0)));
         hubPortal.sendToken(amount, address(mToken), HUB_CHAIN_ID, spokeMToken, recipient, refundAddress, bridgeAdapterArgs);
         vm.stopPrank();
     }

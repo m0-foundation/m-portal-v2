@@ -131,7 +131,7 @@ contract SendFillReportUnitTest is HubPortalUnitTestBase {
     function test_sendFillReport_revertsIfNoBridgeAdapterSet() external {
         uint32 unconfiguredChain = 999;
 
-        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, unconfiguredChain));
+        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, unconfiguredChain, address(0)));
         vm.prank(address(mockOrderBook));
         hubPortal.sendFillReport(unconfiguredChain, testReport, refundAddress, bridgeAdapterArgs);
     }
@@ -151,8 +151,8 @@ contract SendFillReportUnitTest is HubPortalUnitTestBase {
         hubPortal.sendFillReport(SPOKE_CHAIN_ID, testReport, refundAddress, bridgeAdapterArgs);
     }
 
-    function test_sendFillReport_revertsIfInvalidDestinationChain() external {
-        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, HUB_CHAIN_ID));
+    function test_sendFillReport_revertsIfSendToSelf() external {
+        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, HUB_CHAIN_ID, address(0)));
         vm.prank(address(mockOrderBook));
         hubPortal.sendFillReport(HUB_CHAIN_ID, testReport, refundAddress, bridgeAdapterArgs);
     }

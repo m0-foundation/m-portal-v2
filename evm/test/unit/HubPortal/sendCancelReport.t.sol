@@ -126,7 +126,7 @@ contract SendCancelReportUnitTest is HubPortalUnitTestBase {
     function test_sendCancelReport_revertsIfNoBridgeAdapterSet() external {
         uint32 unconfiguredChain = 999;
 
-        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, unconfiguredChain));
+        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, unconfiguredChain, address(0)));
         vm.prank(address(mockOrderBook));
         hubPortal.sendCancelReport(unconfiguredChain, testReport, refundAddress, bridgeAdapterArgs);
     }
@@ -146,8 +146,8 @@ contract SendCancelReportUnitTest is HubPortalUnitTestBase {
         hubPortal.sendCancelReport(SPOKE_CHAIN_ID, testReport, refundAddress, bridgeAdapterArgs);
     }
 
-    function test_sendCancelReport_revertsIfInvalidDestinationChain() external {
-        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, HUB_CHAIN_ID));
+    function test_sendCancelReport_revertsIfISendToSelf() external {
+        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, HUB_CHAIN_ID, address(0)));
         vm.prank(address(mockOrderBook));
         hubPortal.sendCancelReport(HUB_CHAIN_ID, testReport, refundAddress, bridgeAdapterArgs);
     }

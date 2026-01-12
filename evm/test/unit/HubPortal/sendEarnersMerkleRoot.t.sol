@@ -100,7 +100,7 @@ contract SendEarnersMerkleRootUnitTest is HubPortalUnitTestBase {
     function test_sendEarnersMerkleRoot_revertsIfNoBridgeAdapterSet() external {
         uint32 unconfiguredChain = 999;
 
-        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, unconfiguredChain));
+        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, unconfiguredChain, address(0)));
         hubPortal.sendEarnersMerkleRoot(unconfiguredChain, refundAddress, bridgeAdapterArgs);
     }
 
@@ -111,8 +111,8 @@ contract SendEarnersMerkleRootUnitTest is HubPortalUnitTestBase {
         hubPortal.sendEarnersMerkleRoot(SPOKE_CHAIN_ID, refundAddress, unsupportedAdapter, bridgeAdapterArgs);
     }
 
-    function test_sendEarnersMerkleRoot_revertsIfInvalidDestinationChain() external {
-        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, HUB_CHAIN_ID));
+    function test_sendEarnersMerkleRoot_revertsIfSendToSelf() external {
+        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, HUB_CHAIN_ID, address(0)));
         hubPortal.sendEarnersMerkleRoot(HUB_CHAIN_ID, refundAddress, bridgeAdapterArgs);
     }
 }
