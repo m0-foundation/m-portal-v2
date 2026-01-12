@@ -330,4 +330,27 @@ contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {
         vm.prank(address(bridgeAdapter));
         spokePortal.receiveMessage(HUB_CHAIN_ID, payload);
     }
+
+    function test_receiveMessage_revertsIfMessageAlreadyProcessed() external {
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            HUB_CHAIN_ID,
+            address(bridgeAdapter).toBytes32(),
+            messageId,
+            index,
+            amount,
+            address(mToken).toBytes32(),
+            sender,
+            recipient.toBytes32()
+        );
+
+        // First call should succeed
+        vm.prank(address(bridgeAdapter));
+        spokePortal.receiveMessage(HUB_CHAIN_ID, payload);
+
+        // Second call with the same payload should revert
+        vm.expectRevert(abi.encodeWithSelector(IPortal.MessageAlreadyProcessed.selector, messageId));
+
+        vm.prank(address(bridgeAdapter));
+        spokePortal.receiveMessage(HUB_CHAIN_ID, payload);
+    }
 }

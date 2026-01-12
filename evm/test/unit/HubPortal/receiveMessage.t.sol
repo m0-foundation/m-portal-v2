@@ -246,6 +246,33 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
         hubPortal.receiveMessage(SPOKE_CHAIN_ID, payload);
     }
 
+    function test_receiveMessage_revertsIfMessageAlreadyProcessed() external {
+        // Enable cross-spoke transfer to skip principal tracking for this test
+        vm.prank(operator);
+        hubPortal.enableCrossSpokeTokenTransfer(SPOKE_CHAIN_ID);
+
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            SPOKE_CHAIN_ID,
+            address(bridgeAdapter).toBytes32(),
+            messageId,
+            index,
+            amount,
+            address(mToken).toBytes32(),
+            sender,
+            recipient.toBytes32()
+        );
+
+        // First call should succeed
+        vm.prank(address(bridgeAdapter));
+        hubPortal.receiveMessage(SPOKE_CHAIN_ID, payload);
+
+        // Second call with the same payload should revert
+        vm.expectRevert(abi.encodeWithSelector(IPortal.MessageAlreadyProcessed.selector, messageId));
+
+        vm.prank(address(bridgeAdapter));
+        hubPortal.receiveMessage(SPOKE_CHAIN_ID, payload);
+    }
+
     // ==================== PRINCIPAL DECREASE TESTS ====================
 
     function test_receiveMessage_decreasesPrincipalForIsolatedSpoke() external {
