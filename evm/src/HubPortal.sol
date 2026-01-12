@@ -269,6 +269,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         address bridgeAdapter,
         bytes calldata bridgeAdapterArgs
     ) private returns (bytes32 messageId) {
+        _revertIfInvalidDestinationChain(destinationChainId);
         _revertIfZeroRefundAddress(refundAddress);
 
         uint128 index = _currentIndex();
@@ -289,6 +290,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         address bridgeAdapter,
         bytes calldata bridgeAdapterArgs
     ) private returns (bytes32 messageId) {
+        _revertIfInvalidDestinationChain(destinationChainId);
         _revertIfZeroRefundAddress(refundAddress);
 
         bytes32 value = IRegistrarLike(registrar).get(key);
@@ -311,6 +313,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         address bridgeAdapter,
         bytes calldata bridgeAdapterArgs
     ) private returns (bytes32 messageId) {
+        _revertIfInvalidDestinationChain(destinationChainId);
         _revertIfZeroRefundAddress(refundAddress);
 
         bool status = IRegistrarLike(registrar).listContains(listName, account);
@@ -332,6 +335,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         address bridgeAdapter,
         bytes calldata bridgeAdapterArgs
     ) private returns (bytes32 messageId) {
+        _revertIfInvalidDestinationChain(destinationChainId);
         _revertIfZeroRefundAddress(refundAddress);
 
         uint128 index = _currentIndex();

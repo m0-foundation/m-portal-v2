@@ -122,7 +122,11 @@ contract SendRegistrarListStatusUnitTest is HubPortalUnitTestBase {
         address unsupportedAdapter = makeAddr("unsupported");
 
         vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, SPOKE_CHAIN_ID, unsupportedAdapter));
-
         hubPortal.sendRegistrarListStatus(SPOKE_CHAIN_ID, testListName, testAccount, refundAddress, unsupportedAdapter, bridgeAdapterArgs);
+    }
+
+    function test_sendRegistrarListStatus_revertsIfInvalidDestinationChain() external {
+        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, HUB_CHAIN_ID));
+        hubPortal.sendRegistrarListStatus(HUB_CHAIN_ID, testListName, testAccount, refundAddress, bridgeAdapterArgs);
     }
 }
