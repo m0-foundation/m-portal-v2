@@ -13,7 +13,6 @@ import { IHubPortal } from "./interfaces/IHubPortal.sol";
 
 import { Portal } from "./Portal.sol";
 import { PayloadType, PayloadEncoder } from "./libraries/PayloadEncoder.sol";
-import { TypeConverter } from "./libraries/TypeConverter.sol";
 
 struct SpokeChainConfig {
     uint248 bridgedPrincipal;
@@ -44,7 +43,6 @@ abstract contract HubPortalStorageLayout {
 ///         as well as propagating M token index, Registrar keys and list status to the Spoke chain.
 /// @dev    Tokens are bridged using lock-release mechanism.
 contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
-    using TypeConverter for uint256;
 
     bytes32 public constant SVM_EARNER_LIST = bytes32("solana-earners");
 
