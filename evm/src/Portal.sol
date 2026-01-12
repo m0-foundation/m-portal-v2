@@ -130,13 +130,16 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         bytes32 refundAddress,
         bytes calldata bridgeAdapterArgs
     ) external payable whenSendNotPaused whenNotLocked returns (bytes32 messageId) {
-        address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
-        _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
-
-        return
-            _sendToken(
-                amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter, bridgeAdapterArgs
-            );
+        return _sendToken(
+            amount,
+            sourceToken,
+            destinationChainId,
+            destinationToken,
+            recipient,
+            refundAddress,
+            defaultBridgeAdapter(destinationChainId),
+            bridgeAdapterArgs
+        );
     }
 
     function sendToken(
@@ -149,12 +152,9 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         address bridgeAdapter,
         bytes calldata bridgeAdapterArgs
     ) external payable whenSendNotPaused whenNotLocked returns (bytes32 messageId) {
-        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
-
-        return
-            _sendToken(
-                amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter, bridgeAdapterArgs
-            );
+        return _sendToken(
+            amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter, bridgeAdapterArgs
+        );
     }
 
     /// @inheritdoc IPortal
@@ -164,10 +164,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         bytes32 refundAddress,
         bytes calldata bridgeAdapterArgs
     ) external payable whenSendNotPaused whenNotLocked returns (bytes32 messageId) {
-        address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
-        _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
-
-        return _sendFillReport(destinationChainId, report, refundAddress, bridgeAdapter, bridgeAdapterArgs);
+        return _sendFillReport(destinationChainId, report, refundAddress, defaultBridgeAdapter(destinationChainId), bridgeAdapterArgs);
     }
 
     /// @inheritdoc IPortal
@@ -178,8 +175,6 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         address bridgeAdapter,
         bytes calldata bridgeAdapterArgs
     ) external payable whenSendNotPaused whenNotLocked returns (bytes32 messageId) {
-        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
-
         return _sendFillReport(destinationChainId, report, refundAddress, bridgeAdapter, bridgeAdapterArgs);
     }
 
@@ -190,10 +185,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         bytes32 refundAddress,
         bytes calldata bridgeAdapterArgs
     ) external payable whenSendNotPaused whenNotLocked returns (bytes32 messageId) {
-        address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
-        _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
-
-        return _sendCancelReport(destinationChainId, report, refundAddress, bridgeAdapter, bridgeAdapterArgs);
+        return _sendCancelReport(destinationChainId, report, refundAddress, defaultBridgeAdapter(destinationChainId), bridgeAdapterArgs);
     }
 
     /// @inheritdoc IPortal
@@ -204,8 +196,6 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         address bridgeAdapter,
         bytes calldata bridgeAdapterArgs
     ) external payable whenSendNotPaused whenNotLocked returns (bytes32 messageId) {
-        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
-
         return _sendCancelReport(destinationChainId, report, refundAddress, bridgeAdapter, bridgeAdapterArgs);
     }
 
@@ -449,7 +439,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         _revertIfZeroSourceToken(sourceToken);
         _revertIfZeroDestinationToken(destinationToken);
         _revertIfZeroRecipient(recipient);
-        _revertIfInvalidDestinationChain(destinationChainId);
+        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
         _revertIfUnsupportedBridgingPath(sourceToken, destinationChainId, destinationToken);
         _revertIfTokenTransferDisabled(destinationChainId);
 
@@ -548,7 +538,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     ) private returns (bytes32 messageId) {
         if (msg.sender != orderBook) revert NotOrderBook();
         _revertIfZeroRefundAddress(refundAddress);
-        _revertIfInvalidDestinationChain(destinationChainId);
+        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
         bytes memory payload;
         uint128 index;
@@ -604,7 +594,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     ) private returns (bytes32 messageId) {
         if (msg.sender != orderBook) revert NotOrderBook();
         _revertIfZeroRefundAddress(refundAddress);
-        _revertIfInvalidDestinationChain(destinationChainId);
+        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
         uint128 index = _currentIndex();
         messageId = _getMessageId(destinationChainId);

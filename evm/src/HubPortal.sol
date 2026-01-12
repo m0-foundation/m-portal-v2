@@ -43,7 +43,6 @@ abstract contract HubPortalStorageLayout {
 ///         as well as propagating M token index, Registrar keys and list status to the Spoke chain.
 /// @dev    Tokens are bridged using lock-release mechanism.
 contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
-
     bytes32 public constant SVM_EARNER_LIST = bytes32("solana-earners");
 
     /// @inheritdoc IHubPortal
@@ -84,10 +83,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         bytes32 refundAddress,
         bytes calldata bridgeAdapterArgs
     ) external payable whenSendNotPaused returns (bytes32 messageId) {
-        address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
-        _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
-
-        return _sendMTokenIndex(destinationChainId, refundAddress, bridgeAdapter, bridgeAdapterArgs);
+        return _sendMTokenIndex(destinationChainId, refundAddress, defaultBridgeAdapter(destinationChainId), bridgeAdapterArgs);
     }
 
     /// @inheritdoc IHubPortal
@@ -97,8 +93,6 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         address bridgeAdapter,
         bytes calldata bridgeAdapterArgs
     ) external payable whenSendNotPaused returns (bytes32 messageId) {
-        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
-
         return _sendMTokenIndex(destinationChainId, refundAddress, bridgeAdapter, bridgeAdapterArgs);
     }
 
@@ -109,10 +103,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         bytes32 refundAddress,
         bytes calldata bridgeAdapterArgs
     ) external payable whenSendNotPaused returns (bytes32 messageId) {
-        address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
-        _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
-
-        return _sendRegistrarKey(destinationChainId, key, refundAddress, bridgeAdapter, bridgeAdapterArgs);
+        return _sendRegistrarKey(destinationChainId, key, refundAddress, defaultBridgeAdapter(destinationChainId), bridgeAdapterArgs);
     }
 
     /// @inheritdoc IHubPortal
@@ -123,8 +114,6 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         address bridgeAdapter,
         bytes calldata bridgeAdapterArgs
     ) external payable whenSendNotPaused returns (bytes32 messageId) {
-        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
-
         return _sendRegistrarKey(destinationChainId, key, refundAddress, bridgeAdapter, bridgeAdapterArgs);
     }
 
@@ -136,10 +125,9 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         bytes32 refundAddress,
         bytes calldata bridgeAdapterArgs
     ) external payable whenSendNotPaused returns (bytes32 messageId) {
-        address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
-        _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
-
-        return _sendRegistrarListStatus(destinationChainId, listName, account, refundAddress, bridgeAdapter, bridgeAdapterArgs);
+        return _sendRegistrarListStatus(
+            destinationChainId, listName, account, refundAddress, defaultBridgeAdapter(destinationChainId), bridgeAdapterArgs
+        );
     }
 
     /// @inheritdoc IHubPortal
@@ -151,8 +139,6 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         address bridgeAdapter,
         bytes calldata bridgeAdapterArgs
     ) external payable whenSendNotPaused returns (bytes32 messageId) {
-        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
-
         return _sendRegistrarListStatus(destinationChainId, listName, account, refundAddress, bridgeAdapter, bridgeAdapterArgs);
     }
 
@@ -162,10 +148,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         bytes32 refundAddress,
         bytes calldata bridgeAdapterArgs
     ) external payable whenSendNotPaused returns (bytes32 messageId) {
-        address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
-        _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
-
-        return _sendEarnersMerkleRoot(destinationChainId, refundAddress, bridgeAdapter, bridgeAdapterArgs);
+        return _sendEarnersMerkleRoot(destinationChainId, refundAddress, defaultBridgeAdapter(destinationChainId), bridgeAdapterArgs);
     }
 
     /// @inheritdoc IHubPortal
@@ -175,8 +158,6 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         address bridgeAdapter,
         bytes calldata bridgeAdapterArgs
     ) external payable whenSendNotPaused returns (bytes32 messageId) {
-        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
-
         return _sendEarnersMerkleRoot(destinationChainId, refundAddress, bridgeAdapter, bridgeAdapterArgs);
     }
 
@@ -267,8 +248,8 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         address bridgeAdapter,
         bytes calldata bridgeAdapterArgs
     ) private returns (bytes32 messageId) {
-        _revertIfInvalidDestinationChain(destinationChainId);
         _revertIfZeroRefundAddress(refundAddress);
+        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
         uint128 index = _currentIndex();
         bytes32 destinationPeer = IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId);
@@ -288,8 +269,8 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         address bridgeAdapter,
         bytes calldata bridgeAdapterArgs
     ) private returns (bytes32 messageId) {
-        _revertIfInvalidDestinationChain(destinationChainId);
         _revertIfZeroRefundAddress(refundAddress);
+        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
         bytes32 value = IRegistrarLike(registrar).get(key);
         bytes32 destinationPeer = IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId);
@@ -311,8 +292,8 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         address bridgeAdapter,
         bytes calldata bridgeAdapterArgs
     ) private returns (bytes32 messageId) {
-        _revertIfInvalidDestinationChain(destinationChainId);
         _revertIfZeroRefundAddress(refundAddress);
+        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
         bool status = IRegistrarLike(registrar).listContains(listName, account);
         bytes32 destinationPeer = IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId);
@@ -333,8 +314,8 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         address bridgeAdapter,
         bytes calldata bridgeAdapterArgs
     ) private returns (bytes32 messageId) {
-        _revertIfInvalidDestinationChain(destinationChainId);
         _revertIfZeroRefundAddress(refundAddress);
+        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
 
         uint128 index = _currentIndex();
         bytes32 destinationPeer = IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId);
