@@ -39,6 +39,8 @@ abstract contract PortalStorageLayout {
         /// @notice Supported bridging paths for cross-chain transfers.
         mapping(address sourceToken => mapping(uint32 destinationChainId => mapping(bytes32 destinationToken => bool supported)))
             supportedBridgingPath;
+        /// @notice Indicates whether a message with a given hash has been processed.
+        mapping(bytes32 messageId => bool) processedMessages;
         /// @notice Indicates whether sending cross-chain messages is paused.
         bool sendPaused;
         /// @notice Indicates whether receiving cross-chain messages is paused.
@@ -204,6 +206,11 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         _revertIfUnsupportedBridgeAdapter(sourceChainId, msg.sender);
 
         PayloadType payloadType = payload.decodePayloadType();
+        bytes32 messageId = payload.decodeMessageId();
+        PortalStorageStruct storage $ = _getPortalStorageLocation();
+        if ($.processedMessages[messageId]) revert MessageAlreadyProcessed(messageId);
+
+        $.processedMessages[messageId] = true;
 
         if (payloadType == PayloadType.TokenTransfer) {
             _receiveToken(sourceChainId, payload);
