@@ -95,7 +95,11 @@ contract SendRegistrarKeyUnitTest is HubPortalUnitTestBase {
         address unsupportedAdapter = makeAddr("unsupported");
 
         vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, SPOKE_CHAIN_ID, unsupportedAdapter));
-
         hubPortal.sendRegistrarKey(SPOKE_CHAIN_ID, testKey, refundAddress, unsupportedAdapter, bridgeAdapterArgs);
+    }
+
+    function test_sendRegistrarKey_revertsIfInvalidDestinationChain() external {
+        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, HUB_CHAIN_ID));
+        hubPortal.sendRegistrarKey(HUB_CHAIN_ID, testKey, refundAddress, bridgeAdapterArgs);
     }
 }

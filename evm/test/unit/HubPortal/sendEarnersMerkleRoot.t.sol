@@ -108,7 +108,11 @@ contract SendEarnersMerkleRootUnitTest is HubPortalUnitTestBase {
         address unsupportedAdapter = makeAddr("unsupported");
 
         vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, SPOKE_CHAIN_ID, unsupportedAdapter));
-
         hubPortal.sendEarnersMerkleRoot(SPOKE_CHAIN_ID, refundAddress, unsupportedAdapter, bridgeAdapterArgs);
+    }
+
+    function test_sendEarnersMerkleRoot_revertsIfInvalidDestinationChain() external {
+        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, HUB_CHAIN_ID));
+        hubPortal.sendEarnersMerkleRoot(HUB_CHAIN_ID, refundAddress, bridgeAdapterArgs);
     }
 }

@@ -93,7 +93,11 @@ contract SendMTokenIndexUnitTest is HubPortalUnitTestBase {
         address unsupportedAdapter = makeAddr("unsupported");
 
         vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, SPOKE_CHAIN_ID, unsupportedAdapter));
-
         hubPortal.sendMTokenIndex(SPOKE_CHAIN_ID, refundAddress, unsupportedAdapter, bridgeAdapterArgs);
+    }
+
+    function test_sendMTokenIndex_revertsIfInvalidDestinationChain() external {
+        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, HUB_CHAIN_ID));
+        hubPortal.sendMTokenIndex(HUB_CHAIN_ID, refundAddress, bridgeAdapterArgs);
     }
 }
