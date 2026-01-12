@@ -170,7 +170,7 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
         emit CrossSpokeTokenTransferEnabled(spokeChainId);
     }
 
-    /// @dev Reverts if the destination chain is the Hub chain
+    /// @dev Reverts if cross-Spoke token transfer is disabled on the current or destination Spoke chain.
     function _revertIfTokenTransferDisabled(uint32 destinationChainId) internal view override {
         // Always allow sending tokens to the Hub chain
         if (destinationChainId == hubChainId) return;
