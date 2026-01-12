@@ -77,6 +77,28 @@ contract PayloadEncoderTest is Test {
         assertEq(decodedDestinationPeer, destinationPeer);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
+    function test_decodeMessageId_invalidPayloadLength() external {
+        bytes memory payload = abi.encodePacked(uint8(1), uint8(2), uint8(3));
+
+        vm.expectRevert(abi.encodeWithSelector(PayloadEncoder.InvalidPayloadLength.selector, payload.length));
+        PayloadEncoder.decodeMessageId(payload);
+    }
+
+    function test_decodeMessageId() external view {
+        bytes memory payload = abi.encodePacked(PayloadType.Index, DESTINATION_CHAIN_ID, DESTINATION_PEER, MESSAGE_ID, INDEX);
+
+        bytes32 decodedMessageId = PayloadEncoder.decodeMessageId(payload);
+        assertEq(decodedMessageId, MESSAGE_ID);
+    }
+
+    function testFuzz_decodeMessageId(bytes32 messageId) external view {
+        bytes memory payload = abi.encodePacked(PayloadType.Index, DESTINATION_CHAIN_ID, DESTINATION_PEER, messageId, INDEX);
+
+        bytes32 decodedMessageId = PayloadEncoder.decodeMessageId(payload);
+        assertEq(decodedMessageId, messageId);
+    }
+
     function test_encodeTokenTransfer() external {
         uint256 amount = 1e6;
         bytes32 token = "destinationToken";

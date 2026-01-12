@@ -250,6 +250,9 @@ interface IPortal {
     /// @notice Thrown when receiving is paused.
     error ReceivingPaused();
 
+    /// @notice Thrown when a message with the given ID has already been processed.
+    error MessageAlreadyProcessed(bytes32 messageId);
+
     ///////////////////////////////////////////////////////////////////////////
     //                          VIEW/PURE FUNCTIONS                          //
     ///////////////////////////////////////////////////////////////////////////

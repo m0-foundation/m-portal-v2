@@ -68,6 +68,15 @@ library PayloadEncoder {
         (destinationPeer, offset) = payload.asBytes32Unchecked(offset);
     }
 
+    /// @notice Decodes the message ID from the payload.
+    /// @param  payload   The payload to decode.
+    /// @return messageId The message ID.
+    function decodeMessageId(bytes memory payload) internal pure returns (bytes32 messageId) {
+        if (payload.length < HEADER_LENGTH) revert InvalidPayloadLength(payload.length);
+
+        (messageId,) = payload.asBytes32Unchecked(OFFSET);
+    }
+
     /// @notice Encodes a token transfer payload.
     /// @dev    Encoded values are packed using `abi.encodePacked`.
     /// @param destinationChainId The destination chain ID.
