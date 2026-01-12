@@ -52,7 +52,28 @@ contract QuoteUnitTest is HubPortalUnitTestBase {
         address unsupportedAdapter = makeAddr("unsupported");
 
         vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, SPOKE_CHAIN_ID, unsupportedAdapter));
-
         hubPortal.quote(SPOKE_CHAIN_ID, PayloadType.TokenTransfer, unsupportedAdapter);
+    }
+
+    function test_quote_revertsIfPayloadGasLimitNotSet() external {
+        uint32 newChainId = 999;
+
+        // Set up bridge adapter but NOT the gas limit
+        vm.prank(operator);
+        hubPortal.setDefaultBridgeAdapter(newChainId, address(bridgeAdapter));
+
+        vm.expectRevert(abi.encodeWithSelector(IPortal.PayloadGasLimitNotSet.selector, newChainId, PayloadType.TokenTransfer));
+        hubPortal.quote(newChainId, PayloadType.TokenTransfer);
+    }
+
+    function test_quote_withSpecificAdapter_revertsIfPayloadGasLimitNotSet() external {
+        uint32 newChainId = 999;
+
+        // Set up bridge adapter but NOT the gas limit
+        vm.prank(operator);
+        hubPortal.setSupportedBridgeAdapter(newChainId, address(bridgeAdapter), true);
+
+        vm.expectRevert(abi.encodeWithSelector(IPortal.PayloadGasLimitNotSet.selector, newChainId, PayloadType.TokenTransfer));
+        hubPortal.quote(newChainId, PayloadType.TokenTransfer, address(bridgeAdapter));
     }
 }

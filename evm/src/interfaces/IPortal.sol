@@ -253,6 +253,9 @@ interface IPortal {
     /// @notice Thrown when a message with the given ID has already been processed.
     error MessageAlreadyProcessed(bytes32 messageId);
 
+    /// @notice Thrown when the gas limit for the specified payload type is not configured.
+    error PayloadGasLimitNotSet(uint32 destinationChainId, PayloadType payloadType);
+
     ///////////////////////////////////////////////////////////////////////////
     //                          VIEW/PURE FUNCTIONS                          //
     ///////////////////////////////////////////////////////////////////////////
