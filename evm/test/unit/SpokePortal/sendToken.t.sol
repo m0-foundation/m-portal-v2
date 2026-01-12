@@ -169,7 +169,7 @@ contract SendTokenUnitTest is SpokePortalUnitTestBase {
     function test_sendToken_revertsIfNoBridgeAdapterSet() external {
         uint32 unconfiguredChain = 999;
 
-        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, unconfiguredChain));
+        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, unconfiguredChain, address(0)));
         vm.prank(user);
         spokePortal.sendToken(amount, address(mToken), unconfiguredChain, hubMToken, recipient, refundAddress, bridgeAdapterArgs);
     }
@@ -185,11 +185,11 @@ contract SendTokenUnitTest is SpokePortalUnitTestBase {
         );
     }
 
-    function test_sendToken_revertsIfInvalidDestinationChain() external {
+    function test_sendToken_revertsIfSendToSelf() external {
         vm.startPrank(user);
         mToken.approve(address(spokePortal), amount);
 
-        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, SPOKE_CHAIN_ID));
+        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, SPOKE_CHAIN_ID, address(0)));
         spokePortal.sendToken(amount, address(mToken), SPOKE_CHAIN_ID, hubMToken, recipient, refundAddress, bridgeAdapterArgs);
         vm.stopPrank();
     }
@@ -316,21 +316,6 @@ contract SendTokenUnitTest is SpokePortalUnitTestBase {
         vm.expectRevert(abi.encodeWithSelector(ISpokePortal.CrossSpokeTokenTransferDisabled.selector, SPOKE_CHAIN_ID_2));
 
         spokePortal.sendToken(amount, address(mToken), SPOKE_CHAIN_ID_2, spoke2MToken, recipient, refundAddress, bridgeAdapterArgs);
-        vm.stopPrank();
-    }
-
-    function test_sendToken_revertsIfSendToSelfChainWhenIsolated() external {
-        // crossSpokeTokenTransferEnabled is false by default (from setUp) for the current chain
-        assertFalse(spokePortal.crossSpokeTokenTransferEnabled(currentChainId));
-
-        vm.startPrank(user);
-        mToken.approve(address(spokePortal), amount);
-
-        // Trying to send to own chain ID should fail
-        // Note: This reverts with UnsupportedDestinationChain because sending to self is not supported
-        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, SPOKE_CHAIN_ID));
-
-        spokePortal.sendToken(amount, address(mToken), SPOKE_CHAIN_ID, hubMToken, recipient, refundAddress, bridgeAdapterArgs);
         vm.stopPrank();
     }
 }

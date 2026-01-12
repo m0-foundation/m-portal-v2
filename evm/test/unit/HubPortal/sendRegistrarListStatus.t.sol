@@ -114,7 +114,7 @@ contract SendRegistrarListStatusUnitTest is HubPortalUnitTestBase {
     function test_sendRegistrarListStatus_revertsIfNoBridgeAdapterSet() external {
         uint32 unconfiguredChain = 999;
 
-        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, unconfiguredChain));
+        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, unconfiguredChain, address(0)));
         hubPortal.sendRegistrarListStatus(unconfiguredChain, testListName, testAccount, refundAddress, bridgeAdapterArgs);
     }
 
@@ -125,8 +125,8 @@ contract SendRegistrarListStatusUnitTest is HubPortalUnitTestBase {
         hubPortal.sendRegistrarListStatus(SPOKE_CHAIN_ID, testListName, testAccount, refundAddress, unsupportedAdapter, bridgeAdapterArgs);
     }
 
-    function test_sendRegistrarListStatus_revertsIfInvalidDestinationChain() external {
-        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, HUB_CHAIN_ID));
+    function test_sendRegistrarListStatus_revertsIfSendToSelf() external {
+        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, HUB_CHAIN_ID, address(0)));
         hubPortal.sendRegistrarListStatus(HUB_CHAIN_ID, testListName, testAccount, refundAddress, bridgeAdapterArgs);
     }
 }
