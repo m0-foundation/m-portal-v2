@@ -4,7 +4,7 @@ pragma solidity 0.8.30;
 import { IBridgeAdapter } from "../../../src/interfaces/IBridgeAdapter.sol";
 import { IPortal } from "../../../src/interfaces/IPortal.sol";
 import { TypeConverter } from "../../../src/libraries/TypeConverter.sol";
-import { PayloadEncoder } from "../../../src/libraries/PayloadEncoder.sol";
+import { PayloadEncoder, PayloadType } from "../../../src/libraries/PayloadEncoder.sol";
 
 import { MockBridgeAdapter } from "../../mocks/MockBridgeAdapter.sol";
 import { MockFeeOnTransferExtension } from "../../mocks/MockFeeOnTransferExtension.sol";
@@ -244,6 +244,25 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
 
         vm.expectRevert(abi.encodeWithSelector(IPortal.InsufficientAmountReceived.selector, amount, amount - amount * feeRate / 10_000));
         hubPortal.sendToken(amount, address(feeOnUnwrapToken), SPOKE_CHAIN_ID, spokeMToken, recipient, refundAddress, bridgeAdapterArgs);
+        vm.stopPrank();
+    }
+
+    function test_sendToken_revertsIfPayloadGasLimitNotSet() external {
+        uint32 newChainId = 999;
+        bytes32 newChainMToken = makeAddr("newChainMToken").toBytes32();
+
+        // Set up bridge adapter and bridging path but NOT the gas limit
+        vm.startPrank(operator);
+        hubPortal.setDefaultBridgeAdapter(newChainId, address(bridgeAdapter));
+        hubPortal.setSupportedBridgingPath(address(mToken), newChainId, newChainMToken, true);
+        vm.stopPrank();
+
+        vm.startPrank(user);
+        mToken.approve(address(hubPortal), amount);
+
+        vm.expectRevert(abi.encodeWithSelector(IPortal.PayloadGasLimitNotSet.selector, newChainId, PayloadType.TokenTransfer));
+        hubPortal.sendToken{ value: 1 }(amount, address(mToken), newChainId, newChainMToken, recipient, refundAddress, bridgeAdapterArgs);
+        
         vm.stopPrank();
     }
 
