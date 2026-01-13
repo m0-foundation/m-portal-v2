@@ -93,6 +93,9 @@ interface IHubPortal is IPortal {
     //                          VIEW/PURE FUNCTIONS                          //
     ///////////////////////////////////////////////////////////////////////////
 
+    /// @notice The list name identifier for Solana Virtual Machine earners in the Merkle Tree Builder.
+    function SVM_EARNER_LIST() external view returns (bytes32);
+
     /// @notice Indicates whether earning for HubPortal was ever enabled.
     function wasEarningEnabled() external view returns (bool);
 
