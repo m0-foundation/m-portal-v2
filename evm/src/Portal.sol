@@ -426,7 +426,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         bytes calldata bridgeAdapterArgs
     ) internal {
         IBridgeAdapter(bridgeAdapter).sendMessage{ value: msg.value }(
-            destinationChainId, payloadGasLimit(destinationChainId, payloadType), refundAddress, payload, bridgeAdapterArgs
+            destinationChainId, _getPayloadGasLimitOrRevert(destinationChainId, payloadType), refundAddress, payload, bridgeAdapterArgs
         );
     }
 
@@ -793,7 +793,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     /// @param  payloadType        The payload type: TokenTransfer = 0, Index = 1, RegistrarKey = 2, RegistrarList = 3, FillReport = 4
     /// @param  bridgeAdapter      The address of the bridge adapter.
     function _quote(uint32 destinationChainId, PayloadType payloadType, address bridgeAdapter) private view returns (uint256) {
-        uint256 gasLimit = _getPortalStorageLocation().remoteChainConfig[destinationChainId].payloadGasLimit[payloadType];
+        uint256 gasLimit = _getPayloadGasLimitOrRevert(destinationChainId, payloadType);
 
         // NOTE: For quoting delivery fee, the content of the message doesn’t matter,
         //       only the destination chain, gas limit required to process the message on the destination
@@ -801,6 +801,14 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         bytes memory payload = PayloadEncoder.generateEmptyPayload(payloadType);
 
         return IBridgeAdapter(bridgeAdapter).quote(destinationChainId, gasLimit, payload);
+    }
+
+    /// @dev Returns the gas limit for the specified payload type on the destination chain.
+    ///      Reverts if the gas limit is not set.
+    function _getPayloadGasLimitOrRevert(uint32 destinationChainId, PayloadType payloadType) internal view returns (uint256) {
+        uint256 gasLimit = payloadGasLimit(destinationChainId, payloadType);
+        if (gasLimit == 0) revert PayloadGasLimitNotSet(destinationChainId, payloadType);
+        return gasLimit;
     }
 
     /// @dev Reverts if `amount` is zero.
