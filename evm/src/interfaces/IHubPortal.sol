@@ -239,7 +239,7 @@ interface IHubPortal is IPortal {
 
     /// @notice Enables cross-Spoke token transfer for a specified Spoke chain.
     /// @dev    Stops tracking the principal amount of $M tokens bridged to the Spoke chain.
-    ///         Must be called after calling `enableCrossSpokeTokenTransfer` in SpokePortal.
+    ///         Must be called before calling `enableCrossSpokeTokenTransfer` in SpokePortal.
     /// @param  spokeChainId The ID of the Spoke chain.
     function enableCrossSpokeTokenTransfer(uint32 spokeChainId) external;
 }
