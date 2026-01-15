@@ -359,6 +359,7 @@ library PayloadEncoder {
     /// @param orderId            The ID of the order that the cancellation is being reported for.
     /// @param orderSender        The address that originally created the order on the origin chain.
     /// @param tokenIn            The address of the input token on the origin chain.
+    /// @param amountInToRefund   The amount of input token to refund to the origin sender.
     function encodeCancelReport(
         uint32 destinationChainId,
         bytes32 destinationPeer,
