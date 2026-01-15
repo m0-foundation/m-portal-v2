@@ -783,7 +783,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     /// @param amount             The amount of $M tokens to lock/burn.
     function _burnOrLock(uint32 destinationChainId, uint256 amount) internal virtual { }
 
-    /// @dev   Overridden in SpokePortal to update the $M token index.
+    /// @dev Overridden in SpokePortal to update the $M token index.
     function _updateMTokenIndex(uint128 index) internal virtual { }
 
     ///////////////////////////////////////////////////////////////////////////

@@ -116,13 +116,13 @@ interface IPortal {
     );
 
     /// @notice Emitted when an order cancel report is received from a source chain.
-    /// @param sourceChainId The ID of the source chain.
-    /// @param orderId       The ID of the order being reported.
-    /// @param originSender  The address on the origin chain that created the order.
-    /// @param tokenIn       The address of the input token on the origin chain.
+    /// @param sourceChainId    The ID of the source chain.
+    /// @param orderId          The ID of the order being reported.
+    /// @param originSender     The address on the origin chain that created the order.
+    /// @param tokenIn          The address of the input token on the origin chain.
     /// @param amountInToRefund The amount of input token to refund to the origin sender.
-    /// @param index         $M token index received from the source chain.
-    /// @param messageId     The unique identifier for the message.
+    /// @param index            $M token index received from the source chain.
+    /// @param messageId        The unique identifier for the message.
     event CancelReportReceived(
         uint32 indexed sourceChainId,
         bytes32 indexed orderId,
@@ -426,7 +426,7 @@ interface IPortal {
     /// @notice Sends the cancel report to the destination chain using the default bridge adapter.
     /// @param  destinationChainId The ID of the destination chain.
     /// @param  report             The OrderBook cancel report to send.
-    /// @param  refundAddress      The address to receive excess native gas on the source chain
+    /// @param  refundAddress      The address to receive excess native gas on the source chain.
     /// @param  bridgeAdapterArgs  The optional bridge adapter arguments, could be empty.
     /// @return messageId          The ID uniquely identifying the message.
     function sendCancelReport(
@@ -439,7 +439,7 @@ interface IPortal {
     /// @notice Sends the cancel report to the destination chain using the specified bridge adapter.
     /// @param  destinationChainId The ID of the destination chain.
     /// @param  report             The OrderBook cancel report to send.
-    /// @param  refundAddress      The address to receive excess native gas on the source chain
+    /// @param  refundAddress      The address to receive excess native gas on the source chain.
     /// @param  bridgeAdapter      The address of the bridge adapter to use.
     /// @param  bridgeAdapterArgs  The optional bridge adapter arguments, could be empty.
     /// @return messageId          The ID uniquely identifying the message.

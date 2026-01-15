@@ -39,17 +39,17 @@ interface IOrderBookLike {
 
     /**
      * @notice Report a fill that was made on another chain back to this chain as the origin chain
-     * @dev Must be called by the portal contract
-     * @param sourceChainId_ The chain ID that the fill report was sent from
-     * @param report_ Fill data sent from the destination chain
+     * @dev    Must be called by the portal contract
+     * @param sourceChainId The chain ID that the fill report was sent from
+     * @param report Fill data sent from the destination chain
      */
-    function reportFill(uint32 sourceChainId_, FillReport calldata report_) external;
+    function reportFill(uint32 sourceChainId, FillReport calldata report) external;
 
     /**
      * @notice Report a cross-chain cancellation of an order.
-     * @dev Must be called by the portal contract
-     * @param sourceChainId_ The chain ID that the cancel report was sent from
-     * @param report_ Cancel data sent from the destination chain
+     * @dev    Must be called by the portal contract
+     * @param sourceChainId The chain ID that the cancel report was sent from
+     * @param report Cancel data sent from the destination chain
      */
-    function reportCancel(uint32 sourceChainId_, CancelReport calldata report_) external;
+    function reportCancel(uint32 sourceChainId, CancelReport calldata report) external;
 }
