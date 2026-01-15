@@ -45,6 +45,7 @@ abstract contract HubPortalStorageLayout {
 ///         as well as propagating M token index, Registrar keys and list status to the Spoke chain.
 /// @dev    Tokens are bridged using lock-release mechanism.
 contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
+    /// The list name identifier for Solana Virtual Machine earners in the Merkle Tree Builder.
     bytes32 public constant SVM_EARNER_LIST = bytes32("solana-earners");
 
     /// @inheritdoc IHubPortal
