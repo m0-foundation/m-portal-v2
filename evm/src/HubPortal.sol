@@ -15,7 +15,9 @@ import { Portal } from "./Portal.sol";
 import { PayloadType, PayloadEncoder } from "./libraries/PayloadEncoder.sol";
 
 struct SpokeChainConfig {
+    /// The principal amount of M tokens bridged to the Spoke chain (only tracked for isolated Spokes).
     uint248 bridgedPrincipal;
+    /// Indicates whether cross-Spoke token transfer is enabled for this Spoke chain.
     bool crossSpokeTokenTransferEnabled;
 }
 
