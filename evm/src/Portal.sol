@@ -485,7 +485,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         uint256 actualAmount;
 
         // If the source token isn't $M token, unwrap it
-        if (sourceToken != address(mToken)) {
+        if (sourceToken != mToken) {
             // The actual amount of the source tokens that Portal received from the sender.
             actualAmount = _tokenBalanceOf(sourceToken, address(this)) - sourceTokenBalanceBefore;
 
