@@ -474,6 +474,8 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     /// @dev Transfers the specified amount of `sourceToken` from the sender to the Portal
     ///      If the source token is not $M token, it unwraps it to $M token.
     ///      Reverts if the actual amount received is less than the specified amount.
+    /// @param sourceToken     The address of the source token.
+    /// @param specifiedAmount The amount specified by the sender to transfer.
     function _transferAndUnwrap(address sourceToken, uint256 specifiedAmount) internal {
         uint256 mBalanceBefore = _mBalanceOf(address(this));
         uint256 sourceTokenBalanceBefore = _tokenBalanceOf(sourceToken, address(this));
