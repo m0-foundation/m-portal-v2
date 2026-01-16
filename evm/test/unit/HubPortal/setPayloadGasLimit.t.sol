@@ -41,4 +41,10 @@ contract SetPayloadGasLimitUnitTest is HubPortalUnitTestBase {
         vm.prank(operator);
         hubPortal.setPayloadGasLimit(HUB_CHAIN_ID, PayloadType.TokenTransfer, gasLimit);
     }
+
+    function test_setPayloadGasLimit_revertsIfZeroGasLimit() external {
+        vm.expectRevert(IPortal.ZeroPayloadGasLimit.selector);
+        vm.prank(operator);
+        hubPortal.setPayloadGasLimit(SPOKE_CHAIN_ID, PayloadType.TokenTransfer, 0);
+    }
 }
