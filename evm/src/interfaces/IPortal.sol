@@ -223,6 +223,9 @@ interface IPortal {
     /// @notice Thrown when the bridge adapter address is 0x0.
     error ZeroBridgeAdapter();
 
+    /// @notice Thrown when the payload gas limit is 0.
+    error ZeroPayloadGasLimit();
+
     /// @notice Thrown when `receiveMessage` function caller is not the bridge.
     error NotBridgeAdapter();
 
