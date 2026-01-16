@@ -376,12 +376,12 @@ library PayloadEncoder {
     }
 
     /// @notice Decodes an OrderBook cancel report payload.
-    /// @param  payload    The payload to decode.
-    /// @return messageId  The message ID.
-    /// @return index      $M token index.
-    /// @return orderId    The ID of the order that the cancellation is being reported for.
-    /// @return orderSender The address that originally created the order on the origin chain.
-    /// @return tokenIn    The address of the input token on the origin chain.
+    /// @param  payload          The payload to decode.
+    /// @return messageId        The message ID.
+    /// @return index            $M token index.
+    /// @return orderId          The ID of the order that the cancellation is being reported for.
+    /// @return orderSender      The address that originally created the order on the origin chain.
+    /// @return tokenIn          The address of the input token on the origin chain.
     /// @return amountInToRefund The amount of input token to refund to the origin sender.
     function decodeCancelReport(bytes memory payload)
         internal
