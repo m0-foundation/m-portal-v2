@@ -42,7 +42,7 @@ Setup interfaces, mocks, and base test infrastructure.
 
 #### Implementation
 
-- [ ] **Create `ILayerZeroBridgeAdapter` interface**
+- [x] **Create `ILayerZeroBridgeAdapter` interface**
   - Reference: SDD Section 3.2 (LayerZero-Specific Interface)
   - File: `evm/src/bridgeAdapters/layerzero/interfaces/ILayerZeroBridgeAdapter.sol`
   - Define:
@@ -58,7 +58,7 @@ Setup interfaces, mocks, and base test infrastructure.
 
 #### Implementation
 
-- [ ] **Create `MockLayerZeroEndpoint` mock contract**
+- [x] **Create `MockLayerZeroEndpoint` mock contract**
   - File: `evm/test/mocks/MockLayerZeroEndpoint.sol`
   - Implement:
     - `send()` function that records calls and returns MessagingReceipt
@@ -70,7 +70,7 @@ Setup interfaces, mocks, and base test infrastructure.
     - Configurable fee responses
   - Follow pattern from `MockHyperlaneMailbox` and `MockWormholeCoreBridge`
 
-- [ ] **Create LayerZero type definitions**
+- [x] **Create LayerZero type definitions**
   - File: `evm/src/bridgeAdapters/layerzero/interfaces/ILayerZeroTypes.sol`
   - Define (or import from `@layerzerolabs/oapp-evm`):
     - `Origin` struct (srcEid, sender, nonce)
@@ -82,7 +82,7 @@ Setup interfaces, mocks, and base test infrastructure.
 
 #### Implementation
 
-- [ ] **Create `LayerZeroBridgeAdapterUnitTestBase` test base contract**
+- [x] **Create `LayerZeroBridgeAdapterUnitTestBase` test base contract**
   - File: `evm/test/unit/bridgeAdapters/LayerZeroBridgeAdapter/LayerZeroBridgeAdapterUnitTestBase.sol`
   - Reference: `HyperlaneBridgeAdapterUnitTestBase.sol` pattern
   - Define constants:
@@ -111,7 +111,7 @@ Main contract implementation, function by function.
 
 #### Implementation
 
-- [ ] **Create `LayerZeroBridgeAdapter` contract skeleton**
+- [x] **Create `LayerZeroBridgeAdapter` contract skeleton**
   - Reference: SDD Section 2.3 (Contract Structure), Section 4.1 (State Variables)
   - File: `evm/src/bridgeAdapters/layerzero/LayerZeroBridgeAdapter.sol`
   - Inherit from:
@@ -127,7 +127,7 @@ Main contract implementation, function by function.
 
 #### Unit Tests
 
-- [ ] **Create unit test file for constructor**
+- [x] **Create unit test file for constructor**
   - File: `evm/test/unit/bridgeAdapters/LayerZeroBridgeAdapter/constructor.t.sol`
   - Add TODO list at top of file:
     ```solidity
@@ -135,14 +135,14 @@ Main contract implementation, function by function.
      * @notice Unit tests for LayerZeroBridgeAdapter constructor
      *
      * Branch coverage TODOs:
-     * - [ ] when endpoint is zero address
-     *     - [ ] reverts with ZeroEndpoint
-     * - [ ] when portal is zero address
-     *     - [ ] reverts with ZeroPortal (inherited)
-     * - [ ] when both addresses are valid
-     *     - [ ] succeeds
-     *     - [ ] sets endpoint immutable correctly
-     *     - [ ] sets portal immutable correctly
+     * - [x] when endpoint is zero address
+     *     - [x] reverts with ZeroEndpoint
+     * - [x] when portal is zero address
+     *     - [x] reverts with ZeroPortal (inherited)
+     * - [x] when both addresses are valid
+     *     - [x] succeeds
+     *     - [x] sets endpoint immutable correctly
+     *     - [x] sets portal immutable correctly
      */
     ```
 
@@ -150,7 +150,7 @@ Main contract implementation, function by function.
 
 #### Implementation
 
-- [ ] **Implement `initialize` function**
+- [x] **Implement `initialize` function**
   - Reference: SDD Section 7 (Access Control)
   - Signature: `function initialize(address admin, address operator) external initializer`
   - Call `_initialize(admin, operator)` from BridgeAdapter base
@@ -158,7 +158,7 @@ Main contract implementation, function by function.
 
 #### Unit Tests
 
-- [ ] **Create unit test file for `initialize`**
+- [x] **Create unit test file for `initialize`**
   - File: `evm/test/unit/bridgeAdapters/LayerZeroBridgeAdapter/initialize.t.sol`
   - Add TODO list:
     ```solidity
@@ -166,16 +166,16 @@ Main contract implementation, function by function.
      * @notice Unit tests for initialize
      *
      * Branch coverage TODOs:
-     * - [ ] when admin is zero address
-     *     - [ ] reverts with ZeroAdmin
-     * - [ ] when operator is zero address
-     *     - [ ] reverts with ZeroOperator
-     * - [ ] when both addresses are valid
-     *     - [ ] succeeds
-     *     - [ ] grants DEFAULT_ADMIN_ROLE to admin
-     *     - [ ] grants OPERATOR_ROLE to operator
-     * - [ ] when called twice
-     *     - [ ] reverts (already initialized)
+     * - [x] when admin is zero address
+     *     - [x] reverts with ZeroAdmin
+     * - [x] when operator is zero address
+     *     - [x] reverts with ZeroOperator
+     * - [x] when both addresses are valid
+     *     - [x] succeeds
+     *     - [x] grants DEFAULT_ADMIN_ROLE to admin
+     *     - [x] grants OPERATOR_ROLE to operator
+     * - [x] when called twice
+     *     - [x] reverts (already initialized)
      */
     ```
 
@@ -183,7 +183,7 @@ Main contract implementation, function by function.
 
 #### Implementation
 
-- [ ] **Implement `quote` function**
+- [x] **Implement `quote` function**
   - Reference: SDD Section 6.3 (Fee Quoting Flow)
   - Signature: `function quote(uint32 destinationChainId, uint256 gasLimit, bytes memory payload) external view returns (uint256 fee)`
   - Algorithm:
@@ -195,7 +195,7 @@ Main contract implementation, function by function.
 
 #### Unit Tests
 
-- [ ] **Create unit test file for `quote`**
+- [x] **Create unit test file for `quote`**
   - File: `evm/test/unit/bridgeAdapters/LayerZeroBridgeAdapter/quote.t.sol`
   - Add TODO list:
     ```solidity
@@ -203,21 +203,21 @@ Main contract implementation, function by function.
      * @notice Unit tests for quote
      *
      * Branch coverage TODOs:
-     * - [ ] when chain ID is not configured (no peer)
-     *     - [ ] reverts with UnsupportedChain
-     * - [ ] when chain ID is not configured (no bridge chain ID)
-     *     - [ ] reverts with UnsupportedChain
-     * - [ ] when chain is properly configured
-     *     - [ ] succeeds
-     *     - [ ] returns fee from endpoint quote
-     *     - [ ] calls endpoint with correct EID
-     *     - [ ] calls endpoint with correct options encoding
+     * - [x] when chain ID is not configured (no peer)
+     *     - [x] reverts with UnsupportedChain
+     * - [x] when chain ID is not configured (no bridge chain ID)
+     *     - [x] reverts with UnsupportedChain
+     * - [x] when chain is properly configured
+     *     - [x] succeeds
+     *     - [x] returns fee from endpoint quote
+     *     - [x] calls endpoint with correct EID
+     *     - [x] calls endpoint with correct options encoding
      */
     ```
 
 #### Fuzz Tests
 
-- [ ] **Implement fuzz tests for `quote`**
+- [x] **Implement fuzz tests for `quote`**
   - Add to same test file
   - Fuzzable parameters: `gasLimit`, `payload` (length)
   - Invariants:
@@ -228,7 +228,7 @@ Main contract implementation, function by function.
 
 #### Implementation
 
-- [ ] **Implement `sendMessage` function**
+- [x] **Implement `sendMessage` function**
   - Reference: SDD Section 6.1 (Send Message Flow)
   - Signature:
     ```solidity
@@ -248,14 +248,14 @@ Main contract implementation, function by function.
     5. Call `_lzSend(dstEid, payload, options, MessagingFee(msg.value, 0), refundAddress.toAddress())`
   - LayerZero handles refund of excess fees to `refundAddress`
 
-- [ ] **Implement `_buildOptions` internal function**
+- [x] **Implement `_buildOptions` internal function**
   - Reference: SDD Section 4.3 (Execution Options Encoding)
   - Use `OptionsBuilder` from `@layerzerolabs/oapp-evm`
   - Build TYPE_3 options with `addExecutorLzReceiveOption(uint128(gasLimit), 0)`
 
 #### Unit Tests
 
-- [ ] **Create unit test file for `sendMessage`**
+- [x] **Create unit test file for `sendMessage`**
   - File: `evm/test/unit/bridgeAdapters/LayerZeroBridgeAdapter/sendMessage.t.sol`
   - Add TODO list:
     ```solidity
@@ -263,19 +263,19 @@ Main contract implementation, function by function.
      * @notice Unit tests for sendMessage
      *
      * Branch coverage TODOs:
-     * - [ ] when caller is not portal
-     *     - [ ] reverts with NotPortal
-     * - [ ] when peer is not configured
-     *     - [ ] reverts with UnsupportedChain
-     * - [ ] when bridge chain ID is not configured
-     *     - [ ] reverts with UnsupportedChain
-     * - [ ] when all parameters are valid
-     *     - [ ] succeeds
-     *     - [ ] calls endpoint send with correct destination EID
-     *     - [ ] calls endpoint send with correct payload
-     *     - [ ] calls endpoint send with correct options
-     *     - [ ] passes msg.value to endpoint
-     *     - [ ] uses refundAddress for excess fee refund
+     * - [x] when caller is not portal
+     *     - [x] reverts with NotPortal
+     * - [x] when peer is not configured
+     *     - [x] reverts with UnsupportedChain
+     * - [x] when bridge chain ID is not configured
+     *     - [x] reverts with UnsupportedChain
+     * - [x] when all parameters are valid
+     *     - [x] succeeds
+     *     - [x] calls endpoint send with correct destination EID
+     *     - [x] calls endpoint send with correct payload
+     *     - [x] calls endpoint send with correct options
+     *     - [x] passes msg.value to endpoint
+     *     - [x] uses refundAddress for excess fee refund
      */
     ```
 
@@ -283,7 +283,7 @@ Main contract implementation, function by function.
 
 #### Implementation
 
-- [ ] **Implement `_lzReceive` internal override**
+- [x] **Implement `_lzReceive` internal override**
   - Reference: SDD Section 6.2 (Receive Message Flow)
   - Signature (override from OAppReceiver):
     ```solidity
@@ -303,7 +303,7 @@ Main contract implementation, function by function.
 
 #### Unit Tests
 
-- [ ] **Create unit test file for `lzReceive`**
+- [x] **Create unit test file for `lzReceive`**
   - File: `evm/test/unit/bridgeAdapters/LayerZeroBridgeAdapter/lzReceive.t.sol`
   - Add TODO list:
     ```solidity
@@ -311,16 +311,16 @@ Main contract implementation, function by function.
      * @notice Unit tests for lzReceive (via _lzReceive)
      *
      * Branch coverage TODOs:
-     * - [ ] when caller is not endpoint
-     *     - [ ] reverts (enforced by OAppReceiver base)
-     * - [ ] when source EID is not configured
-     *     - [ ] reverts with UnsupportedBridgeChain
-     * - [ ] when sender does not match peer for source chain
-     *     - [ ] reverts with InvalidPeer
-     * - [ ] when sender matches configured peer
-     *     - [ ] succeeds
-     *     - [ ] calls portal.receiveMessage with correct source chain ID
-     *     - [ ] calls portal.receiveMessage with correct payload
+     * - [x] when caller is not endpoint
+     *     - [x] reverts (enforced by OAppReceiver base)
+     * - [x] when source EID is not configured
+     *     - [x] reverts with UnsupportedBridgeChain
+     * - [x] when sender does not match peer for source chain
+     *     - [x] reverts with InvalidPeer
+     * - [x] when sender matches configured peer
+     *     - [x] succeeds
+     *     - [x] calls portal.receiveMessage with correct source chain ID
+     *     - [x] calls portal.receiveMessage with correct payload
      */
     ```
 
@@ -328,7 +328,7 @@ Main contract implementation, function by function.
 
 #### Implementation
 
-- [ ] **Override `_getPeerOrRevert` for OAppCore compatibility**
+- [x] **Override `_getPeerOrRevert` for OAppCore compatibility**
   - Reference: SDD Section 2.3 (Contract Structure)
   - LayerZero's OAppCore expects `peers(uint32 eid)` function
   - Override or implement to use BridgeAdapter's peer storage
@@ -336,7 +336,7 @@ Main contract implementation, function by function.
 
 #### Unit Tests
 
-- [ ] **Add peer compatibility tests to existing peer test file**
+- [x] **Add peer compatibility tests to existing peer test file**
   - Verify OApp's peer query mechanism works with BridgeAdapter storage
   - Verify `setPeer` updates are reflected in OApp peer queries
 
@@ -350,7 +350,7 @@ Role setup, permission checks, recovery functions.
 
 #### Implementation
 
-- [ ] **Implement `skip` admin recovery function**
+- [x] **Implement `skip` admin recovery function**
   - Reference: SDD Section 6.4 (Recovery Functions)
   - Signature: `function skip(uint32 srcEid, bytes32 sender, uint64 nonce) external onlyRole(DEFAULT_ADMIN_ROLE)`
   - Call `ILayerZeroEndpointV2(endpoint).skip(address(this), srcEid, sender, nonce)`
@@ -358,7 +358,7 @@ Role setup, permission checks, recovery functions.
 
 #### Unit Tests
 
-- [ ] **Create unit test file for `skip`**
+- [x] **Create unit test file for `skip`**
   - File: `evm/test/unit/bridgeAdapters/LayerZeroBridgeAdapter/skip.t.sol`
   - Add TODO list:
     ```solidity
@@ -366,12 +366,12 @@ Role setup, permission checks, recovery functions.
      * @notice Unit tests for skip
      *
      * Branch coverage TODOs:
-     * - [ ] when caller does not have DEFAULT_ADMIN_ROLE
-     *     - [ ] reverts with AccessControlUnauthorizedAccount
-     * - [ ] when caller has DEFAULT_ADMIN_ROLE
-     *     - [ ] succeeds
-     *     - [ ] calls endpoint.skip with correct parameters
-     *     - [ ] emits NonceSkipped event
+     * - [x] when caller does not have DEFAULT_ADMIN_ROLE
+     *     - [x] reverts with AccessControlUnauthorizedAccount
+     * - [x] when caller has DEFAULT_ADMIN_ROLE
+     *     - [x] succeeds
+     *     - [x] calls endpoint.skip with correct parameters
+     *     - [x] emits NonceSkipped event
      */
     ```
 
@@ -379,7 +379,7 @@ Role setup, permission checks, recovery functions.
 
 #### Implementation
 
-- [ ] **Implement `clear` admin recovery function**
+- [x] **Implement `clear` admin recovery function**
   - Reference: SDD Section 6.4 (Recovery Functions)
   - Signature: `function clear(Origin calldata origin, bytes32 guid, bytes calldata message) external onlyRole(DEFAULT_ADMIN_ROLE)`
   - Call `ILayerZeroEndpointV2(endpoint).clear(address(this), origin, guid, message)`
@@ -387,7 +387,7 @@ Role setup, permission checks, recovery functions.
 
 #### Unit Tests
 
-- [ ] **Create unit test file for `clear`**
+- [x] **Create unit test file for `clear`**
   - File: `evm/test/unit/bridgeAdapters/LayerZeroBridgeAdapter/clear.t.sol`
   - Add TODO list:
     ```solidity
@@ -395,12 +395,12 @@ Role setup, permission checks, recovery functions.
      * @notice Unit tests for clear
      *
      * Branch coverage TODOs:
-     * - [ ] when caller does not have DEFAULT_ADMIN_ROLE
-     *     - [ ] reverts with AccessControlUnauthorizedAccount
-     * - [ ] when caller has DEFAULT_ADMIN_ROLE
-     *     - [ ] succeeds
-     *     - [ ] calls endpoint.clear with correct parameters
-     *     - [ ] emits PayloadCleared event
+     * - [x] when caller does not have DEFAULT_ADMIN_ROLE
+     *     - [x] reverts with AccessControlUnauthorizedAccount
+     * - [x] when caller has DEFAULT_ADMIN_ROLE
+     *     - [x] succeeds
+     *     - [x] calls endpoint.clear with correct parameters
+     *     - [x] emits PayloadCleared event
      */
     ```
 
@@ -408,7 +408,7 @@ Role setup, permission checks, recovery functions.
 
 #### Unit Tests
 
-- [ ] **Create unit test file for `setPeer`**
+- [x] **Create unit test file for `setPeer`**
   - File: `evm/test/unit/bridgeAdapters/LayerZeroBridgeAdapter/setPeer.t.sol`
   - Follow pattern from `HyperlaneBridgeAdapter/setPeer.t.sol`
   - Add TODO list:
@@ -417,22 +417,22 @@ Role setup, permission checks, recovery functions.
      * @notice Unit tests for setPeer (inherited from BridgeAdapter)
      *
      * Branch coverage TODOs:
-     * - [ ] when caller does not have OPERATOR_ROLE
-     *     - [ ] reverts with AccessControlUnauthorizedAccount
-     * - [ ] when chainId is zero
-     *     - [ ] reverts with ZeroChain
-     * - [ ] when peer is zero bytes32
-     *     - [ ] reverts with ZeroPeer
-     * - [ ] when peer is already set to same value
-     *     - [ ] succeeds but does not emit event (no-op)
-     * - [ ] when setting new peer
-     *     - [ ] succeeds
-     *     - [ ] updates storage
-     *     - [ ] emits PeerSet event
+     * - [x] when caller does not have OPERATOR_ROLE
+     *     - [x] reverts with AccessControlUnauthorizedAccount
+     * - [x] when chainId is zero
+     *     - [x] reverts with ZeroChain
+     * - [x] when peer is zero bytes32
+     *     - [x] reverts with ZeroPeer
+     * - [x] when peer is already set to same value
+     *     - [x] succeeds but does not emit event (no-op)
+     * - [x] when setting new peer
+     *     - [x] succeeds
+     *     - [x] updates storage
+     *     - [x] emits PeerSet event
      */
     ```
 
-- [ ] **Create unit test file for `setBridgeChainId`**
+- [x] **Create unit test file for `setBridgeChainId`**
   - File: `evm/test/unit/bridgeAdapters/LayerZeroBridgeAdapter/setBridgeChainId.t.sol`
   - Follow pattern from `HyperlaneBridgeAdapter/setBridgeChainId.t.sol`
   - Add TODO list:
@@ -441,23 +441,23 @@ Role setup, permission checks, recovery functions.
      * @notice Unit tests for setBridgeChainId (inherited from BridgeAdapter)
      *
      * Branch coverage TODOs:
-     * - [ ] when caller does not have OPERATOR_ROLE
-     *     - [ ] reverts with AccessControlUnauthorizedAccount
-     * - [ ] when chainId is zero
-     *     - [ ] reverts with ZeroChain
-     * - [ ] when bridgeChainId is zero
-     *     - [ ] reverts with ZeroBridgeChain
-     * - [ ] when mapping is already set to same value
-     *     - [ ] succeeds but does not emit event (no-op)
-     * - [ ] when setting new mapping
-     *     - [ ] succeeds
-     *     - [ ] updates forward mapping
-     *     - [ ] updates reverse mapping
-     *     - [ ] emits BridgeChainIdSet event
-     * - [ ] when changing existing mapping
-     *     - [ ] cleans up old forward mapping
-     *     - [ ] cleans up old reverse mapping
-     *     - [ ] sets new mappings correctly
+     * - [x] when caller does not have OPERATOR_ROLE
+     *     - [x] reverts with AccessControlUnauthorizedAccount
+     * - [x] when chainId is zero
+     *     - [x] reverts with ZeroChain
+     * - [x] when bridgeChainId is zero
+     *     - [x] reverts with ZeroBridgeChain
+     * - [x] when mapping is already set to same value
+     *     - [x] succeeds but does not emit event (no-op)
+     * - [x] when setting new mapping
+     *     - [x] succeeds
+     *     - [x] updates forward mapping
+     *     - [x] updates reverse mapping
+     *     - [x] emits BridgeChainIdSet event
+     * - [x] when changing existing mapping
+     *     - [x] cleans up old forward mapping
+     *     - [x] cleans up old reverse mapping
+     *     - [x] sets new mappings correctly
      */
     ```
 
@@ -465,7 +465,7 @@ Role setup, permission checks, recovery functions.
 
 #### Unit Tests
 
-- [ ] **Add upgrade authorization tests to initialize test file**
+- [x] **Add upgrade authorization tests to initialize test file**
   - Verify only DEFAULT_ADMIN_ROLE can authorize upgrades
   - Test `_authorizeUpgrade` access control
 
@@ -479,15 +479,15 @@ DVN configuration and endpoint interactions.
 
 #### Implementation
 
-- [ ] **Implement `setDVNConfig` admin function** (if needed per SDD Section 3.4)
+- [x] **Implement `setDVNConfig` admin function** (if needed per SDD Section 3.4)
   - Reference: SDD Section 3.4 (Admin/Privileged Interface)
-  - Signature: `function setDVNConfig(uint32 remoteEid, uint32 configType, bytes calldata config) external onlyRole(DEFAULT_ADMIN_ROLE)`
+  - Signature: `function setDVNConfig(address lib, SetConfigParam[] calldata params) external onlyRole(DEFAULT_ADMIN_ROLE)`
   - Call through to LayerZero Endpoint's `setConfig()` via MessageLib
   - Note: This may be handled outside the adapter via direct Endpoint interaction
 
 #### Unit Tests
 
-- [ ] **Create unit test file for DVN configuration** (if implemented)
+- [x] **Create unit test file for DVN configuration** (if implemented)
   - File: `evm/test/unit/bridgeAdapters/LayerZeroBridgeAdapter/setDVNConfig.t.sol`
   - Test access control and correct endpoint interaction
 
@@ -499,17 +499,17 @@ Comprehensive invariant testing based on SDD mathematical invariants.
 
 ### 5.1 Core Invariants
 
-- [ ] **Implement invariant test suite**
+- [x] **Implement invariant test suite**
   - Reference: SDD Section 5 (Mathematical Invariants)
   - File: `evm/test/invariants/LayerZeroBridgeAdapter.invariants.t.sol`
   - Invariants to test:
-    - [ ] **Sender Verification**: Every received message origin.sender == peers[origin.srcEid]
-    - [ ] **Chain ID Bijection**: internalToBridgeChainId[c] = b ⟺ bridgeToInternalChainId[b] = c
-    - [ ] **Quote Accuracy**: quote() returns fee >= actual send cost
+    - [x] **Sender Verification**: Every received message origin.sender == peers[origin.srcEid]
+    - [x] **Chain ID Bijection**: internalToBridgeChainId[c] = b ⟺ bridgeToInternalChainId[b] = c
+    - [x] **Quote Accuracy**: quote() returns fee >= actual send cost
 
 ### 5.2 Stateful Fuzz Testing
 
-- [ ] **Implement stateful fuzz test handlers**
+- [x] **Implement stateful fuzz test handlers**
   - Define actor functions:
     - `setPeer(uint32 chainId, bytes32 peer)`
     - `setBridgeChainId(uint32 chainId, uint256 bridgeChainId)`
