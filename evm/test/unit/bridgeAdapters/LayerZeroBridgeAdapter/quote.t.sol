@@ -141,8 +141,9 @@ contract QuoteUnitTest is LayerZeroBridgeAdapterUnitTestBase {
         assertEq(fee, configuredFee, "Quote should return configured fee regardless of payload length");
     }
 
-    function testFuzz_quote_deterministic(uint256 gasLimit, bytes memory payload) external view {
+    function testFuzz_quote_deterministic(uint128 gasLimit, bytes memory payload) external view {
         // Quote with same parameters should always return the same value
+        // Note: gasLimit is uint128 because LayerZero options encode gas as uint128
         uint256 fee1 = adapter.quote(SPOKE_CHAIN_ID, gasLimit, payload);
         uint256 fee2 = adapter.quote(SPOKE_CHAIN_ID, gasLimit, payload);
 
