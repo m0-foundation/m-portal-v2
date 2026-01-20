@@ -54,6 +54,7 @@ Bridge adapters abstract the underlying cross-chain messaging protocol:
 - **BridgeAdapter** (`src/bridgeAdapters/BridgeAdapter.sol`) - Abstract base with chain ID mapping and peer management
 - **HyperlaneBridgeAdapter** - Hyperlane integration
 - **WormholeBridgeAdapter** - Wormhole integration
+- **LayerZeroBridgeAdapter** - LayerZero V2 integration
 
 Adapters are UUPS upgradeable proxies with role-based access control (admin + operator roles).
 
@@ -84,6 +85,7 @@ evm/
 │   ├── bridgeAdapters/
 │   │   ├── BridgeAdapter.sol
 │   │   ├── hyperlane/
+│   │   ├── layerzero/
 │   │   └── wormhole/
 │   ├── interfaces/
 │   └── libraries/
