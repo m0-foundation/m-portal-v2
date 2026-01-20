@@ -174,6 +174,6 @@ contract LayerZeroBridgeAdapter is BridgeAdapter, OAppReceiver, ILayerZeroBridge
     /// @param  gasLimit The gas limit for destination execution.
     /// @return options The encoded options bytes.
     function _buildOptions(uint256 gasLimit) internal pure returns (bytes memory options) {
-        options = OptionsBuilder.newOptions().addExecutorLzReceiveOption(uint128(gasLimit), 0);
+        options = OptionsBuilder.newOptions().addExecutorLzReceiveOption(gasLimit.toUint128(), 0);
     }
 }
