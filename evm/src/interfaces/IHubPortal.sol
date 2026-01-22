@@ -70,6 +70,9 @@ interface IHubPortal is IPortal {
     /// @param  bridgedPrincipal The principal amount of $M tokens bridged to the Spoke chain before transfer was enabled.
     event CrossSpokeTokenTransferEnabled(uint32 spokeChainId, uint248 bridgedPrincipal);
 
+    /// @notice Emitted when the migration process is completed.
+    event MigrationCompleted();
+
     ///////////////////////////////////////////////////////////////////////////
     //                             CUSTOM ERRORS                             //
     ///////////////////////////////////////////////////////////////////////////
@@ -89,12 +92,26 @@ interface IHubPortal is IPortal {
     /// @notice Thrown when trying to unlock more tokens than was locked.
     error InsufficientBridgedBalance();
 
+    /// @notice Thrown when calling `migrateBridgedPrincipal` function while the contract is not in migration mode.
+    error NotMigrating();
+
+    /// @notice Thrown when trying to migrate bridged principal for a connected Spoke.
+    /// @param  spokeChainId The ID of the Spoke chain.
+    error ConnectedSpoke(uint32 spokeChainId);
+
+    /// @notice Thrown when trying to migrate bridged principal that has already been set.
+    /// @param  spokeChainId The ID of the Spoke chain.
+    error BridgedPrincipalAlreadySet(uint32 spokeChainId);
+
     ///////////////////////////////////////////////////////////////////////////
     //                          VIEW/PURE FUNCTIONS                          //
     ///////////////////////////////////////////////////////////////////////////
 
     /// @notice The list name identifier for Solana Virtual Machine earners in the Merkle Tree Builder.
     function SVM_EARNER_LIST() external view returns (bytes32);
+
+    /// @notice Indicates whether the contract is in migration mode.
+    function migrating() external view returns (bool);
 
     /// @notice Indicates whether earning for HubPortal was ever enabled.
     function wasEarningEnabled() external view returns (bool);
@@ -245,4 +262,15 @@ interface IHubPortal is IPortal {
     ///         Must be called before calling `enableCrossSpokeTokenTransfer` in SpokePortal.
     /// @param  spokeChainId The ID of the Spoke chain.
     function enableCrossSpokeTokenTransfer(uint32 spokeChainId) external;
+
+    /// @notice Migrates the principal amount of $M tokens bridged to a specified isolated Spoke chain in Portal V1.
+    /// @dev    Must be called after an existing Spoke chain is migrated to Portal V2.
+    ///         The function could be removed after all Spoke chains are migrated.
+    /// @param  spokeChainId     The ID of the Spoke chain.
+    /// @param  bridgedPrincipal The principal amount of $M tokens bridged to the Spoke chain.
+    function migrateBridgedPrincipal(uint32 spokeChainId, uint248 bridgedPrincipal) external;
+
+    /// @notice Completes the migration process, disabling `migrateBridgedPrincipal` operation.
+    /// @dev    Must be called after all Spoke chains have been migrated.
+    function completeMigration() external;
 }
