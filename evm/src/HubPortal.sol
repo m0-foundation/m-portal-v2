@@ -24,6 +24,7 @@ struct SpokeChainConfig {
 abstract contract HubPortalStorageLayout {
     /// @custom:storage-location erc7201:M0.storage.HubPortal
     struct HubPortalStorageStruct {
+        bool migrating;
         bool wasEarningEnabled;
         uint128 disableEarningIndex;
         mapping(uint32 spokeChainId => SpokeChainConfig) spokeConfig;
@@ -74,6 +75,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
 
         HubPortalStorageStruct storage $ = _getHubPortalStorageLocation();
         $.disableEarningIndex = IndexingMath.EXP_SCALED_ONE;
+        $.migrating = true;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -212,9 +214,37 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         emit CrossSpokeTokenTransferEnabled(spokeChainId, spokeBridgedPrincipal);
     }
 
+    /// @inheritdoc IHubPortal
+    function migrateBridgedPrincipal(uint32 spokeChainId, uint248 spokeBridgedPrincipal) external onlyRole(OPERATOR_ROLE) {
+        HubPortalStorageStruct storage $ = _getHubPortalStorageLocation();
+        if (!$.migrating) revert NotMigrating();
+
+        SpokeChainConfig storage spokeConfig = $.spokeConfig[spokeChainId];
+
+        if (spokeConfig.crossSpokeTokenTransferEnabled) revert ConnectedSpoke(spokeChainId);
+        if (spokeConfig.bridgedPrincipal > 0) revert BridgedPrincipalAlreadySet(spokeChainId);
+
+        spokeConfig.bridgedPrincipal = spokeBridgedPrincipal;
+    }
+
+    /// @inheritdoc IHubPortal
+    function completeMigration() external onlyRole(OPERATOR_ROLE) {
+        HubPortalStorageStruct storage $ = _getHubPortalStorageLocation();
+        if (!$.migrating) return;
+
+        $.migrating = false;
+
+        emit MigrationCompleted();
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     //                     EXTERNAL VIEW/PURE FUNCTIONS                      //
     ///////////////////////////////////////////////////////////////////////////
+
+    /// @inheritdoc IHubPortal
+    function migrating() external view returns (bool) {
+        return _getHubPortalStorageLocation().migrating;
+    }
 
     /// @inheritdoc IHubPortal
     function wasEarningEnabled() public view returns (bool) {
