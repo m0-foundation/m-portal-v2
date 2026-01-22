@@ -262,7 +262,7 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
 
         vm.expectRevert(abi.encodeWithSelector(IPortal.PayloadGasLimitNotSet.selector, newChainId, PayloadType.TokenTransfer));
         hubPortal.sendToken{ value: 1 }(amount, address(mToken), newChainId, newChainMToken, recipient, refundAddress, bridgeAdapterArgs);
-        
+
         vm.stopPrank();
     }
 

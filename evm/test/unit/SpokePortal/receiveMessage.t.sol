@@ -477,4 +477,40 @@ contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {
         vm.prank(address(bridgeAdapter));
         spokePortal.receiveMessage(SPOKE_CHAIN_ID_2, payload);
     }
+
+    function test_receiveMessage_index_revertsIfInvalidSourceChain() external {
+        uint128 newIndex = 1_200_000_000_000;
+        bytes memory payload = PayloadEncoder.encodeIndex(SPOKE_CHAIN_ID_2, address(bridgeAdapter).toBytes32(), messageId, newIndex);
+
+        vm.expectRevert(abi.encodeWithSelector(ISpokePortal.InvalidSourceChain.selector, SPOKE_CHAIN_ID_2));
+
+        vm.prank(address(bridgeAdapter));
+        spokePortal.receiveMessage(SPOKE_CHAIN_ID_2, payload);
+    }
+
+    function test_receiveMessage_registrarKey_revertsIfInvalidSourceChain() external {
+        bytes32 key = bytes32("test_key");
+        bytes32 value = bytes32("test_value");
+        bytes memory payload =
+            PayloadEncoder.encodeRegistrarKey(SPOKE_CHAIN_ID_2, address(bridgeAdapter).toBytes32(), messageId, index, key, value);
+
+        vm.expectRevert(abi.encodeWithSelector(ISpokePortal.InvalidSourceChain.selector, SPOKE_CHAIN_ID_2));
+
+        vm.prank(address(bridgeAdapter));
+        spokePortal.receiveMessage(SPOKE_CHAIN_ID_2, payload);
+    }
+
+    function test_receiveMessage_registrarList_revertsIfInvalidSourceChain() external {
+        bytes32 listName = EARNERS_LIST;
+        address account = makeAddr("earner");
+        bool add = true;
+        bytes memory payload = PayloadEncoder.encodeRegistrarList(
+            SPOKE_CHAIN_ID_2, address(bridgeAdapter).toBytes32(), messageId, index, listName, account, add
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(ISpokePortal.InvalidSourceChain.selector, SPOKE_CHAIN_ID_2));
+
+        vm.prank(address(bridgeAdapter));
+        spokePortal.receiveMessage(SPOKE_CHAIN_ID_2, payload);
+    }
 }

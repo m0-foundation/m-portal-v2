@@ -228,7 +228,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         }
 
         // Index, Registrar Key, or Registrar List Update on Spoke chains
-        _receiveCustomPayload(payloadType, payload);
+        _receiveCustomPayload(sourceChainId, payloadType, payload);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -762,9 +762,10 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     }
 
     /// @dev   Overridden in SpokePortal to handle custom payload messages.
-    /// @param payloadType The type of the payload (Index, RegistrarKey, or RegistrarList).
-    /// @param payload     The message payload to process.
-    function _receiveCustomPayload(PayloadType payloadType, bytes memory payload) internal virtual { }
+    /// @param sourceChainId The ID of the source chain.
+    /// @param payloadType   The type of the payload (Index, RegistrarKey, or RegistrarList).
+    /// @param payload       The message payload to process.
+    function _receiveCustomPayload(uint32 sourceChainId, PayloadType payloadType, bytes memory payload) internal virtual { }
 
     /// @dev   HubPortal:   unlocks and transfers `amount` $M tokens to `recipient`.
     ///        SpokePortal: mints `amount` $M tokens to `recipient`.
