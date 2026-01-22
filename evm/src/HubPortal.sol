@@ -212,6 +212,15 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         emit CrossSpokeTokenTransferEnabled(spokeChainId, spokeBridgedPrincipal);
     }
 
+    /// @inheritdoc IHubPortal
+    function migrateBridgedPrincipal(uint32 spokeChainId, uint248 spokeBridgedPrincipal) external onlyRole(OPERATOR_ROLE) {
+        SpokeChainConfig storage spokeConfig = _getHubPortalStorageLocation().spokeConfig[spokeChainId];
+
+        if (spokeConfig.crossSpokeTokenTransferEnabled || spokeConfig.bridgedPrincipal > 0) return;
+
+        spokeConfig.bridgedPrincipal = spokeBridgedPrincipal;
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     //                     EXTERNAL VIEW/PURE FUNCTIONS                      //
     ///////////////////////////////////////////////////////////////////////////

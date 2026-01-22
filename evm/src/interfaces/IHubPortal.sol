@@ -245,4 +245,11 @@ interface IHubPortal is IPortal {
     ///         Must be called before calling `enableCrossSpokeTokenTransfer` in SpokePortal.
     /// @param  spokeChainId The ID of the Spoke chain.
     function enableCrossSpokeTokenTransfer(uint32 spokeChainId) external;
+
+    /// @notice Migrates the principal amount of $M tokens bridged to a specified isolated Spoke chain in Portal V1.
+    /// @dev    Must be called after an existing Spoke chain is migrated to Portal V2.
+    ///         The function could be removed after all Spoke chains are migrated.
+    /// @param  spokeChainId     The ID of the Spoke chain.
+    /// @param  bridgedPrincipal The principal amount of $M tokens bridged to the Spoke chain.
+    function migrateBridgedPrincipal(uint32 spokeChainId, uint248 bridgedPrincipal) external;
 }
