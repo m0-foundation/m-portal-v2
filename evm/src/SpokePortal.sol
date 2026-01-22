@@ -138,15 +138,13 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
     }
 
     /// @dev Mints $M Token to the `recipient`.
-    /// @param recipient The account to mint $M tokens to.
-    /// @param amount    The amount of $M Token to mint to the recipient.
-    /// @param index     The index from the source chain.
-    function _mintOrUnlock(
-        uint32, /* sourceChainId */
-        address recipient,
-        uint256 amount,
-        uint128 index
-    ) internal override {
+    /// @param sourceChainId The ID of the source chain.
+    /// @param recipient     The account to mint $M tokens to.
+    /// @param amount        The amount of $M Token to mint to the recipient.
+    /// @param index         The index from the source chain.
+    function _mintOrUnlock(uint32 sourceChainId, address recipient, uint256 amount, uint128 index) internal override {
+        _revertIfTokenTransferDisabled(sourceChainId);
+
         // Update M token index only if the index received from the remote chain is bigger
         if (index > _currentIndex()) {
             ISpokeMTokenLike(mToken).mint(recipient, amount, index);
@@ -170,10 +168,10 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
         emit CrossSpokeTokenTransferEnabled(spokeChainId);
     }
 
-    /// @dev Reverts if cross-Spoke token transfer is disabled on the current or destination Spoke chain.
-    function _revertIfTokenTransferDisabled(uint32 destinationChainId) internal view override {
+    /// @dev Reverts if cross-Spoke token transfer is disabled on the current or remote Spoke chain.
+    function _revertIfTokenTransferDisabled(uint32 remoteChainId) internal view override {
         // Always allow sending tokens to the Hub chain
-        if (destinationChainId == hubChainId) return;
+        if (remoteChainId == hubChainId) return;
 
         SpokePortalStorageStruct storage $ = _getSpokePortalStorageLocation();
 
@@ -181,7 +179,7 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
         if (!$.crossSpokeTokenTransferEnabled[currentChainId()]) revert CrossSpokeTokenTransferDisabled(currentChainId());
 
         // Destination chain is isolated, disallow sending tokens to that Spoke
-        if (!$.crossSpokeTokenTransferEnabled[destinationChainId]) revert CrossSpokeTokenTransferDisabled(destinationChainId);
+        if (!$.crossSpokeTokenTransferEnabled[remoteChainId]) revert CrossSpokeTokenTransferDisabled(remoteChainId);
     }
 
     ///////////////////////////////////////////////////////////////////////////

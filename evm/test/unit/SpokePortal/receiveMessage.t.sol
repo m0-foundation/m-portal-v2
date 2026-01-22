@@ -353,4 +353,128 @@ contract ReceiveMessageUnitTest is SpokePortalUnitTestBase {
         vm.prank(address(bridgeAdapter));
         spokePortal.receiveMessage(HUB_CHAIN_ID, payload);
     }
+
+    // ==================== CROSS-SPOKE TOKEN TRANSFER TESTS ====================
+
+    function test_receiveMessage_tokenTransfer_fromHubWhenCurrentChainIsolated() external {
+        // Current chain is isolated (default state), but receiving from Hub should always work
+        assertFalse(spokePortal.crossSpokeTokenTransferEnabled(SPOKE_CHAIN_ID));
+
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            HUB_CHAIN_ID,
+            address(bridgeAdapter).toBytes32(),
+            messageId,
+            index,
+            amount,
+            address(mToken).toBytes32(),
+            sender,
+            recipient.toBytes32()
+        );
+
+        vm.expectEmit();
+        emit IPortal.TokenReceived(HUB_CHAIN_ID, address(mToken), sender.toBytes32(), recipient, amount, index, messageId);
+
+        vm.prank(address(bridgeAdapter));
+        spokePortal.receiveMessage(HUB_CHAIN_ID, payload);
+
+        assertEq(mToken.balanceOf(recipient), amount);
+    }
+
+    function test_receiveMessage_tokenTransfer_fromSpokeWhenBothConnected() external {
+        // Enable cross-spoke transfer for both current chain and source chain
+        vm.startPrank(operator);
+        spokePortal.enableCrossSpokeTokenTransfer(SPOKE_CHAIN_ID);
+        spokePortal.enableCrossSpokeTokenTransfer(SPOKE_CHAIN_ID_2);
+        vm.stopPrank();
+
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            SPOKE_CHAIN_ID_2,
+            address(bridgeAdapter).toBytes32(),
+            messageId,
+            index,
+            amount,
+            address(mToken).toBytes32(),
+            sender,
+            recipient.toBytes32()
+        );
+
+        vm.expectEmit();
+        emit IPortal.TokenReceived(SPOKE_CHAIN_ID_2, address(mToken), sender.toBytes32(), recipient, amount, index, messageId);
+
+        vm.prank(address(bridgeAdapter));
+        spokePortal.receiveMessage(SPOKE_CHAIN_ID_2, payload);
+
+        assertEq(mToken.balanceOf(recipient), amount);
+    }
+
+    function test_receiveMessage_tokenTransfer_revertsWhenCurrentChainIsolated() external {
+        // Current chain is isolated (default), source chain is connected
+        assertFalse(spokePortal.crossSpokeTokenTransferEnabled(SPOKE_CHAIN_ID));
+
+        vm.prank(operator);
+        spokePortal.enableCrossSpokeTokenTransfer(SPOKE_CHAIN_ID_2);
+
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            SPOKE_CHAIN_ID_2,
+            address(bridgeAdapter).toBytes32(),
+            messageId,
+            index,
+            amount,
+            address(mToken).toBytes32(),
+            sender,
+            recipient.toBytes32()
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(ISpokePortal.CrossSpokeTokenTransferDisabled.selector, SPOKE_CHAIN_ID));
+
+        vm.prank(address(bridgeAdapter));
+        spokePortal.receiveMessage(SPOKE_CHAIN_ID_2, payload);
+    }
+
+    function test_receiveMessage_tokenTransfer_revertsWhenSourceChainIsolated() external {
+        // Current chain is connected, source chain is isolated
+        vm.prank(operator);
+        spokePortal.enableCrossSpokeTokenTransfer(SPOKE_CHAIN_ID);
+
+        assertFalse(spokePortal.crossSpokeTokenTransferEnabled(SPOKE_CHAIN_ID_2));
+
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            SPOKE_CHAIN_ID_2,
+            address(bridgeAdapter).toBytes32(),
+            messageId,
+            index,
+            amount,
+            address(mToken).toBytes32(),
+            sender,
+            recipient.toBytes32()
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(ISpokePortal.CrossSpokeTokenTransferDisabled.selector, SPOKE_CHAIN_ID_2));
+
+        vm.prank(address(bridgeAdapter));
+        spokePortal.receiveMessage(SPOKE_CHAIN_ID_2, payload);
+    }
+
+    function test_receiveMessage_tokenTransfer_revertsWhenBothChainsIsolated() external {
+        // Both chains are isolated (default state)
+        assertFalse(spokePortal.crossSpokeTokenTransferEnabled(SPOKE_CHAIN_ID));
+        assertFalse(spokePortal.crossSpokeTokenTransferEnabled(SPOKE_CHAIN_ID_2));
+
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            SPOKE_CHAIN_ID_2,
+            address(bridgeAdapter).toBytes32(),
+            messageId,
+            index,
+            amount,
+            address(mToken).toBytes32(),
+            sender,
+            recipient.toBytes32()
+        );
+
+        // Should revert with current chain ID since it's checked first
+        vm.expectRevert(abi.encodeWithSelector(ISpokePortal.CrossSpokeTokenTransferDisabled.selector, SPOKE_CHAIN_ID));
+
+        vm.prank(address(bridgeAdapter));
+        spokePortal.receiveMessage(SPOKE_CHAIN_ID_2, payload);
+    }
 }
