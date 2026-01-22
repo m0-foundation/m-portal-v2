@@ -5,12 +5,15 @@ import {
     IAccessControl
 } from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
 
+import { IHubPortal } from "../../../src/interfaces/IHubPortal.sol";
+
 import { HubPortalUnitTestBase } from "./HubPortalUnitTestBase.sol";
 
 contract MigrateBridgedPrincipalUnitTest is HubPortalUnitTestBase {
     uint248 internal migratedPrincipal = 1_000_000e6;
 
     function test_migrateBridgedPrincipal_success() external {
+        assertTrue(hubPortal.migrating());
         assertEq(hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID), 0);
 
         vm.prank(operator);
@@ -46,23 +49,33 @@ contract MigrateBridgedPrincipalUnitTest is HubPortalUnitTestBase {
         assertEq(hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID), 0);
     }
 
-    function test_migrateBridgedPrincipal_doNothingWhenCrossSpokeEnabled() external {
+    function test_migrateBridgedPrincipal_revertsWhenNotMigrating() external {
+        // Complete migration first
+        vm.prank(operator);
+        hubPortal.completeMigration();
+
+        assertFalse(hubPortal.migrating());
+
+        vm.expectRevert(IHubPortal.NotMigrating.selector);
+
+        vm.prank(operator);
+        hubPortal.migrateBridgedPrincipal(SPOKE_CHAIN_ID, migratedPrincipal);
+    }
+
+    function test_migrateBridgedPrincipal_revertsWhenSpokeAlreadyConnected() external {
         // First enable cross-spoke transfer
         vm.prank(operator);
         hubPortal.enableCrossSpokeTokenTransfer(SPOKE_CHAIN_ID);
 
         assertTrue(hubPortal.crossSpokeTokenTransferEnabled(SPOKE_CHAIN_ID));
-        assertEq(hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID), 0);
 
-        // Attempt to migrate bridged principal - should be no-op
+        vm.expectRevert(abi.encodeWithSelector(IHubPortal.ConnectedSpoke.selector, SPOKE_CHAIN_ID));
+
         vm.prank(operator);
         hubPortal.migrateBridgedPrincipal(SPOKE_CHAIN_ID, migratedPrincipal);
-
-        // Principal should remain 0
-        assertEq(hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID), 0);
     }
 
-    function test_migrateBridgedPrincipal_doNothingWhenAlreadyMigrated() external {
+    function test_migrateBridgedPrincipal_revertsWhenBridgedPrincipalAlreadySet() external {
         uint248 initialPrincipal = 500_000e6;
         uint248 newPrincipal = 1_000_000e6;
 
@@ -72,14 +85,13 @@ contract MigrateBridgedPrincipalUnitTest is HubPortalUnitTestBase {
 
         assertEq(hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID), initialPrincipal);
 
-        // Attempt second migration - should be no-op
+        vm.expectRevert(abi.encodeWithSelector(IHubPortal.BridgedPrincipalAlreadySet.selector, SPOKE_CHAIN_ID));
+
+        // Attempt second migration - should revert
         vm.prank(operator);
         hubPortal.migrateBridgedPrincipal(SPOKE_CHAIN_ID, newPrincipal);
-
-        // Principal should remain unchanged
-        assertEq(hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID), initialPrincipal);
     }
-    
+
     function test_migrateBridgedPrincipal_revertsIfNotOperator() external {
         vm.expectRevert(abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, hubPortal.OPERATOR_ROLE()));
 
