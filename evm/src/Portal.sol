@@ -686,6 +686,8 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
             bytes32 tokenIn
         ) = payload.decodeFillReport();
 
+        _updateMTokenIndex(index);
+
         IOrderBookLike(orderBook)
             .reportFill(
                 sourceChainId,
@@ -698,8 +700,6 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
                 })
             );
 
-        _updateMTokenIndex(index);
-
         emit FillReportReceived(sourceChainId, orderId, amountInToRelease, amountOutFilled, originRecipient, tokenIn, index, messageId);
     }
 
@@ -710,6 +710,8 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         (bytes32 messageId, uint128 index, bytes32 orderId, bytes32 orderSender, bytes32 tokenIn, uint128 amountInToRefund) =
             payload.decodeCancelReport();
 
+        _updateMTokenIndex(index);
+
         IOrderBookLike(orderBook)
             .reportCancel(
                 sourceChainId,
@@ -717,7 +719,6 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
                     orderId: orderId, originSender: orderSender, tokenIn: tokenIn, amountInToRefund: amountInToRefund
                 })
             );
-        _updateMTokenIndex(index);
 
         emit CancelReportReceived(sourceChainId, orderId, orderSender, tokenIn, amountInToRefund, index, messageId);
     }
