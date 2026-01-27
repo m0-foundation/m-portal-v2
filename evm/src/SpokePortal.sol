@@ -154,11 +154,10 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
     }
 
     /// @dev Burns $M Token.
+    /// @param destinationChainId The ID of the destination chain.
     /// @param amount The amount of M Token to burn from the SpokePortal.
-    function _burnOrLock(
-        uint32, /* destinationChainId */
-        uint256 amount
-    ) internal override {
+    function _burnOrLock(uint32 destinationChainId, uint256 amount) internal override {
+        _revertIfTokenTransferDisabled(destinationChainId);
         ISpokeMTokenLike(mToken).burn(amount);
     }
 
@@ -168,20 +167,6 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
         emit CrossSpokeTokenTransferEnabled(spokeChainId);
     }
 
-    /// @dev Reverts if cross-Spoke token transfer is disabled on the current or remote Spoke chain.
-    function _revertIfTokenTransferDisabled(uint32 remoteChainId) internal view override {
-        // Always allow sending tokens to the Hub chain
-        if (remoteChainId == hubChainId) return;
-
-        SpokePortalStorageStruct storage $ = _getSpokePortalStorageLocation();
-
-        // Current chain is isolated, disallow sending tokens to any other Spoke
-        if (!$.crossSpokeTokenTransferEnabled[currentChainId()]) revert CrossSpokeTokenTransferDisabled(currentChainId());
-
-        // Destination chain is isolated, disallow sending tokens to that Spoke
-        if (!$.crossSpokeTokenTransferEnabled[remoteChainId]) revert CrossSpokeTokenTransferDisabled(remoteChainId);
-    }
-
     ///////////////////////////////////////////////////////////////////////////
     //                      INTERNAL VIEW/PURE FUNCTIONS                     //
     ///////////////////////////////////////////////////////////////////////////
@@ -189,5 +174,19 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
     /// @dev Returns the current M token index used by the Spoke Portal.
     function _currentIndex() internal view override returns (uint128) {
         return ISpokeMTokenLike(mToken).currentIndex();
+    }
+
+    /// @dev Reverts if cross-Spoke token transfer is disabled on the current or remote Spoke chain.
+    function _revertIfTokenTransferDisabled(uint32 remoteChainId) private view {
+        // Always allow transfers to/from the Hub chain
+        if (remoteChainId == hubChainId) return;
+
+        SpokePortalStorageStruct storage $ = _getSpokePortalStorageLocation();
+
+        // Revert if the current Spoke is isolated
+        if (!$.crossSpokeTokenTransferEnabled[currentChainId()]) revert CrossSpokeTokenTransferDisabled(currentChainId());
+
+        // Revert if the remote Spoke is isolated
+        if (!$.crossSpokeTokenTransferEnabled[remoteChainId]) revert CrossSpokeTokenTransferDisabled(remoteChainId);
     }
 }
