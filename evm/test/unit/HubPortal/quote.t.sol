@@ -44,7 +44,7 @@ contract QuoteUnitTest is HubPortalUnitTestBase {
     function test_quote_revertsIfNoBridgeAdapterSet() external {
         uint32 unconfiguredChain = 999;
 
-        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedDestinationChain.selector, unconfiguredChain));
+        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, unconfiguredChain, address(0)));
         hubPortal.quote(unconfiguredChain, PayloadType.TokenTransfer);
     }
 
