@@ -235,9 +235,6 @@ interface IPortal {
     /// @notice Thrown when the destination chain id is equal to the source one.
     error InvalidDestinationChain(uint32 destinationChainId);
 
-    /// @notice Thrown if bridging to the destination chain is not supported.
-    error UnsupportedDestinationChain(uint32 destinationChainId);
-
     /// @notice Thrown in `sendToken` function when bridging path is not supported
     error UnsupportedBridgingPath(address sourceToken, uint32 destinationChainId, bytes32 destinationToken);
 
