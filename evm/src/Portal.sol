@@ -238,6 +238,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     /// @inheritdoc IPortal
     function setDefaultBridgeAdapter(uint32 destinationChainId, address bridgeAdapter) external onlyRole(OPERATOR_ROLE) {
         _revertIfInvalidDestinationChain(destinationChainId);
+        _revertIfZeroBridgeAdapter(bridgeAdapter);
 
         ChainConfig storage remoteChainConfig = _getPortalStorageLocation().remoteChainConfig[destinationChainId];
 
@@ -256,7 +257,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     /// @inheritdoc IPortal
     function setSupportedBridgeAdapter(uint32 destinationChainId, address bridgeAdapter, bool supported) external onlyRole(OPERATOR_ROLE) {
         _revertIfInvalidDestinationChain(destinationChainId);
-        if (bridgeAdapter == address(0)) revert ZeroBridgeAdapter();
+        _revertIfZeroBridgeAdapter(bridgeAdapter);
 
         ChainConfig storage remoteChainConfig = _getPortalStorageLocation().remoteChainConfig[destinationChainId];
 
@@ -390,16 +391,11 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
 
     /// @inheritdoc IPortal
     function quote(uint32 destinationChainId, PayloadType payloadType) external view returns (uint256) {
-        address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
-        _revertIfZeroBridgeAdapter(destinationChainId, bridgeAdapter);
-
-        return _quote(destinationChainId, payloadType, bridgeAdapter);
+        return _quote(destinationChainId, payloadType, defaultBridgeAdapter(destinationChainId));
     }
 
     /// @inheritdoc IPortal
     function quote(uint32 destinationChainId, PayloadType payloadType, address bridgeAdapter) external view returns (uint256) {
-        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
-
         return _quote(destinationChainId, payloadType, bridgeAdapter);
     }
 
@@ -795,6 +791,8 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     /// @param  payloadType        The payload type: TokenTransfer = 0, Index = 1, RegistrarKey = 2, RegistrarList = 3, FillReport = 4
     /// @param  bridgeAdapter      The address of the bridge adapter.
     function _quote(uint32 destinationChainId, PayloadType payloadType, address bridgeAdapter) private view returns (uint256) {
+        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
+
         uint256 gasLimit = _getPayloadGasLimitOrRevert(destinationChainId, payloadType);
 
         // NOTE: For quoting delivery fee, the content of the message doesn’t matter,
@@ -824,8 +822,8 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     }
 
     /// @dev Reverts if `bridgeAdapter` is zero address.
-    function _revertIfZeroBridgeAdapter(uint32 destinationChainId, address bridgeAdapter) internal pure {
-        if (bridgeAdapter == address(0)) revert UnsupportedDestinationChain(destinationChainId);
+    function _revertIfZeroBridgeAdapter(address bridgeAdapter) internal pure {
+        if (bridgeAdapter == address(0)) revert ZeroBridgeAdapter();
     }
 
     function _revertIfInvalidDestinationChain(uint32 destinationChainId) internal view {

@@ -50,10 +50,9 @@ contract SetDefaultBridgeAdapterUnitTest is HubPortalUnitTestBase {
         hubPortal.setDefaultBridgeAdapter(HUB_CHAIN_ID, newBridgeAdapter);
     }
 
-    function test_setDefaultBridgeAdapter_acceptsZeroBridgeAdapter() external {
+    function test_setDefaultBridgeAdapter_revertsIfZeroBridgeAdapter() external {
+        vm.expectRevert(IPortal.ZeroBridgeAdapter.selector);
         vm.prank(operator);
         hubPortal.setDefaultBridgeAdapter(SPOKE_CHAIN_ID, address(0));
-
-        assertEq(hubPortal.defaultBridgeAdapter(SPOKE_CHAIN_ID), address(0));
     }
 }
