@@ -99,10 +99,6 @@ interface IHubPortal is IPortal {
     /// @param  spokeChainId The ID of the Spoke chain.
     error ConnectedSpoke(uint32 spokeChainId);
 
-    /// @notice Thrown when trying to migrate bridged principal that has already been set.
-    /// @param  spokeChainId The ID of the Spoke chain.
-    error BridgedPrincipalAlreadySet(uint32 spokeChainId);
-
     ///////////////////////////////////////////////////////////////////////////
     //                          VIEW/PURE FUNCTIONS                          //
     ///////////////////////////////////////////////////////////////////////////

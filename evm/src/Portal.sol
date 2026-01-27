@@ -449,7 +449,6 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         _revertIfZeroRecipient(recipient);
         _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
         _revertIfUnsupportedBridgingPath(sourceToken, destinationChainId, destinationToken);
-        _revertIfTokenTransferDisabled(destinationChainId);
 
         // Transfer and if the source token isn't $M token, unwrap it to $M token.
         _transferAndUnwrap(sourceToken, amount);
@@ -848,9 +847,6 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     function _revertIfUnsupportedBridgeAdapter(uint32 chainId, address bridgeAdapter) internal view {
         if (!supportedBridgeAdapter(chainId, bridgeAdapter)) revert UnsupportedBridgeAdapter(chainId, bridgeAdapter);
     }
-
-    /// @dev Overridden in SpokePortal to allow bridging only to the Hub chain for isolated Spokes.
-    function _revertIfTokenTransferDisabled(uint32 chainId) internal view virtual { }
 
     function _revertIfUnsupportedBridgingPath(address sourceToken, uint32 destinationChainId, bytes32 destinationToken) internal view {
         PortalStorageStruct storage $ = _getPortalStorageLocation();
