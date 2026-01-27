@@ -222,7 +222,6 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         SpokeChainConfig storage spokeConfig = $.spokeConfig[spokeChainId];
 
         if (spokeConfig.crossSpokeTokenTransferEnabled) revert ConnectedSpoke(spokeChainId);
-        if (spokeConfig.bridgedPrincipal > 0) revert BridgedPrincipalAlreadySet(spokeChainId);
 
         spokeConfig.bridgedPrincipal = spokeBridgedPrincipal;
     }

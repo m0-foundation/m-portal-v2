@@ -75,23 +75,6 @@ contract MigrateBridgedPrincipalUnitTest is HubPortalUnitTestBase {
         hubPortal.migrateBridgedPrincipal(SPOKE_CHAIN_ID, migratedPrincipal);
     }
 
-    function test_migrateBridgedPrincipal_revertsWhenBridgedPrincipalAlreadySet() external {
-        uint248 initialPrincipal = 500_000e6;
-        uint248 newPrincipal = 1_000_000e6;
-
-        // First migration
-        vm.prank(operator);
-        hubPortal.migrateBridgedPrincipal(SPOKE_CHAIN_ID, initialPrincipal);
-
-        assertEq(hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID), initialPrincipal);
-
-        vm.expectRevert(abi.encodeWithSelector(IHubPortal.BridgedPrincipalAlreadySet.selector, SPOKE_CHAIN_ID));
-
-        // Attempt second migration - should revert
-        vm.prank(operator);
-        hubPortal.migrateBridgedPrincipal(SPOKE_CHAIN_ID, newPrincipal);
-    }
-
     function test_migrateBridgedPrincipal_revertsIfNotOperator() external {
         vm.expectRevert(abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, hubPortal.OPERATOR_ROLE()));
 
