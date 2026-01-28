@@ -86,7 +86,9 @@ contract SpokePortal is SpokePortalStorageLayout, Portal, ISpokePortal {
     //                INTERNAL/PRIVATE INTERACTIVE FUNCTIONS                 //
     ///////////////////////////////////////////////////////////////////////////
 
-    function _receiveCustomPayload(PayloadType payloadType, bytes memory payload) internal override {
+    function _receiveCustomPayload(uint32 sourceChainId, PayloadType payloadType, bytes memory payload) internal override {
+        if (sourceChainId != hubChainId) revert InvalidSourceChain(sourceChainId);
+
         if (payloadType == PayloadType.Index) {
             _updateMTokenIndex(payload);
         } else if (payloadType == PayloadType.RegistrarKey) {

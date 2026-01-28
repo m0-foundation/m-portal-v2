@@ -46,6 +46,10 @@ interface ISpokePortal is IPortal {
     /// @param  spokeChainId The ID of the Spoke chain for which the transfer is disabled.
     error CrossSpokeTokenTransferDisabled(uint32 spokeChainId);
 
+    /// @notice Thrown when the source chain is not the Hub chain.
+    /// @param  sourceChainId The ID of the source chain.
+    error InvalidSourceChain(uint32 sourceChainId);
+
     ///////////////////////////////////////////////////////////////////////////
     //                          VIEW/PURE FUNCTIONS                          //
     ///////////////////////////////////////////////////////////////////////////
