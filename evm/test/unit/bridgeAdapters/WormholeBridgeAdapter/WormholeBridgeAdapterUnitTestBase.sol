@@ -55,6 +55,7 @@ abstract contract WormholeBridgeAdapterUnitTestBase is Test {
         vm.startPrank(operator);
         // Configure peer and chain ID mapping
         adapter.setPeer(SPOKE_CHAIN_ID, peerAdapterAddress);
+        adapter.setSenderPeer(SPOKE_CHAIN_ID, peerAdapterAddress);
         adapter.setBridgeChainId(SPOKE_CHAIN_ID, SPOKE_WORMHOLE_CHAIN_ID);
         vm.stopPrank();
 
