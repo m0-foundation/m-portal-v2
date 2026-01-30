@@ -25,6 +25,10 @@ abstract contract WormholeBridgeAdapterStorageLayout {
         ///         while `remotePeer` stores destination addresses (program ID) for outgoing messages.
         ///         On EVM chains, both mappings contain the same addresses.
         mapping(uint32 internalChainId => bytes32 peer) remoteSenderPeer;
+        /// @notice Maps chain IDs to the msg values to include in relay instructions.
+        /// @dev    Zero for EVM chains. For SVM chains, must cover lamports for transaction fees,
+        ///         priority fees, and rent for new accounts.
+        mapping(uint32 internalChainId => uint128 value) remoteMsgValue;
     }
 
     // keccak256(abi.encode(uint256(keccak256("M0.storage.WormholeBridgeAdapter")) - 1)) & ~bytes32(uint256(0xff))
@@ -98,6 +102,11 @@ contract WormholeBridgeAdapter is WormholeBridgeAdapterStorageLayout, BridgeAdap
         return _getWormholeBridgeAdapterStorageLocation().remoteSenderPeer[chainId];
     }
 
+    /// @inheritdoc IWormholeBridgeAdapter
+    function getMsgValue(uint32 chainId) external view returns (uint128) {
+        return _getWormholeBridgeAdapterStorageLocation().remoteMsgValue[chainId];
+    }
+
     /// @inheritdoc IBridgeAdapter
     function sendMessage(
         uint32 destinationChainId,
@@ -115,7 +124,8 @@ contract WormholeBridgeAdapter is WormholeBridgeAdapterStorageLayout, BridgeAdap
         uint64 sequence = ICoreBridge(coreBridge).publishMessage{ value: coreBridgeFee }(0, payload, consistencyLevel);
         bytes32 destinationPeer = _getPeerOrRevert(destinationChainId);
         uint16 destinationWormholeChainId = _getBridgeChainIdOrRevert(destinationChainId).toUint16();
-        bytes memory relayInstructions = RelayInstructions.encodeGas(gasLimit.toUint128(), 0);
+        uint128 msgValue = _getWormholeBridgeAdapterStorageLocation().remoteMsgValue[destinationChainId];
+        bytes memory relayInstructions = RelayInstructions.encodeGas(gasLimit.toUint128(), msgValue);
 
         IExecutor(executor).requestExecution{ value: msg.value - coreBridgeFee }(
             destinationWormholeChainId,
@@ -168,6 +178,18 @@ contract WormholeBridgeAdapter is WormholeBridgeAdapterStorageLayout, BridgeAdap
 
         $.remoteSenderPeer[chainId] = senderPeer;
         emit SenderPeerSet(chainId, senderPeer);
+    }
+
+    /// @inheritdoc IWormholeBridgeAdapter
+    function setMsgValue(uint32 chainId, uint128 msgValue) external onlyRole(OPERATOR_ROLE) {
+        _revertIfZeroChain(chainId);
+
+        WormholeBridgeAdapterStorageStruct storage $ = _getWormholeBridgeAdapterStorageLocation();
+
+        if ($.remoteMsgValue[chainId] == msgValue) return;
+
+        $.remoteMsgValue[chainId] = msgValue;
+        emit MsgValueSet(chainId, msgValue);
     }
 }
 
