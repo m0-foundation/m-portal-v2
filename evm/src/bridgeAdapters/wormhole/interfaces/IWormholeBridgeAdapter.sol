@@ -41,6 +41,15 @@ interface IWormholeBridgeAdapter is IBridgeAdapter, IVaaV1Receiver {
     error InvalidTargetBridgeAdapter(bytes32 targetBridgeAdapter);
 
     ///////////////////////////////////////////////////////////////////////////
+    //                                 EVENTS                                //
+    ///////////////////////////////////////////////////////////////////////////
+
+    /// @notice Emitted when the sender peer for a remote chain is set.
+    /// @param  chainId    The ID of the remote chain.
+    /// @param  senderPeer The address of the peer that sends messages from the remote chain.
+    event SenderPeerSet(uint32 chainId, bytes32 senderPeer);
+
+    ///////////////////////////////////////////////////////////////////////////
     //                          VIEW/PURE FUNCTIONS                          //
     ///////////////////////////////////////////////////////////////////////////
 
@@ -60,4 +69,19 @@ interface IWormholeBridgeAdapter is IBridgeAdapter, IVaaV1Receiver {
     /// @notice Returns whether a Wormhole message with a given hash has been consumed.
     /// @param  hash The Wormhole hash of the message.
     function messageConsumed(bytes32 hash) external view returns (bool);
+
+    /// @notice Returns the address of the peer that sends messages from the remote chain.
+    /// @param  chainId The ID of the remote chain.
+    function getSenderPeer(uint32 chainId) external view returns (bytes32);
+
+    ///////////////////////////////////////////////////////////////////////////
+    //                         INTERACTIVE FUNCTIONS                         //
+    ///////////////////////////////////////////////////////////////////////////
+
+    /// @notice Sets the peer address that sends messages from the remote chain.
+    /// @dev    Required because Wormhole on SVM uses different addresses for sending (signer PDA)
+    ///         vs receiving (program ID)
+    /// @param  chainId    The ID of the remote chain.
+    /// @param  senderPeer The address of the peer that sends messages from the remote chain.
+    function setSenderPeer(uint32 chainId, bytes32 senderPeer) external;
 }
