@@ -19,6 +19,12 @@ abstract contract WormholeBridgeAdapterStorageLayout {
     struct WormholeBridgeAdapterStorageStruct {
         /// @notice Indicates whether a message with a given hash has been consumed.
         mapping(bytes32 hash => bool) consumedMessages;
+        /// @notice Maps chain IDs to the peer addresses that send cross-chain messages.
+        /// @dev    On SVM, Wormhole uses different addresses for sending (signer PDA) vs receiving (program ID).
+        ///         This mapping stores sender addresses (signer PDA) for incoming message verification,
+        ///         while `remotePeer` stores destination addresses (program ID) for outgoing messages.
+        ///         On EVM chains, both mappings contain the same addresses.
+        mapping(uint32 internalChainId => bytes32 peer) remoteSenderPeer;
     }
 
     // keccak256(abi.encode(uint256(keccak256("M0.storage.WormholeBridgeAdapter")) - 1)) & ~bytes32(uint256(0xff))
@@ -87,6 +93,11 @@ contract WormholeBridgeAdapter is WormholeBridgeAdapterStorageLayout, BridgeAdap
         return _getWormholeBridgeAdapterStorageLocation().consumedMessages[hash];
     }
 
+    /// @inheritdoc IWormholeBridgeAdapter
+    function getSenderPeer(uint32 chainId) external view returns (bytes32) {
+        return _getWormholeBridgeAdapterStorageLocation().remoteSenderPeer[chainId];
+    }
+
     /// @inheritdoc IBridgeAdapter
     function sendMessage(
         uint32 destinationChainId,
@@ -137,9 +148,26 @@ contract WormholeBridgeAdapter is WormholeBridgeAdapterStorageLayout, BridgeAdap
 
         // Convert Wormhole chain ID to internal chain ID
         uint32 sourceChainId = _getChainIdOrRevert(vm.emitterChainId);
-        if (vm.emitterAddress != _getPeer(sourceChainId)) revert UnsupportedSender(vm.emitterAddress);
+        if (vm.emitterAddress != $.remoteSenderPeer[sourceChainId]) revert UnsupportedSender(vm.emitterAddress);
 
         IPortal(portal).receiveMessage(sourceChainId, vm.payload);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    //                          PRIVILEGED FUNCTIONS                         //
+    ///////////////////////////////////////////////////////////////////////////
+
+    /// @inheritdoc IWormholeBridgeAdapter
+    function setSenderPeer(uint32 chainId, bytes32 senderPeer) external onlyRole(OPERATOR_ROLE) {
+        _revertIfZeroChain(chainId);
+        _revertIfZeroPeer(senderPeer);
+
+        WormholeBridgeAdapterStorageStruct storage $ = _getWormholeBridgeAdapterStorageLocation();
+
+        if ($.remoteSenderPeer[chainId] == senderPeer) return;
+
+        $.remoteSenderPeer[chainId] = senderPeer;
+        emit SenderPeerSet(chainId, senderPeer);
     }
 }
 
