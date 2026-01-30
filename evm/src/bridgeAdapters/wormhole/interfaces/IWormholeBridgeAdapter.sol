@@ -49,6 +49,12 @@ interface IWormholeBridgeAdapter is IBridgeAdapter, IVaaV1Receiver {
     /// @param  senderPeer The address of the peer that sends messages from the remote chain.
     event SenderPeerSet(uint32 chainId, bytes32 senderPeer);
 
+    /// @notice Emitted when the msg value for a remote chain is set.
+    /// @dev    Only relevant for SVM chains where msg value covers lamports for fees and rent.
+    /// @param  chainId  The ID of the remote chain.
+    /// @param  msgValue The msg value to include in relay instructions for the remote chain.
+    event MsgValueSet(uint32 chainId, uint128 msgValue);
+
     ///////////////////////////////////////////////////////////////////////////
     //                          VIEW/PURE FUNCTIONS                          //
     ///////////////////////////////////////////////////////////////////////////
@@ -74,6 +80,10 @@ interface IWormholeBridgeAdapter is IBridgeAdapter, IVaaV1Receiver {
     /// @param  chainId The ID of the remote chain.
     function getSenderPeer(uint32 chainId) external view returns (bytes32);
 
+    /// @notice Returns the value to include in relay instructions for the remote chain.
+    /// @param  chainId The ID of the remote chain.
+    function getMsgValue(uint32 chainId) external view returns (uint128);
+
     ///////////////////////////////////////////////////////////////////////////
     //                         INTERACTIVE FUNCTIONS                         //
     ///////////////////////////////////////////////////////////////////////////
@@ -84,4 +94,11 @@ interface IWormholeBridgeAdapter is IBridgeAdapter, IVaaV1Receiver {
     /// @param  chainId    The ID of the remote chain.
     /// @param  senderPeer The address of the peer that sends messages from the remote chain.
     function setSenderPeer(uint32 chainId, bytes32 senderPeer) external;
+
+    /// @notice Sets the msg value to include in relay instructions for the remote chain.
+    /// @dev    Only required for SVM chains. Must cover lamports for transaction fees,
+    ///         priority fees, and rent for new accounts.
+    /// @param  chainId  The ID of the remote chain.
+    /// @param  msgValue The msg value to include in relay instructions for the remote chain.
+    function setMsgValue(uint32 chainId, uint128 msgValue) external;
 }
