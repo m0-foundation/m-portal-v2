@@ -75,7 +75,7 @@ contract ExecuteVAAv1UnitTest is WormholeBridgeAdapterUnitTestBase {
 
         vm.mockCall(address(coreBridge), abi.encodeWithSelector(ICoreBridge.parseAndVerifyVM.selector), abi.encode(mockVM, true, ""));
 
-        vm.expectRevert(abi.encodeWithSelector(IWormholeBridgeAdapter.UnsupportedSender.selector, unsupportedSender));
+        vm.expectRevert(abi.encodeWithSelector(IBridgeAdapter.UnsupportedSender.selector, unsupportedSender));
         adapter.executeVAAv1(encodedMessage);
     }
 

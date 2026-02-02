@@ -19,9 +19,6 @@ interface IHyperlaneBridgeAdapter is IBridgeAdapter, IMessageRecipient {
     /// @notice Thrown when the caller is not the Hyperlane Mailbox.
     error NotMailbox();
 
-    /// @notice Thrown when the source chain isn't supported or configured peer doesn't match the sender.
-    error UnsupportedSender(bytes32 sender);
-
     ///////////////////////////////////////////////////////////////////////////
     //                          VIEW/PURE FUNCTIONS                          //
     ///////////////////////////////////////////////////////////////////////////
