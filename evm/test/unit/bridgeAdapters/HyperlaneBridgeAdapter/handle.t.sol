@@ -48,7 +48,7 @@ contract HandleUnitTest is HyperlaneBridgeAdapterUnitTestBase {
         bytes32 unsupportedSender = makeAddr("unsupported").toBytes32();
         bytes memory payload = "test payload";
 
-        vm.expectRevert(abi.encodeWithSelector(IHyperlaneBridgeAdapter.UnsupportedSender.selector, unsupportedSender));
+        vm.expectRevert(abi.encodeWithSelector(IBridgeAdapter.UnsupportedSender.selector, unsupportedSender));
 
         vm.prank(address(mailbox));
         adapter.handle(SPOKE_HYPERLANE_DOMAIN, unsupportedSender, payload);

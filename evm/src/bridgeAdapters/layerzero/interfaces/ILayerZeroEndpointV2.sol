@@ -1,59 +1,74 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.30;
+pragma solidity >=0.8.0;
 
-import { Origin, MessagingFee, MessagingParams, MessagingReceipt, SetConfigParam } from "./ILayerZeroTypes.sol";
+struct MessagingParams {
+    uint32 dstEid;
+    bytes32 receiver;
+    bytes message;
+    bytes options;
+    bool payInLzToken;
+}
+
+struct MessagingReceipt {
+    bytes32 guid;
+    uint64 nonce;
+    MessagingFee fee;
+}
+
+struct MessagingFee {
+    uint256 nativeFee;
+    uint256 lzTokenFee;
+}
+
+struct Origin {
+    uint32 srcEid;
+    bytes32 sender;
+    uint64 nonce;
+}
+
+struct SetConfigParam {
+    uint32 eid;
+    uint32 configType;
+    bytes config;
+}
 
 /// @title  ILayerZeroEndpointV2
-/// @notice Interface for LayerZero Endpoint V2 contract.
-/// @dev    Minimal interface with only the functions needed by the bridge adapter.
+/// @author LayerZero Labs
+/// @notice Minimal interface for LayerZero V2 Endpoint used by LayerZeroBridgeAdapter.
+/// @dev    See full version at:
+///         https://github.com/LayerZero-Labs/LayerZero-v2/blob/main/packages/layerzero-v2/evm/protocol/contracts/interfaces/ILayerZeroEndpointV2.sol
 interface ILayerZeroEndpointV2 {
-    /// @notice Sends a message to the specified destination.
-    /// @param  _params The messaging parameters.
-    /// @param  _refundAddress The address to refund excess fees.
-    /// @return receipt The messaging receipt containing guid, nonce, and fee.
-    function send(MessagingParams calldata _params, address _refundAddress) external payable returns (MessagingReceipt memory receipt);
+    /// @notice Estimates the fee for sending a cross-chain message.
+    /// @param  params The messaging parameters (destination, receiver, message, options).
+    /// @param  sender The address of the sender.
+    /// @return fee    The estimated native and LZ token fees.
+    function quote(MessagingParams calldata params, address sender) external view returns (MessagingFee memory fee);
 
-    /// @notice Quotes the fee required to send a message.
-    /// @param  _params The messaging parameters.
-    /// @param  _sender The sender address (OApp).
-    /// @return fee The messaging fee (nativeFee and lzTokenFee).
-    function quote(MessagingParams calldata _params, address _sender) external view returns (MessagingFee memory fee);
+    /// @notice Sends a cross-chain message to the specified destination.
+    /// @param  params        The messaging parameters (destination, receiver, message, options).
+    /// @param  refundAddress The address to receive excess fee refunds.
+    /// @return receipt       The messaging receipt containing guid, nonce, and actual fee.
+    function send(
+        MessagingParams calldata params,
+        address refundAddress
+    ) external payable returns (MessagingReceipt memory receipt);
 
-    /// @notice Sets the delegate for the calling OApp.
-    /// @param  _delegate The delegate address.
-    function setDelegate(address _delegate) external;
+    /// @notice Delivers a received message to the specified receiver.
+    /// @param  origin    The origin information (source endpoint ID, sender, nonce).
+    /// @param  receiver  The address of the receiver contract.
+    /// @param  guid      The globally unique identifier of the message.
+    /// @param  message   The message payload.
+    /// @param  extraData Additional data provided by the executor.
+    function lzReceive(
+        Origin calldata origin,
+        address receiver,
+        bytes32 guid,
+        bytes calldata message,
+        bytes calldata extraData
+    ) external payable;
 
-    /// @notice Skips a blocked inbound nonce to unblock subsequent messages.
-    /// @param  _oapp The OApp address.
-    /// @param  _srcEid The source endpoint ID.
-    /// @param  _sender The sender address (bytes32).
-    /// @param  _nonce The nonce to skip.
-    function skip(address _oapp, uint32 _srcEid, bytes32 _sender, uint64 _nonce) external;
-
-    /// @notice Clears a stored payload hash that failed execution.
-    /// @param  _oapp The OApp address.
-    /// @param  _origin The origin information.
-    /// @param  _guid The global unique identifier.
-    /// @param  _message The original message bytes.
-    function clear(address _oapp, Origin calldata _origin, bytes32 _guid, bytes calldata _message) external;
-
-    /// @notice Sets configuration for the OApp in the specified message library.
-    /// @param  _oapp The OApp address.
-    /// @param  _lib The message library address.
-    /// @param  _params The configuration parameters.
-    function setConfig(address _oapp, address _lib, SetConfigParam[] calldata _params) external;
-
-    /// @notice Returns the send library address for the OApp to a specific destination EID.
-    /// @param  _sender The OApp address.
-    /// @param  _dstEid The destination endpoint ID.
-    /// @return lib The send library address.
-    function getSendLibrary(address _sender, uint32 _dstEid) external view returns (address lib);
-
-    /// @notice Returns the receive library address for the OApp from a specific source EID.
-    /// @param  _receiver The OApp address.
-    /// @param  _srcEid The source endpoint ID.
-    /// @return lib The receive library address.
-    /// @return isDefault Whether it is the default library.
-    function getReceiveLibrary(address _receiver, uint32 _srcEid) external view returns (address lib, bool isDefault);
+    /// @notice Sets the delegate address authorized to configure LayerZero settings.
+    /// @param  delegate The address to grant delegate permissions.
+    function setDelegate(address delegate) external;
 }

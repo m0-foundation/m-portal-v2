@@ -1,51 +1,55 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.30;
+pragma solidity ^0.8.20;
+
+import {
+    SafeCast
+} from "../../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
+
+import { ExecutorOptions } from "./ExecutorOptions.sol";
 
 /// @title  OptionsBuilder
-/// @notice Library for building LayerZero execution options.
-/// @dev    Simplified version of LayerZero's OptionsBuilder for the bridge adapter use case.
+/// @author LayerZero Labs
+/// @notice Library for building LayerZero V2 messaging options.
+/// @dev    See full version at:
+///         https://github.com/LayerZero-Labs/LayerZero-v2/blob/main/packages/layerzero-v2/evm/oapp/contracts/oapp/libs/OptionsBuilder.sol
 library OptionsBuilder {
-    /// @notice Option type for executor options (lzReceive gas, native drop, etc).
-    uint8 internal constant WORKER_ID_EXECUTOR = 1;
+    using SafeCast for uint256;
 
-    /// @notice Option type for lzReceive gas configuration.
-    uint8 internal constant OPTION_TYPE_LZRECEIVE = 1;
+    // Constants for options types
+    uint16 internal constant TYPE_1 = 1; // legacy options type 1
+    uint16 internal constant TYPE_2 = 2; // legacy options type 2
+    uint16 internal constant TYPE_3 = 3;
 
-    /// @notice Creates new TYPE_3 options bytes.
-    /// @return options The initialized options bytes (just the type header).
-    function newOptions() internal pure returns (bytes memory options) {
-        // TYPE_3 options header: 0x0003
-        return hex"0003";
+    error InvalidSize(uint256 max, uint256 actual);
+    error InvalidOptionType(uint16 optionType);
+
+    /// @dev Creates a new options container with type 3.
+    function newOptions() internal pure returns (bytes memory) {
+        return abi.encodePacked(TYPE_3);
     }
 
-    /// @notice Adds executor lzReceive option to specify gas limit and msg.value for the destination execution.
-    /// @param  _options The existing options bytes.
-    /// @param  _gas The gas limit for lzReceive execution.
-    /// @param  _value The msg.value to pass to lzReceive (typically 0).
-    /// @return options The options with the lzReceive option appended.
-    function addExecutorLzReceiveOption(bytes memory _options, uint128 _gas, uint128 _value) internal pure returns (bytes memory options) {
-        // Format: workerID (1 byte) + optionLength (2 bytes) + optionType (1 byte) + gas (16 bytes) [+ value (16 bytes)]
-        bytes memory option;
-        if (_value == 0) {
-            // Without value: optionType (1) + gas (16) = 17 bytes
-            option = abi.encodePacked(
-                WORKER_ID_EXECUTOR, // 1 byte
-                uint16(17), // option length: 1 + 16
-                OPTION_TYPE_LZRECEIVE, // 1 byte
-                _gas // 16 bytes
-            );
-        } else {
-            // With value: optionType (1) + gas (16) + value (16) = 33 bytes
-            option = abi.encodePacked(
-                WORKER_ID_EXECUTOR, // 1 byte
-                uint16(33), // option length: 1 + 16 + 16
-                OPTION_TYPE_LZRECEIVE, // 1 byte
-                _gas, // 16 bytes
-                _value // 16 bytes
-            );
-        }
+    /// @dev Adds an executor LZ receive option to the existing options.
+    /// @param options The existing options container.
+    /// @param gas     The gasLimit used on the lzReceive() function in the OApp.
+    /// @param value   The msg.value passed to the lzReceive() function in the OApp.
+    function addExecutorLzReceiveOption(bytes memory options, uint128 gas, uint128 value) internal pure returns (bytes memory) {
+        bytes memory option = ExecutorOptions.encodeLzReceiveOption(gas, value);
+        return addExecutorOption(options, ExecutorOptions.OPTION_TYPE_LZRECEIVE, option);
+    }
 
-        return abi.encodePacked(_options, option);
+    /// @dev Adds an executor option to the existing options.
+    /// @param options    The existing options container.
+    /// @param optionType The type of the executor option.
+    /// @param option     The encoded data for the executor option.
+    function addExecutorOption(bytes memory options, uint8 optionType, bytes memory option) internal pure returns (bytes memory) {
+        return
+            abi.encodePacked(
+                options,
+                ExecutorOptions.WORKER_ID,
+                option.length.toUint16() + 1, // +1 for optionType
+                optionType,
+                option
+            );
     }
 }
