@@ -43,13 +43,12 @@ library OptionsBuilder {
     /// @param optionType The type of the executor option.
     /// @param option     The encoded data for the executor option.
     function addExecutorOption(bytes memory options, uint8 optionType, bytes memory option) internal pure returns (bytes memory) {
-        return
-            abi.encodePacked(
-                options,
-                ExecutorOptions.WORKER_ID,
-                option.length.toUint16() + 1, // +1 for optionType
-                optionType,
-                option
-            );
+        return abi.encodePacked(
+            options,
+            ExecutorOptions.WORKER_ID,
+            option.length.toUint16() + 1, // +1 for optionType
+            optionType,
+            option
+        );
     }
 }
