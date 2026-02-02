@@ -49,10 +49,7 @@ interface ILayerZeroEndpointV2 {
     /// @param  params        The messaging parameters (destination, receiver, message, options).
     /// @param  refundAddress The address to receive excess fee refunds.
     /// @return receipt       The messaging receipt containing guid, nonce, and actual fee.
-    function send(
-        MessagingParams calldata params,
-        address refundAddress
-    ) external payable returns (MessagingReceipt memory receipt);
+    function send(MessagingParams calldata params, address refundAddress) external payable returns (MessagingReceipt memory receipt);
 
     /// @notice Delivers a received message to the specified receiver.
     /// @param  origin    The origin information (source endpoint ID, sender, nonce).
