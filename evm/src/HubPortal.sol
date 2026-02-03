@@ -264,7 +264,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     }
 
     /// @inheritdoc IHubPortal
-    function crossSpokeTokenTransferEnabled(uint32 spokeChainId) public view returns (bool) {
+    function crossSpokeTokenTransferEnabled(uint32 spokeChainId) external view returns (bool) {
         HubPortalStorageStruct storage $ = _getHubPortalStorageLocation();
         return $.spokeConfig[spokeChainId].crossSpokeTokenTransferEnabled;
     }
@@ -374,10 +374,8 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     /// @param recipient     The account to unlock/transfer M tokens to.
     /// @param amount        The amount of $M Token to unlock to the recipient.
     function _mintOrUnlock(uint32 sourceChainId, address recipient, uint256 amount, uint128) internal override {
-        // Only track bridged principal for isolated Spokes
-        if (!crossSpokeTokenTransferEnabled(sourceChainId)) {
-            _decreaseBridgedPrincipal(sourceChainId, amount);
-        }
+        _decreaseBridgedPrincipal(sourceChainId, amount);
+    
         if (recipient != address(this)) {
             IERC20(mToken).transfer(recipient, amount);
         }
@@ -387,6 +385,10 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     ///      Reverts when trying to unlock more than was bridged to the Spoke.
     function _decreaseBridgedPrincipal(uint32 spokeChainId, uint256 amount) private {
         SpokeChainConfig storage spokeConfig = _getHubPortalStorageLocation().spokeConfig[spokeChainId];
+        
+        // Only track bridged principal for isolated Spokes
+        if (spokeConfig.crossSpokeTokenTransferEnabled) return;
+
         uint248 totalBridgedPrincipal = spokeConfig.bridgedPrincipal;
         uint248 principalAmount = IndexingMath.getPrincipalAmountRoundedDown(uint240(amount), _currentIndex());
 
