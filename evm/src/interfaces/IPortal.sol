@@ -308,13 +308,13 @@ interface IPortal {
     /// @notice Returns the fee for delivering a cross-chain message using the default bridge adapter.
     /// @dev    The fee must be passed as msg.value when calling any function that sends a cross-chain message (e.g. `sendToken`).
     /// @param  destinationChainId The ID of the destination chain.
-    /// @param  payloadType        The payload type: TokenTransfer = 0, Index = 1, RegistrarKey = 2, RegistrarList = 3, FillReport = 4
+    /// @param  payloadType        The payload type: TokenTransfer = 0, Index = 1, RegistrarKey = 2, RegistrarList = 3, FillReport = 4, EarnerMerkleRoot = 5, CancelReport = 6
     function quote(uint32 destinationChainId, PayloadType payloadType) external view returns (uint256);
 
     /// @notice Returns the fee for delivering a cross-chain message using the specified bridge adapter.
     /// @dev    The fee must be passed as msg.value when calling any function that sends a cross-chain message (e.g. `sendToken`).
     /// @param  destinationChainId The ID of the destination chain.
-    /// @param  payloadType        The payload type: TokenTransfer = 0, Index = 1, RegistrarKey = 2, RegistrarList = 3, FillReport = 4
+    /// @param  payloadType        The payload type: TokenTransfer = 0, Index = 1, RegistrarKey = 2, RegistrarList = 3, FillReport = 4, EarnerMerkleRoot = 5, CancelReport = 6
     /// @param  bridgeAdapter      The address of the bridge adapter.
     function quote(uint32 destinationChainId, PayloadType payloadType, address bridgeAdapter) external view returns (uint256);
 

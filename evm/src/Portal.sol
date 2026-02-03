@@ -790,7 +790,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
 
     /// @dev Returns the fee for delivering a cross-chain message.
     /// @param  destinationChainId The ID of the destination chain.
-    /// @param  payloadType        The payload type: TokenTransfer = 0, Index = 1, RegistrarKey = 2, RegistrarList = 3, FillReport = 4
+    /// @param  payloadType        The payload type: TokenTransfer = 0, Index = 1, RegistrarKey = 2, RegistrarList = 3, FillReport = 4, EarnerMerkleRoot = 5, CancelReport = 6
     /// @param  bridgeAdapter      The address of the bridge adapter.
     function _quote(uint32 destinationChainId, PayloadType payloadType, address bridgeAdapter) private view returns (uint256) {
         _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
