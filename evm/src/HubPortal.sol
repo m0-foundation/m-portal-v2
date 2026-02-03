@@ -375,7 +375,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     /// @param amount        The amount of $M Token to unlock to the recipient.
     function _mintOrUnlock(uint32 sourceChainId, address recipient, uint256 amount, uint128) internal override {
         _decreaseBridgedPrincipal(sourceChainId, amount);
-    
+
         if (recipient != address(this)) {
             IERC20(mToken).transfer(recipient, amount);
         }
@@ -385,7 +385,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     ///      Reverts when trying to unlock more than was bridged to the Spoke.
     function _decreaseBridgedPrincipal(uint32 spokeChainId, uint256 amount) private {
         SpokeChainConfig storage spokeConfig = _getHubPortalStorageLocation().spokeConfig[spokeChainId];
-        
+
         // Only track bridged principal for isolated Spokes
         if (spokeConfig.crossSpokeTokenTransferEnabled) return;
 
