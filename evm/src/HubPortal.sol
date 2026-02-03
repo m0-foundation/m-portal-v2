@@ -281,7 +281,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         bytes calldata bridgeAdapterArgs
     ) private returns (bytes32 messageId) {
         _revertIfZeroRefundAddress(refundAddress);
-        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
+        _revertIfBridgeAdapterSendDisabled(destinationChainId, bridgeAdapter);
 
         uint128 index = _currentIndex();
         bytes32 destinationPeer = IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId);
@@ -302,7 +302,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         bytes calldata bridgeAdapterArgs
     ) private returns (bytes32 messageId) {
         _revertIfZeroRefundAddress(refundAddress);
-        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
+        _revertIfBridgeAdapterSendDisabled(destinationChainId, bridgeAdapter);
 
         bytes32 value = IRegistrarLike(registrar).get(key);
         bytes32 destinationPeer = IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId);
@@ -325,7 +325,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         bytes calldata bridgeAdapterArgs
     ) private returns (bytes32 messageId) {
         _revertIfZeroRefundAddress(refundAddress);
-        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
+        _revertIfBridgeAdapterSendDisabled(destinationChainId, bridgeAdapter);
 
         bool status = IRegistrarLike(registrar).listContains(listName, account);
         bytes32 destinationPeer = IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId);
@@ -347,7 +347,7 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
         bytes calldata bridgeAdapterArgs
     ) private returns (bytes32 messageId) {
         _revertIfZeroRefundAddress(refundAddress);
-        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
+        _revertIfBridgeAdapterSendDisabled(destinationChainId, bridgeAdapter);
 
         uint128 index = _currentIndex();
         bytes32 destinationPeer = IBridgeAdapter(bridgeAdapter).getPeer(destinationChainId);
