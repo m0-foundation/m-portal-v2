@@ -48,6 +48,23 @@ contract LzReceiveUnitTest is LayerZeroBridgeAdapterUnitTestBase {
         adapter.lzReceive(origin, bytes32(0), payload, address(0), "");
     }
 
+    function test_lzReceive_revertsIfPeerNotDefined() external {
+        // Set up a chain ID mapping without a peer
+        uint32 noPeerChainId = 3;
+        uint32 noPeerEid = 30_103;
+
+        vm.prank(operator);
+        adapter.setBridgeChainId(noPeerChainId, noPeerEid);
+
+        bytes memory payload = "test payload";
+        Origin memory origin = Origin({ srcEid: noPeerEid, sender: peerAdapterAddress, nonce: 1 });
+
+        vm.expectRevert(abi.encodeWithSelector(IBridgeAdapter.UnsupportedChain.selector, noPeerChainId));
+
+        vm.prank(address(lzEndpoint));
+        adapter.lzReceive(origin, bytes32(0), payload, address(0), "");
+    }
+
     function test_lzReceive_revertsIfUnsupportedSender() external {
         bytes32 unsupportedSender = makeAddr("unsupported").toBytes32();
         bytes memory payload = "test payload";

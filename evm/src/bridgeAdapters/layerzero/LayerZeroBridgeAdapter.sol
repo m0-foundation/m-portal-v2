@@ -76,7 +76,7 @@ contract LayerZeroBridgeAdapter is BridgeAdapter, ILayerZeroBridgeAdapter {
         if (msg.sender != endpoint) revert NotEndpoint();
         // Convert LayerZero Endpoint ID to internal chain ID
         uint32 sourceChainId = _getChainIdOrRevert(origin.srcEid);
-        if (origin.sender != _getPeer(sourceChainId)) revert UnsupportedSender(origin.sender);
+        if (origin.sender != _getPeerOrRevert(sourceChainId)) revert UnsupportedSender(origin.sender);
 
         IPortal(portal).receiveMessage(sourceChainId, payload);
     }
