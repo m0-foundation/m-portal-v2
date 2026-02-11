@@ -70,7 +70,7 @@ contract HyperlaneBridgeAdapter is BridgeAdapter, IHyperlaneBridgeAdapter {
         if (msg.sender != mailbox) revert NotMailbox();
         // Convert Hyperlane domain to internal chain ID
         uint32 sourceChainId = _getChainIdOrRevert(sourceBridgeChainId);
-        if (sender != _getPeer(sourceChainId)) revert UnsupportedSender(sender);
+        if (sender != _getPeerOrRevert(sourceChainId)) revert UnsupportedSender(sender);
 
         IPortal(portal).receiveMessage(sourceChainId, payload);
     }
