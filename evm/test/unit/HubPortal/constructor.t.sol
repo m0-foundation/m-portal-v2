@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 import { IPortal } from "../../../src/interfaces/IPortal.sol";
 import { IHubPortal } from "../../../src/interfaces/IHubPortal.sol";

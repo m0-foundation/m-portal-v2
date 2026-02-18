@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 import { BytesParser } from "./BytesParser.sol";
 import { TypeConverter } from "./TypeConverter.sol";

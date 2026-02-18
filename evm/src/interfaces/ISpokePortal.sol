@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 import { IPortal } from "./IPortal.sol";
 
