@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import { IPortal } from "../../../src/interfaces/IPortal.sol";
+import { BridgeAdapterStatus, IPortal } from "../../../src/interfaces/IPortal.sol";
 import { PayloadType } from "../../../src/libraries/PayloadEncoder.sol";
 
 import { MockBridgeAdapter } from "../../mocks/MockBridgeAdapter.sol";
@@ -25,7 +25,7 @@ contract QuoteUnitTest is HubPortalUnitTestBase {
         customAdapter.setQuote(expectedFee);
 
         vm.prank(operator);
-        hubPortal.setSupportedBridgeAdapter(SPOKE_CHAIN_ID, address(customAdapter), true);
+        hubPortal.setBridgeAdapterStatus(SPOKE_CHAIN_ID, address(customAdapter), BridgeAdapterStatus.Enabled);
 
         uint256 fee = hubPortal.quote(SPOKE_CHAIN_ID, PayloadType.TokenTransfer, address(customAdapter));
 
@@ -44,14 +44,14 @@ contract QuoteUnitTest is HubPortalUnitTestBase {
     function test_quote_revertsIfNoBridgeAdapterSet() external {
         uint32 unconfiguredChain = 999;
 
-        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, unconfiguredChain, address(0)));
+        vm.expectRevert(abi.encodeWithSelector(IPortal.BridgeAdapterSendDisabled.selector, unconfiguredChain, address(0)));
         hubPortal.quote(unconfiguredChain, PayloadType.TokenTransfer);
     }
 
     function test_quote_revertsIfUnsupportedBridgeAdapter() external {
         address unsupportedAdapter = makeAddr("unsupported");
 
-        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, SPOKE_CHAIN_ID, unsupportedAdapter));
+        vm.expectRevert(abi.encodeWithSelector(IPortal.BridgeAdapterSendDisabled.selector, SPOKE_CHAIN_ID, unsupportedAdapter));
         hubPortal.quote(SPOKE_CHAIN_ID, PayloadType.TokenTransfer, unsupportedAdapter);
     }
 
@@ -71,7 +71,7 @@ contract QuoteUnitTest is HubPortalUnitTestBase {
 
         // Set up bridge adapter but NOT the gas limit
         vm.prank(operator);
-        hubPortal.setSupportedBridgeAdapter(newChainId, address(bridgeAdapter), true);
+        hubPortal.setBridgeAdapterStatus(newChainId, address(bridgeAdapter), BridgeAdapterStatus.Enabled);
 
         vm.expectRevert(abi.encodeWithSelector(IPortal.PayloadGasLimitNotSet.selector, newChainId, PayloadType.TokenTransfer));
         hubPortal.quote(newChainId, PayloadType.TokenTransfer, address(bridgeAdapter));

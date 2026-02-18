@@ -5,6 +5,13 @@ pragma solidity 0.8.30;
 import { PayloadType } from "../libraries/PayloadEncoder.sol";
 import { IOrderBookLike } from "./IOrderBookLike.sol";
 
+/// @notice Status of a bridge adapter for a specific chain.
+enum BridgeAdapterStatus {
+    Disabled, // Cannot send or receive messages
+    Enabled, // Can send and receive messages
+    ReceiveOnly // Can only receive messages (for graceful deprecation)
+}
+
 /// @title  IPortal interface
 /// @author M0 Labs
 /// @notice Subset of functions inherited by both IHubPortal and ISpokePortal.
@@ -159,11 +166,11 @@ interface IPortal {
     /// @param  bridgeAdapter      The address of the bridge adapter.
     event DefaultBridgeAdapterSet(uint32 indexed destinationChainId, address indexed bridgeAdapter);
 
-    /// @notice Emitted when a supported bridge adapter for a destination chain is set.
+    /// @notice Emitted when the status of a bridge adapter for a destination chain is updated.
     /// @param  destinationChainId The ID of the destination chain.
     /// @param  bridgeAdapter      The address of the bridge adapter.
-    /// @param  supported          `True` if the bridge adapter is supported, `false` otherwise.
-    event SupportedBridgeAdapterSet(uint32 indexed destinationChainId, address indexed bridgeAdapter, bool supported);
+    /// @param  status             The new status of the bridge adapter.
+    event BridgeAdapterStatusSet(uint32 indexed destinationChainId, address indexed bridgeAdapter, BridgeAdapterStatus status);
 
     /// @notice Emitted when sending is paused.
     event SendPaused();
@@ -241,6 +248,9 @@ interface IPortal {
     /// @notice Thrown when the bridge adapter is not supported for the destination chain.
     error UnsupportedBridgeAdapter(uint32 destinationChainId, address bridgeAdapter);
 
+    /// @notice Thrown when the bridge adapter is not enabled for sending on the destination chain.
+    error BridgeAdapterSendDisabled(uint32 destinationChainId, address bridgeAdapter);
+
     /// @notice Thrown in `sendToken` function when the actual amount received is less than the specified amount.
     error InsufficientAmountReceived(uint256 specifiedAmount, uint256 actualAmount);
 
@@ -282,10 +292,10 @@ interface IPortal {
     /// @param  destinationChainId The ID of the destination chain.
     function defaultBridgeAdapter(uint32 destinationChainId) external view returns (address);
 
-    /// @notice Indicates whether the provided bridge adapter is supported for the destination chain.
+    /// @notice Returns the status of the provided bridge adapter for the destination chain.
     /// @param  destinationChainId The ID of the destination chain.
-    /// @param  bridgingAdapter    The address of the bridge adapter.
-    function supportedBridgeAdapter(uint32 destinationChainId, address bridgingAdapter) external view returns (bool);
+    /// @param  bridgeAdapter      The address of the bridge adapter.
+    function bridgeAdapterStatus(uint32 destinationChainId, address bridgeAdapter) external view returns (BridgeAdapterStatus);
 
     /// @notice Indicates whether the provided bridging path is supported.
     /// @param  sourceToken        The address of the token on the current chain.
@@ -347,11 +357,13 @@ interface IPortal {
     /// @param  bridgeAdapter      The address of the bridge adapter.
     function setDefaultBridgeAdapter(uint32 destinationChainId, address bridgeAdapter) external;
 
-    /// @notice Sets a supported bridge adapter for a destination chain.
+    /// @notice Sets the status of a bridge adapter for a destination chain.
+    /// @dev    Use `ReceiveOnly` status for graceful deprecation to allow in-flight messages to be received
+    ///         while preventing new messages from being sent.
     /// @param  destinationChainId The ID of the destination chain.
     /// @param  bridgeAdapter      The address of the bridge adapter.
-    /// @param  supported          `True` if the bridge adapter is supported, `false` otherwise.
-    function setSupportedBridgeAdapter(uint32 destinationChainId, address bridgeAdapter, bool supported) external;
+    /// @param  status             The new status of the bridge adapter.
+    function setBridgeAdapterStatus(uint32 destinationChainId, address bridgeAdapter, BridgeAdapterStatus status) external;
 
     /// @notice Transfers $M Token or $M Extension to the destination chain using the default bridge adapter.
     /// @dev    If wrapping on the destination fails, the recipient will receive $M token.

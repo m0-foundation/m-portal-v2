@@ -3,7 +3,7 @@ pragma solidity 0.8.30;
 
 import { IBridgeAdapter } from "../../../src/interfaces/IBridgeAdapter.sol";
 import { IHubPortal } from "../../../src/interfaces/IHubPortal.sol";
-import { IPortal } from "../../../src/interfaces/IPortal.sol";
+import { BridgeAdapterStatus, IPortal } from "../../../src/interfaces/IPortal.sol";
 import { TypeConverter } from "../../../src/libraries/TypeConverter.sol";
 import { PayloadEncoder } from "../../../src/libraries/PayloadEncoder.sol";
 
@@ -58,7 +58,7 @@ contract SendRegistrarKeyUnitTest is HubPortalUnitTestBase {
         registrar.set(testKey, testValue);
 
         vm.prank(operator);
-        hubPortal.setSupportedBridgeAdapter(SPOKE_CHAIN_ID, address(customAdapter), true);
+        hubPortal.setBridgeAdapterStatus(SPOKE_CHAIN_ID, address(customAdapter), BridgeAdapterStatus.Enabled);
 
         vm.expectCall(
             address(customAdapter),
@@ -87,19 +87,19 @@ contract SendRegistrarKeyUnitTest is HubPortalUnitTestBase {
     function test_sendRegistrarKey_revertsIfNoBridgeAdapterSet() external {
         uint32 unconfiguredChain = 999;
 
-        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, unconfiguredChain, address(0)));
+        vm.expectRevert(abi.encodeWithSelector(IPortal.BridgeAdapterSendDisabled.selector, unconfiguredChain, address(0)));
         hubPortal.sendRegistrarKey(unconfiguredChain, testKey, refundAddress, bridgeAdapterArgs);
     }
 
     function test_sendRegistrarKey_revertsIfUnsupportedBridgeAdapter() external {
         address unsupportedAdapter = makeAddr("unsupported");
 
-        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, SPOKE_CHAIN_ID, unsupportedAdapter));
+        vm.expectRevert(abi.encodeWithSelector(IPortal.BridgeAdapterSendDisabled.selector, SPOKE_CHAIN_ID, unsupportedAdapter));
         hubPortal.sendRegistrarKey(SPOKE_CHAIN_ID, testKey, refundAddress, unsupportedAdapter, bridgeAdapterArgs);
     }
 
     function test_sendRegistrarKey_revertsIfSendToSelf() external {
-        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, HUB_CHAIN_ID, address(0)));
+        vm.expectRevert(abi.encodeWithSelector(IPortal.BridgeAdapterSendDisabled.selector, HUB_CHAIN_ID, address(0)));
         hubPortal.sendRegistrarKey(HUB_CHAIN_ID, testKey, refundAddress, bridgeAdapterArgs);
     }
 }

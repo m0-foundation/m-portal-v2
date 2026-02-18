@@ -2,7 +2,7 @@
 pragma solidity 0.8.30;
 
 import { IBridgeAdapter } from "../../../src/interfaces/IBridgeAdapter.sol";
-import { IPortal } from "../../../src/interfaces/IPortal.sol";
+import { BridgeAdapterStatus, IPortal } from "../../../src/interfaces/IPortal.sol";
 import { ISpokePortal } from "../../../src/interfaces/ISpokePortal.sol";
 import { TypeConverter } from "../../../src/libraries/TypeConverter.sol";
 import { PayloadEncoder } from "../../../src/libraries/PayloadEncoder.sol";
@@ -109,7 +109,7 @@ contract SendTokenUnitTest is SpokePortalUnitTestBase {
         mToken.setCurrentIndex(index);
 
         vm.prank(operator);
-        spokePortal.setSupportedBridgeAdapter(HUB_CHAIN_ID, address(customAdapter), true);
+        spokePortal.setBridgeAdapterStatus(HUB_CHAIN_ID, address(customAdapter), BridgeAdapterStatus.Enabled);
 
         vm.startPrank(user);
         mToken.approve(address(spokePortal), amount);
@@ -169,7 +169,7 @@ contract SendTokenUnitTest is SpokePortalUnitTestBase {
     function test_sendToken_revertsIfNoBridgeAdapterSet() external {
         uint32 unconfiguredChain = 999;
 
-        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, unconfiguredChain, address(0)));
+        vm.expectRevert(abi.encodeWithSelector(IPortal.BridgeAdapterSendDisabled.selector, unconfiguredChain, address(0)));
         vm.prank(user);
         spokePortal.sendToken(amount, address(mToken), unconfiguredChain, hubMToken, recipient, refundAddress, bridgeAdapterArgs);
     }
@@ -177,7 +177,7 @@ contract SendTokenUnitTest is SpokePortalUnitTestBase {
     function test_sendToken_revertsIfUnsupportedBridgeAdapter() external {
         address unsupportedAdapter = makeAddr("unsupported");
 
-        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, HUB_CHAIN_ID, unsupportedAdapter));
+        vm.expectRevert(abi.encodeWithSelector(IPortal.BridgeAdapterSendDisabled.selector, HUB_CHAIN_ID, unsupportedAdapter));
 
         vm.prank(user);
         spokePortal.sendToken(
@@ -189,7 +189,7 @@ contract SendTokenUnitTest is SpokePortalUnitTestBase {
         vm.startPrank(user);
         mToken.approve(address(spokePortal), amount);
 
-        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, SPOKE_CHAIN_ID, address(0)));
+        vm.expectRevert(abi.encodeWithSelector(IPortal.BridgeAdapterSendDisabled.selector, SPOKE_CHAIN_ID, address(0)));
         spokePortal.sendToken(amount, address(mToken), SPOKE_CHAIN_ID, hubMToken, recipient, refundAddress, bridgeAdapterArgs);
         vm.stopPrank();
     }

@@ -13,7 +13,7 @@ import {
 import { UUPSUpgradeable } from "../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import { IBridgeAdapter } from "./interfaces/IBridgeAdapter.sol";
-import { IPortal } from "./interfaces/IPortal.sol";
+import { BridgeAdapterStatus, IPortal } from "./interfaces/IPortal.sol";
 import { ISwapFacilityLike } from "./interfaces/ISwapFacilityLike.sol";
 import { IOrderBookLike } from "./interfaces/IOrderBookLike.sol";
 import { ReentrancyLock } from "./utils/ReentrancyLock.sol";
@@ -23,8 +23,8 @@ import { TypeConverter } from "./libraries/TypeConverter.sol";
 struct ChainConfig {
     /// @notice Default bridge adapter for each remote chain used if no bridge adapter is specified.
     address defaultBridgeAdapter;
-    /// @notice Supported bridge adapters for each remote chain.
-    mapping(address bridgeAdapter => bool supported) supportedBridgeAdapter;
+    /// @notice Status of bridge adapters for each remote chain.
+    mapping(address bridgeAdapter => BridgeAdapterStatus status) bridgeAdapterStatus;
     /// @notice Gas limit required to process different types of payload on destination chains.
     mapping(PayloadType payloadType => uint256 gasLimit) payloadGasLimit;
 }
@@ -242,10 +242,10 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
 
         ChainConfig storage remoteChainConfig = _getPortalStorageLocation().remoteChainConfig[destinationChainId];
 
-        // If the bridge adapter isn't already supported, add it to the supported adapters list
-        if (!remoteChainConfig.supportedBridgeAdapter[bridgeAdapter]) {
-            remoteChainConfig.supportedBridgeAdapter[bridgeAdapter] = true;
-            emit SupportedBridgeAdapterSet(destinationChainId, bridgeAdapter, true);
+        // If the bridge adapter isn't already enabled, enable it
+        if (remoteChainConfig.bridgeAdapterStatus[bridgeAdapter] != BridgeAdapterStatus.Enabled) {
+            remoteChainConfig.bridgeAdapterStatus[bridgeAdapter] = BridgeAdapterStatus.Enabled;
+            emit BridgeAdapterStatusSet(destinationChainId, bridgeAdapter, BridgeAdapterStatus.Enabled);
         }
 
         if (remoteChainConfig.defaultBridgeAdapter == bridgeAdapter) return;
@@ -255,22 +255,26 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     }
 
     /// @inheritdoc IPortal
-    function setSupportedBridgeAdapter(uint32 destinationChainId, address bridgeAdapter, bool supported) external onlyRole(OPERATOR_ROLE) {
+    function setBridgeAdapterStatus(
+        uint32 destinationChainId,
+        address bridgeAdapter,
+        BridgeAdapterStatus status
+    ) external onlyRole(OPERATOR_ROLE) {
         _revertIfInvalidDestinationChain(destinationChainId);
         _revertIfZeroBridgeAdapter(bridgeAdapter);
 
         ChainConfig storage remoteChainConfig = _getPortalStorageLocation().remoteChainConfig[destinationChainId];
 
-        if (remoteChainConfig.supportedBridgeAdapter[bridgeAdapter] == supported) return;
+        if (remoteChainConfig.bridgeAdapterStatus[bridgeAdapter] == status) return;
 
-        // If the bridge adapter being removed is currently set as the default, clear the default adapter
-        if (!supported && remoteChainConfig.defaultBridgeAdapter == bridgeAdapter) {
+        // If the bridge adapter is not fully enabled and is currently set as the default, clear the default adapter
+        if (status != BridgeAdapterStatus.Enabled && remoteChainConfig.defaultBridgeAdapter == bridgeAdapter) {
             remoteChainConfig.defaultBridgeAdapter = address(0);
             emit DefaultBridgeAdapterSet(destinationChainId, address(0));
         }
 
-        remoteChainConfig.supportedBridgeAdapter[bridgeAdapter] = supported;
-        emit SupportedBridgeAdapterSet(destinationChainId, bridgeAdapter, supported);
+        remoteChainConfig.bridgeAdapterStatus[bridgeAdapter] = status;
+        emit BridgeAdapterStatusSet(destinationChainId, bridgeAdapter, status);
     }
 
     /// @inheritdoc IPortal
@@ -362,9 +366,9 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     }
 
     /// @inheritdoc IPortal
-    function supportedBridgeAdapter(uint32 destinationChainId, address bridgeAdapter) public view returns (bool) {
+    function bridgeAdapterStatus(uint32 destinationChainId, address bridgeAdapter) public view returns (BridgeAdapterStatus) {
         PortalStorageStruct storage $ = _getPortalStorageLocation();
-        return $.remoteChainConfig[destinationChainId].supportedBridgeAdapter[bridgeAdapter];
+        return $.remoteChainConfig[destinationChainId].bridgeAdapterStatus[bridgeAdapter];
     }
 
     /// @inheritdoc IPortal
@@ -443,7 +447,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         _revertIfZeroSourceToken(sourceToken);
         _revertIfZeroDestinationToken(destinationToken);
         _revertIfZeroRecipient(recipient);
-        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
+        _revertIfBridgeAdapterSendDisabled(destinationChainId, bridgeAdapter);
         _revertIfUnsupportedBridgingPath(sourceToken, destinationChainId, destinationToken);
 
         // Transfer and if the source token isn't $M token, unwrap it to $M token.
@@ -543,7 +547,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     ) private returns (bytes32 messageId) {
         if (msg.sender != orderBook) revert NotOrderBook();
         _revertIfZeroRefundAddress(refundAddress);
-        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
+        _revertIfBridgeAdapterSendDisabled(destinationChainId, bridgeAdapter);
 
         bytes memory payload;
         uint128 index;
@@ -599,7 +603,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     ) private returns (bytes32 messageId) {
         if (msg.sender != orderBook) revert NotOrderBook();
         _revertIfZeroRefundAddress(refundAddress);
-        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
+        _revertIfBridgeAdapterSendDisabled(destinationChainId, bridgeAdapter);
 
         uint128 index = _currentIndex();
         messageId = _getMessageId(destinationChainId);
@@ -793,7 +797,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     /// @param  payloadType        The payload type: TokenTransfer = 0, Index = 1, RegistrarKey = 2, RegistrarList = 3, FillReport = 4, EarnerMerkleRoot = 5, CancelReport = 6
     /// @param  bridgeAdapter      The address of the bridge adapter.
     function _quote(uint32 destinationChainId, PayloadType payloadType, address bridgeAdapter) private view returns (uint256) {
-        _revertIfUnsupportedBridgeAdapter(destinationChainId, bridgeAdapter);
+        _revertIfBridgeAdapterSendDisabled(destinationChainId, bridgeAdapter);
 
         uint256 gasLimit = _getPayloadGasLimitOrRevert(destinationChainId, payloadType);
 
@@ -844,8 +848,18 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         if (recipient == bytes32(0)) revert ZeroRecipient();
     }
 
+    /// @dev Reverts if the bridge adapter is not enabled for sending (requires Enabled status).
+    function _revertIfBridgeAdapterSendDisabled(uint32 chainId, address bridgeAdapter) internal view {
+        if (bridgeAdapterStatus(chainId, bridgeAdapter) != BridgeAdapterStatus.Enabled) {
+            revert BridgeAdapterSendDisabled(chainId, bridgeAdapter);
+        }
+    }
+
+    /// @dev Reverts if the bridge adapter is not enabled for receiving (requires Enabled or ReceiveOnly status).
     function _revertIfUnsupportedBridgeAdapter(uint32 chainId, address bridgeAdapter) internal view {
-        if (!supportedBridgeAdapter(chainId, bridgeAdapter)) revert UnsupportedBridgeAdapter(chainId, bridgeAdapter);
+        if (bridgeAdapterStatus(chainId, bridgeAdapter) == BridgeAdapterStatus.Disabled) {
+            revert UnsupportedBridgeAdapter(chainId, bridgeAdapter);
+        }
     }
 
     function _revertIfUnsupportedBridgingPath(address sourceToken, uint32 destinationChainId, bytes32 destinationToken) internal view {

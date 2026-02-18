@@ -5,7 +5,7 @@ import {
     IAccessControl
 } from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/access/IAccessControl.sol";
 
-import { IPortal } from "../../../src/interfaces/IPortal.sol";
+import { BridgeAdapterStatus, IPortal } from "../../../src/interfaces/IPortal.sol";
 
 import { HubPortalUnitTestBase } from "./HubPortalUnitTestBase.sol";
 
@@ -27,11 +27,11 @@ contract SetDefaultBridgeAdapterUnitTest is HubPortalUnitTestBase {
         vm.prank(operator);
 
         vm.expectEmit();
-        emit IPortal.SupportedBridgeAdapterSet(SPOKE_CHAIN_ID, newBridgeAdapter, true);
+        emit IPortal.BridgeAdapterStatusSet(SPOKE_CHAIN_ID, newBridgeAdapter, BridgeAdapterStatus.Enabled);
 
         hubPortal.setDefaultBridgeAdapter(SPOKE_CHAIN_ID, newBridgeAdapter);
 
-        assertTrue(hubPortal.supportedBridgeAdapter(SPOKE_CHAIN_ID, newBridgeAdapter));
+        assertEq(uint8(hubPortal.bridgeAdapterStatus(SPOKE_CHAIN_ID, newBridgeAdapter)), uint8(BridgeAdapterStatus.Enabled));
     }
 
     function test_setDefaultBridgeAdapter_revertsIfCalledByNonOperator() external {

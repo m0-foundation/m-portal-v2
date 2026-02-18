@@ -2,7 +2,7 @@
 pragma solidity 0.8.30;
 
 import { IBridgeAdapter } from "../../../src/interfaces/IBridgeAdapter.sol";
-import { IPortal } from "../../../src/interfaces/IPortal.sol";
+import { BridgeAdapterStatus, IPortal } from "../../../src/interfaces/IPortal.sol";
 import { IOrderBookLike } from "../../../src/interfaces/IOrderBookLike.sol";
 import { TypeConverter } from "../../../src/libraries/TypeConverter.sol";
 import { PayloadEncoder } from "../../../src/libraries/PayloadEncoder.sol";
@@ -86,7 +86,7 @@ contract SendCancelReportUnitTest is HubPortalUnitTestBase {
         vm.mockCall(address(customAdapter), abi.encodeCall(MockBridgeAdapter.getPeer, (SPOKE_CHAIN_ID)), abi.encode(spokeBridgeAdapter));
 
         vm.prank(operator);
-        hubPortal.setSupportedBridgeAdapter(SPOKE_CHAIN_ID, address(customAdapter), true);
+        hubPortal.setBridgeAdapterStatus(SPOKE_CHAIN_ID, address(customAdapter), BridgeAdapterStatus.Enabled);
 
         vm.expectCall(
             address(customAdapter),
@@ -126,7 +126,7 @@ contract SendCancelReportUnitTest is HubPortalUnitTestBase {
     function test_sendCancelReport_revertsIfNoBridgeAdapterSet() external {
         uint32 unconfiguredChain = 999;
 
-        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, unconfiguredChain, address(0)));
+        vm.expectRevert(abi.encodeWithSelector(IPortal.BridgeAdapterSendDisabled.selector, unconfiguredChain, address(0)));
         vm.prank(address(mockOrderBook));
         hubPortal.sendCancelReport(unconfiguredChain, testReport, refundAddress, bridgeAdapterArgs);
     }
@@ -134,7 +134,7 @@ contract SendCancelReportUnitTest is HubPortalUnitTestBase {
     function test_sendCancelReport_revertsIfUnsupportedBridgeAdapter() external {
         address unsupportedAdapter = makeAddr("unsupported");
 
-        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, SPOKE_CHAIN_ID, unsupportedAdapter));
+        vm.expectRevert(abi.encodeWithSelector(IPortal.BridgeAdapterSendDisabled.selector, SPOKE_CHAIN_ID, unsupportedAdapter));
 
         vm.prank(address(mockOrderBook));
         hubPortal.sendCancelReport(SPOKE_CHAIN_ID, testReport, refundAddress, unsupportedAdapter, bridgeAdapterArgs);
@@ -147,7 +147,7 @@ contract SendCancelReportUnitTest is HubPortalUnitTestBase {
     }
 
     function test_sendCancelReport_revertsIfISendToSelf() external {
-        vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, HUB_CHAIN_ID, address(0)));
+        vm.expectRevert(abi.encodeWithSelector(IPortal.BridgeAdapterSendDisabled.selector, HUB_CHAIN_ID, address(0)));
         vm.prank(address(mockOrderBook));
         hubPortal.sendCancelReport(HUB_CHAIN_ID, testReport, refundAddress, bridgeAdapterArgs);
     }
