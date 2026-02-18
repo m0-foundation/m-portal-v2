@@ -41,11 +41,17 @@ abstract contract WormholeBridgeAdapterUnitTestBase is Test {
 
         portal = new MockPortal(address(0));
         coreBridge = new MockWormholeCoreBridge();
+        vm.mockCall(
+            address(coreBridge),
+            abi.encodeCall(MockWormholeCoreBridge.chainId, ()),
+            abi.encode(HUB_WORMHOLE_CHAIN_ID)
+        );
+        
         executor = new MockWormholeExecutor();
 
         // Deploy implementation
         implementation =
-            new WormholeBridgeAdapter(address(coreBridge), address(executor), CONSISTENCY_LEVEL, HUB_WORMHOLE_CHAIN_ID, address(portal));
+            new WormholeBridgeAdapter(address(coreBridge), address(executor), CONSISTENCY_LEVEL, address(portal));
 
         // Deploy UUPS proxy
         bytes memory initializeData = abi.encodeCall(WormholeBridgeAdapter.initialize, (admin, operator));

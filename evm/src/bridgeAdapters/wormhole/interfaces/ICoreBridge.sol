@@ -42,4 +42,7 @@ interface ICoreBridge {
     /// @notice Parses and verifies a Wormhole VAA.
     /// @dev Consider using `VaaLib` and `CoreBridgeLib` instead to save on gas (though at the expense of some code size)
     function parseAndVerifyVM(bytes calldata encodedVM) external view returns (CoreBridgeVM memory vm, bool valid, string memory reason);
+
+    /// @notice Returns the Wormhole chain ID of the current chain
+    function chainId() external view returns (uint16);
 }
