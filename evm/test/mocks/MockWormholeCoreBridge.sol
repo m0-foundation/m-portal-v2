@@ -21,4 +21,9 @@ contract MockWormholeCoreBridge {
     function parseAndVerifyVM(bytes calldata) external pure returns (CoreBridgeVM memory vm, bool valid, string memory reason) {
         return (vm, false, "");
     }
+
+    /// @notice Returns the Wormhole chain ID of the current chain
+    function chainId() external pure returns (uint16) {
+        return 0;
+    }
 }

@@ -23,7 +23,7 @@ contract InitializeUnitTest is WormholeBridgeAdapterUnitTestBase {
 
     function test_initialize_zeroAdmin() external {
         WormholeBridgeAdapter newImplementation =
-            new WormholeBridgeAdapter(address(coreBridge), address(executor), CONSISTENCY_LEVEL, HUB_WORMHOLE_CHAIN_ID, address(portal));
+            new WormholeBridgeAdapter(address(coreBridge), address(executor), CONSISTENCY_LEVEL, address(portal));
 
         bytes memory initializeData = abi.encodeCall(WormholeBridgeAdapter.initialize, (address(0), operator));
 
@@ -33,7 +33,7 @@ contract InitializeUnitTest is WormholeBridgeAdapterUnitTestBase {
 
     function test_initialize_zeroOperator() external {
         WormholeBridgeAdapter newImplementation =
-            new WormholeBridgeAdapter(address(coreBridge), address(executor), CONSISTENCY_LEVEL, HUB_WORMHOLE_CHAIN_ID, address(portal));
+            new WormholeBridgeAdapter(address(coreBridge), address(executor), CONSISTENCY_LEVEL, address(portal));
 
         bytes memory initializeData = abi.encodeCall(WormholeBridgeAdapter.initialize, (admin, address(0)));
 

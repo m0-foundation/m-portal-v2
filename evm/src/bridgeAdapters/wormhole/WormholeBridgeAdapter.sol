@@ -64,20 +64,18 @@ contract WormholeBridgeAdapter is WormholeBridgeAdapterStorageLayout, BridgeAdap
     /// @param coreBridge_             The address of the Wormhole Core Bridge.
     /// @param executor_               The address of the Executor.
     /// @param consistencyLevel_       The consistency level.
-    /// @param currentWormholeChainId_ The Wormhole chain ID of the current chain.
     /// @param portal_                 The address of the Portal.
     constructor(
         address coreBridge_,
         address executor_,
         uint8 consistencyLevel_,
-        uint16 currentWormholeChainId_,
         address portal_
     ) BridgeAdapter(portal_) {
         if ((coreBridge = coreBridge_) == address(0)) revert ZeroCoreBridge();
         if ((executor = executor_) == address(0)) revert ZeroExecutor();
 
         consistencyLevel = consistencyLevel_;
-        currentWormholeChainId = currentWormholeChainId_;
+        currentWormholeChainId = ICoreBridge(coreBridge_).chainId();
     }
 
     /// @inheritdoc IBridgeAdapter
