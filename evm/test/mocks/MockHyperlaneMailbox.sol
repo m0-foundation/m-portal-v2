@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 contract MockHyperlaneMailbox {
     function quoteDispatch(uint32, bytes32, bytes calldata, bytes calldata) external view returns (uint256) {

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 import { WormholeBridgeAdapter } from "../../../../src/bridgeAdapters/wormhole/WormholeBridgeAdapter.sol";
 import { IBridgeAdapter } from "../../../../src/interfaces/IBridgeAdapter.sol";

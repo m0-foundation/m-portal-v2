@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity 0.8.33;
+pragma solidity 0.8.34;
 
 import { BridgingPath, PortalV1StorageCleaner } from "./PortalV1StorageCleaner.sol";
 
