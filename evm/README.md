@@ -7,7 +7,7 @@ This folder contains the EVM implementation of PortalV2. It uses Foundry for bui
 ### Prerequisites
 
 - [Foundry](https://book.getfoundry.sh/getting-started/installation)
-- Solidity 0.8.30
+- Solidity 0.8.33
 
 ### Setup
 
