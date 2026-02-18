@@ -170,7 +170,6 @@ contract WormholeBridgeAdapter is WormholeBridgeAdapterStorageLayout, BridgeAdap
     /// @inheritdoc IWormholeBridgeAdapter
     function setSenderPeer(uint32 chainId, bytes32 senderPeer) external onlyRole(OPERATOR_ROLE) {
         _revertIfZeroChain(chainId);
-        _revertIfZeroPeer(senderPeer);
 
         WormholeBridgeAdapterStorageStruct storage $ = _getWormholeBridgeAdapterStorageLocation();
 
