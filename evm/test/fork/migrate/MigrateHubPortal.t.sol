@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.30;
+pragma solidity 0.8.33;
 
 import { Test } from "../../../lib/forge-std/src/Test.sol";
 import { IndexingMath } from "../../../lib/common/src/libs/IndexingMath.sol";
