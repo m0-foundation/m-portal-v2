@@ -65,7 +65,6 @@ abstract contract BridgeAdapter is IBridgeAdapter, BridgeAdapterStorageLayout, A
     /// @inheritdoc IBridgeAdapter
     function setPeer(uint32 chainId, bytes32 peer) external onlyRole(OPERATOR_ROLE) {
         _revertIfZeroChain(chainId);
-        _revertIfZeroPeer(peer);
 
         BridgeAdapterStorageStruct storage $ = _getBridgeAdapterStorageLocation();
 
@@ -176,12 +175,6 @@ abstract contract BridgeAdapter is IBridgeAdapter, BridgeAdapterStorageLayout, A
     /// @param  bridgeChainId The bridge-specific chain ID.
     function _revertIfZeroBridgeChain(uint256 bridgeChainId) internal pure {
         if (bridgeChainId == 0) revert ZeroBridgeChain();
-    }
-
-    /// @notice Reverts if the given peer is zero.
-    /// @param  peer The peer address.
-    function _revertIfZeroPeer(bytes32 peer) internal pure {
-        if (peer == bytes32(0)) revert ZeroPeer();
     }
 
     /// @notice Reverts if `msg.sender` is not the Portal.

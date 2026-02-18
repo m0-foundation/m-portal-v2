@@ -42,9 +42,6 @@ interface IBridgeAdapter {
     /// @notice Thrown when the provider-specific chain ID is 0.
     error ZeroBridgeChain();
 
-    /// @notice Thrown when the remote bridge is 0x0.
-    error ZeroPeer();
-
     /// @notice Thrown when the specified remote chain isn't supported.
     error UnsupportedChain(uint32 chainId);
 

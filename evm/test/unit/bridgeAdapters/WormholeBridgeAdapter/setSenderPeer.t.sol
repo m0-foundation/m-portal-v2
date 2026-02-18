@@ -23,6 +23,14 @@ contract SetSenderPeerUnitTest is WormholeBridgeAdapterUnitTestBase {
         assertEq(adapter.getSenderPeer(newChainId), newSenderPeer);
     }
 
+    function test_setSenderPeer_zeroAddress() external {
+        uint32 newChainId = 3;
+        vm.prank(operator);
+        adapter.setPeer(newChainId, bytes32(0));
+
+        assertEq(adapter.getPeer(newChainId), bytes32(0));
+    }
+
     function test_setSenderPeer_samePeerNoEvent() external {
         uint32 chainId = 3;
         bytes32 senderPeer = makeAddr("senderPeer").toBytes32();
@@ -57,12 +65,5 @@ contract SetSenderPeerUnitTest is WormholeBridgeAdapterUnitTestBase {
 
         vm.prank(operator);
         adapter.setSenderPeer(0, newSenderPeer);
-    }
-
-    function test_setSenderPeer_revertsIfZeroPeer() external {
-        vm.expectRevert(IBridgeAdapter.ZeroPeer.selector);
-
-        vm.prank(operator);
-        adapter.setSenderPeer(SPOKE_CHAIN_ID, bytes32(0));
     }
 }

@@ -22,6 +22,13 @@ contract SetPeerUnitTest is HyperlaneBridgeAdapterUnitTestBase {
         assertEq(adapter.getPeer(newChainId), newPeer);
     }
 
+    function test_setPeer_zeroAddress() external {
+        vm.prank(operator);
+        adapter.setPeer(SPOKE_CHAIN_ID, bytes32(0));
+
+        assertEq(adapter.getPeer(SPOKE_CHAIN_ID), bytes32(0));
+    }
+
     function test_setPeer_samePeerNoEvent() external {
         // Setting the same peer should not emit event
         vm.recordLogs();
@@ -49,12 +56,5 @@ contract SetPeerUnitTest is HyperlaneBridgeAdapterUnitTestBase {
 
         vm.prank(operator);
         adapter.setPeer(0, newPeer);
-    }
-
-    function test_setPeer_revertsIfZeroPeer() external {
-        vm.expectRevert(IBridgeAdapter.ZeroPeer.selector);
-
-        vm.prank(operator);
-        adapter.setPeer(SPOKE_CHAIN_ID, bytes32(0));
     }
 }
