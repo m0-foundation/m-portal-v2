@@ -202,7 +202,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     }
 
     /// @inheritdoc IPortal
-    function receiveMessage(uint32 sourceChainId, bytes calldata payload) external whenReceiveNotPaused {
+    function receiveMessage(uint32 sourceChainId, bytes calldata payload) external whenReceiveNotPaused whenNotLocked {
         _revertIfUnsupportedBridgeAdapter(sourceChainId, msg.sender);
 
         PayloadType payloadType = payload.decodePayloadType();
