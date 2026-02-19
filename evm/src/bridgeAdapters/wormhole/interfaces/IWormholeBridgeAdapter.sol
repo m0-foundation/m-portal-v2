@@ -22,9 +22,6 @@ interface IWormholeBridgeAdapter is IBridgeAdapter, IVaaV1Receiver {
     /// @notice Thrown when the invalid VAA is received.
     error InvalidVaa(string reason);
 
-    /// @notice Thrown when the source chain isn't supported or configured peer doesn't match the sender.
-    error UnsupportedSender(bytes32 sender);
-
     /// @notice Thrown when the provided fee is insufficient to cover the Wormhole Core Bridge fee.
     error InsufficientFee();
 

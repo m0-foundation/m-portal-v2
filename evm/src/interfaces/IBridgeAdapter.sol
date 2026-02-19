@@ -48,6 +48,9 @@ interface IBridgeAdapter {
     /// @notice Thrown when the specified remote bridge chain isn't supported.
     error UnsupportedBridgeChain(uint256 bridgeChainId);
 
+    /// @notice Thrown when the source chain isn't supported or configured peer doesn't match the sender.
+    error UnsupportedSender(bytes32 sender);
+
     ///////////////////////////////////////////////////////////////////////////
     //                          VIEW/PURE FUNCTIONS                          //
     ///////////////////////////////////////////////////////////////////////////

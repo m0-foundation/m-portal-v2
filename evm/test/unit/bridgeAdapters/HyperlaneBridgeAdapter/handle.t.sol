@@ -44,11 +44,27 @@ contract HandleUnitTest is HyperlaneBridgeAdapterUnitTestBase {
         adapter.handle(unsupportedDomain, peerAdapterAddress, payload);
     }
 
+    function test_handle_revertsIfPeerNotDefined() external {
+        // Set up a chain ID mapping without a peer
+        uint32 noPeerChainId = 3;
+        uint32 noPeerDomain = 3;
+
+        vm.prank(operator);
+        adapter.setBridgeChainId(noPeerChainId, noPeerDomain);
+
+        bytes memory payload = "test payload";
+
+        vm.expectRevert(abi.encodeWithSelector(IBridgeAdapter.UnsupportedChain.selector, noPeerChainId));
+
+        vm.prank(address(mailbox));
+        adapter.handle(noPeerDomain, peerAdapterAddress, payload);
+    }
+
     function test_handle_revertsIfUnsupportedSender() external {
         bytes32 unsupportedSender = makeAddr("unsupported").toBytes32();
         bytes memory payload = "test payload";
 
-        vm.expectRevert(abi.encodeWithSelector(IHyperlaneBridgeAdapter.UnsupportedSender.selector, unsupportedSender));
+        vm.expectRevert(abi.encodeWithSelector(IBridgeAdapter.UnsupportedSender.selector, unsupportedSender));
 
         vm.prank(address(mailbox));
         adapter.handle(SPOKE_HYPERLANE_DOMAIN, unsupportedSender, payload);
