@@ -103,7 +103,7 @@ sdk-evm/               # TypeScript SDK (WIP)
 
 ## Code Conventions
 
-- Solidity 0.8.30 with optimizer (10,000 runs)
+- Solidity 0.8.34 with optimizer (10,000 runs)
 - ERC-7201 namespaced storage for upgradeable contracts
 - NatSpec documentation on all public interfaces
 - Use `bytes32` for addresses in payloads (cross-VM compatibility)
