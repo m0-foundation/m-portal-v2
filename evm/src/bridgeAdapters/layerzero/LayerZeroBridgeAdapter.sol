@@ -33,11 +33,6 @@ contract LayerZeroBridgeAdapter is BridgeAdapter, ILayerZeroBridgeAdapter {
     /// @inheritdoc IBridgeAdapter
     function initialize(address admin, address operator) external initializer {
         _initialize(admin, operator);
-
-        // Sets the operator as a default delegate.
-        // The delegate is authorized to configure LayerZero settings, clear, skip messages, etc.
-        // by interacting directly with LayerZero Endpoint on behalf of this contract.
-        ILayerZeroEndpointV2(endpoint).setDelegate(operator);
     }
 
     ///////////////////////////////////////////////////////////////////////////
