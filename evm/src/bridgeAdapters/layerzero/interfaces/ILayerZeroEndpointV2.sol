@@ -51,20 +51,6 @@ interface ILayerZeroEndpointV2 {
     /// @return receipt       The messaging receipt containing guid, nonce, and actual fee.
     function send(MessagingParams calldata params, address refundAddress) external payable returns (MessagingReceipt memory receipt);
 
-    /// @notice Delivers a received message to the specified receiver.
-    /// @param  origin    The origin information (source endpoint ID, sender, nonce).
-    /// @param  receiver  The address of the receiver contract.
-    /// @param  guid      The globally unique identifier of the message.
-    /// @param  message   The message payload.
-    /// @param  extraData Additional data provided by the executor.
-    function lzReceive(
-        Origin calldata origin,
-        address receiver,
-        bytes32 guid,
-        bytes calldata message,
-        bytes calldata extraData
-    ) external payable;
-
     /// @notice Sets the delegate address authorized to configure LayerZero settings.
     /// @param  delegate The address to grant delegate permissions.
     function setDelegate(address delegate) external;
