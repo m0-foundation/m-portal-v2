@@ -120,10 +120,15 @@ contract LayerZeroBridgeAdapter is BridgeAdapter, ILayerZeroBridgeAdapter {
 
     /// @inheritdoc ILayerZeroReceiver
     function allowInitializePath(Origin calldata origin) external view returns (bool) {
-        // The path is assumed to be initialized if the peer was set.
-        // The same logic is used in LayerZero OAppReceiver implementation:
+        // The path is considered initialized if the source endpoint ID maps to a known chain
+        // and the sender matches the configured peer for that chain.
+        // Reference:
         // https://github.com/LayerZero-Labs/LayerZero-v2/blob/main/packages/layerzero-v2/evm/oapp/contracts/oapp/OAppReceiver.sol#L63
-        return _getPeer(_getChainId(origin.srcEid)) == origin.sender;
+        uint32 chainId = _getChainId(origin.srcEid);
+        if (chainId == 0) return false;
+        bytes32 peer = _getPeer(chainId);
+        if (peer == bytes32(0)) return false;
+        return peer == origin.sender;
     }
 
     /// @inheritdoc ILayerZeroReceiver
