@@ -11,6 +11,8 @@ import {
 } from "../../src/bridgeAdapters/layerZero/interfaces/ILayerZeroEndpointV2.sol";
 
 contract MockLayerZeroEndpoint {
+    mapping(address oapp => address delegate) public delegates;
+
     function quote(
         MessagingParams calldata,
         /* params */
@@ -25,7 +27,9 @@ contract MockLayerZeroEndpoint {
         address /* refundAddress */
     ) external payable returns (MessagingReceipt memory receipt) { }
 
-    function setDelegate(address delegate) external { }
+    function setDelegate(address delegate) external {
+        delegates[msg.sender] = delegate;
+    }
 
     /// @notice Allows the contract to receive ETH for fee handling.
     receive() external payable { }

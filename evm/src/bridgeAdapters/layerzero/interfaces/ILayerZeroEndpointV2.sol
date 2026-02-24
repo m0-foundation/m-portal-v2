@@ -54,4 +54,9 @@ interface ILayerZeroEndpointV2 {
     /// @notice Sets the delegate address authorized to configure LayerZero settings.
     /// @param  delegate The address to grant delegate permissions.
     function setDelegate(address delegate) external;
+
+    /// @notice Returns the delegate address for the given OApp.
+    /// @param  oapp     The OApp address to query.
+    /// @return delegate The current delegate address.
+    function delegates(address oapp) external view returns (address delegate);
 }

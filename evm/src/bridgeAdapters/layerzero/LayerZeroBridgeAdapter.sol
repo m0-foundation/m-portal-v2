@@ -33,6 +33,11 @@ contract LayerZeroBridgeAdapter is BridgeAdapter, ILayerZeroBridgeAdapter {
     /// @inheritdoc IBridgeAdapter
     function initialize(address admin, address operator) external initializer {
         _initialize(admin, operator);
+
+        // Sets the operator as a default delegate.
+        // The delegate is authorized to configure LayerZero settings, clear, skip messages, etc.
+        // by interacting directly with LayerZero Endpoint on behalf of this contract.
+        ILayerZeroEndpointV2(endpoint).setDelegate(operator);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -79,6 +84,23 @@ contract LayerZeroBridgeAdapter is BridgeAdapter, ILayerZeroBridgeAdapter {
     /// @inheritdoc ILayerZeroBridgeAdapter
     function setDelegate(address delegate) external onlyRole(OPERATOR_ROLE) {
         ILayerZeroEndpointV2(endpoint).setDelegate(delegate);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    //                       INTERNAL FUNCTIONS                              //
+    ///////////////////////////////////////////////////////////////////////////
+
+    /// @dev Clears the LayerZero Endpoint delegate when the OPERATOR_ROLE is revoked from the current delegate.
+    function _revokeRole(bytes32 role, address account) internal override returns (bool) {
+        bool revoked = super._revokeRole(role, account);
+
+        if (revoked && role == OPERATOR_ROLE) {
+            if (ILayerZeroEndpointV2(endpoint).delegates(address(this)) == account) {
+                ILayerZeroEndpointV2(endpoint).setDelegate(address(0));
+            }
+        }
+
+        return revoked;
     }
 
     ///////////////////////////////////////////////////////////////////////////
