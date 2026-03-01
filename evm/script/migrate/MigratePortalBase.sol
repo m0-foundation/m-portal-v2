@@ -19,7 +19,7 @@ abstract contract MigratePortalBase is Script {
     uint16 internal constant WORMHOLE_BASE_CHAIN_ID = 30;
 
     // Portal V1 Access control addresses
-    address constant OWNER_V1 = 0xdcf79C332cB3Fe9d39A830a5f8de7cE6b1BD6fD1;
+    address constant OWNER_V1 = 0xb7A9B5f301eF3bAD36C2b4964E82931Dd7fb989C;
     address constant PAUSER_V1 = 0xF2f1ACbe0BA726fEE8d75f3E32900526874740BB;
 
     // Existing contract addresses

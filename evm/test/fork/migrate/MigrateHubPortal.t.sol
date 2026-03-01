@@ -15,7 +15,7 @@ import { BridgingPath } from "../../../script/migrate/storageCleaners/PortalV1St
 contract MigrateHubPortalTest is MigrateHubPortalBase, Test {
     using TypeConverter for *;
 
-    uint256 constant ETHEREUM_FORK_BLOCK = 24_050_400;
+    uint256 constant ETHEREUM_FORK_BLOCK = 24_564_447;
 
     function setUp() external {
         vm.createSelectFork({ urlOrAlias: "ethereum", blockNumber: ETHEREUM_FORK_BLOCK });
