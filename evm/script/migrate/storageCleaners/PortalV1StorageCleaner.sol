@@ -16,7 +16,7 @@ struct BridgingPath {
 ///      After calling clearAllStorage(), the contract should be upgraded to the new implementation.
 abstract contract PortalV1StorageCleaner is UUPSUpgradeable {
     /// @dev The current owner of the Portal contract
-    address public constant MIGRATOR = 0xdcf79C332cB3Fe9d39A830a5f8de7cE6b1BD6fD1;
+    address public constant MIGRATOR = 0xb7A9B5f301eF3bAD36C2b4964E82931Dd7fb989C;
     address public constant PORTAL = 0xD925C84b55E4e44a53749fF5F2a5A13F63D128fd;
     address public constant TRANSCEIVER = 0x0763196A091575adF99e2306E5e90E0Be5154841;
 

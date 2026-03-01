@@ -14,7 +14,7 @@ import { BridgingPath } from "../../../script/migrate//storageCleaners/PortalV1S
 contract MigrateSpokePortalTest is MigrateSpokePortalBase, Test {
     using TypeConverter for *;
 
-    uint256 constant ARBITRUM_FORK_BLOCK = 412_451_880;
+    uint256 constant ARBITRUM_FORK_BLOCK = 437_294_597;
 
     function setUp() external {
         vm.createSelectFork({ urlOrAlias: "arbitrum", blockNumber: ARBITRUM_FORK_BLOCK });
