@@ -386,7 +386,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
 
     /// @inheritdoc IPortal
     function msgSender() public view returns (address) {
-        return _locker;
+        return _locker();
     }
 
     /// @inheritdoc IPortal
