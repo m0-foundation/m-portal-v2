@@ -12,6 +12,7 @@ abstract contract ReentrancyLock {
     bytes32 private constant REENTRANCY_LOCK_STORAGE_LOCATION =
         0x157708201859ed3ceee295d1baf4381ae5b622de496b1cee3705ed07c6a50200;
 
+    /// @custom:storage-location erc7201:M0.storage.ReentrancyLock
     struct ReentrancyLockStorage {
         address _locker;
     }
