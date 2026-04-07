@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "build": "forge build"
+    "build": "forge build",
+    "relay-wh": "op run --account mzerolabs.1password.com --env-file .env.op -- ./script/relay-wormhole-message.sh"
   }
 }
