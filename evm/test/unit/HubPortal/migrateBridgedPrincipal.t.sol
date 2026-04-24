@@ -62,17 +62,21 @@ contract MigrateBridgedPrincipalUnitTest is HubPortalUnitTestBase {
         hubPortal.migrateBridgedPrincipal(SPOKE_CHAIN_ID, migratedPrincipal);
     }
 
-    function test_migrateBridgedPrincipal_revertsWhenSpokeAlreadyConnected() external {
+    function test_migrateBridgedPrincipal_disablesCrossSpokeTokenTransfer() external {
         // First enable cross-spoke transfer
         vm.prank(operator);
         hubPortal.enableCrossSpokeTokenTransfer(SPOKE_CHAIN_ID);
 
         assertTrue(hubPortal.crossSpokeTokenTransferEnabled(SPOKE_CHAIN_ID));
 
-        vm.expectRevert(abi.encodeWithSelector(IHubPortal.ConnectedSpoke.selector, SPOKE_CHAIN_ID));
+        vm.expectEmit(address(hubPortal));
+        emit IHubPortal.CrossSpokeTokenTransferDisabled(SPOKE_CHAIN_ID, migratedPrincipal);
 
         vm.prank(operator);
         hubPortal.migrateBridgedPrincipal(SPOKE_CHAIN_ID, migratedPrincipal);
+
+        assertFalse(hubPortal.crossSpokeTokenTransferEnabled(SPOKE_CHAIN_ID));
+        assertEq(hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID), migratedPrincipal);
     }
 
     function test_migrateBridgedPrincipal_revertsIfNotOperator() external {

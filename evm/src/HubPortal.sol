@@ -221,7 +221,12 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
 
         SpokeChainConfig storage spokeConfig = $.spokeConfig[spokeChainId];
 
-        if (spokeConfig.crossSpokeTokenTransferEnabled) revert ConnectedSpoke(spokeChainId);
+        // Disable cross-Spoke token transfer for the Spoke if it was enabled
+        // As bridged principal balance is only tracked for isolated Spokes
+        if (spokeConfig.crossSpokeTokenTransferEnabled) {
+            spokeConfig.crossSpokeTokenTransferEnabled = false;
+            emit CrossSpokeTokenTransferDisabled(spokeChainId, spokeBridgedPrincipal);
+        }
 
         spokeConfig.bridgedPrincipal = spokeBridgedPrincipal;
     }
