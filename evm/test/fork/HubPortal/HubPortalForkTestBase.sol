@@ -19,7 +19,9 @@ import { PortalForkTestBase } from "../PortalForkTestBase.sol";
 contract HubPortalForkTestBase is MigrateHubPortalBase, PortalForkTestBase {
     using TypeConverter for *;
 
-    uint256 constant ETHEREUM_FORK_BLOCK = 24_171_707;
+    // Must be a block where on-chain Portal owner == MIGRATOR (`PortalV1StorageCleaner.MIGRATOR`),
+    // since the cleaner hardcodes the migrator address.
+    uint256 constant ETHEREUM_FORK_BLOCK = 24_564_447;
 
     address SWAP_FACILITY_ADMIN = 0xb7A9B5f301eF3bAD36C2b4964E82931Dd7fb989C;
 
