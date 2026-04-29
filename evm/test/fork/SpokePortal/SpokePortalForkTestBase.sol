@@ -19,7 +19,9 @@ import { PortalForkTestBase } from "../PortalForkTestBase.sol";
 contract SpokePortalForkTestBase is MigrateSpokePortalBase, PortalForkTestBase {
     using TypeConverter for *;
 
-    uint256 constant ARBITRUM_FORK_BLOCK = 418_948_002;
+    // Must be a block where on-chain Portal owner == MIGRATOR (`PortalV1StorageCleaner.MIGRATOR`),
+    // since the cleaner hardcodes the migrator address.
+    uint256 constant ARBITRUM_FORK_BLOCK = 437_294_597;
 
     address public constant ARBITRUM_HYPERLANE_MAILBOX = 0x979Ca5202784112f4738403dBec5D0F3B9daabB9;
     address public constant TOKEN_HOLDER = 0x77BAB32F75996de8075eBA62aEa7b1205cf7E004;
