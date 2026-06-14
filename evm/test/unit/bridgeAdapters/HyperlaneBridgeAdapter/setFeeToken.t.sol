@@ -7,23 +7,47 @@ import { HyperlaneBridgeAdapterStorageLayout } from "../../../../src/bridgeAdapt
 import { StandardHookMetadata } from "../../../../src/bridgeAdapters/hyperlane/libraries/StandardHookMetadata.sol";
 import { TypeConverter } from "../../../../src/libraries/TypeConverter.sol";
 
-import { MockERC20 } from "../../../mocks/MockERC20.sol";
 import { HyperlaneBridgeAdapterUnitTestBase } from "./HyperlaneBridgeAdapterUnitTestBase.sol";
 
-contract MockFeeToken is MockERC20 {
-    constructor() MockERC20("Seismic USDC", "sUSDC", 6) { }
+/// @dev Mock Seismic SRC20 fee token. Mirrors sUSDC: it does NOT implement the standard
+///      approve(address,uint256); only the shielded approve(address,suint256) selector is handled.
+///      `suint256` is a Seismic-only type, so the standalone (stock solc) test emulates the shielded
+///      approve through the fallback keyed on the selector and records the resulting allowance.
+contract MockShieldedFeeToken {
+    bytes4 internal constant SHIELDED_APPROVE = bytes4(keccak256("approve(address,suint256)"));
+
+    mapping(address => mapping(address => uint256)) public allowance;
+
+    string public constant symbol = "sUSDC";
+    uint8 public constant decimals = 6;
+
+    bool public approveReturnsFalse;
+
+    function setApproveReturnsFalse(bool value) external {
+        approveReturnsFalse = value;
+    }
+
+    fallback(bytes calldata data) external returns (bytes memory) {
+        require(bytes4(data) == SHIELDED_APPROVE, "unsupported selector");
+        (address spender, uint256 amount) = abi.decode(data[4:], (address, uint256));
+        allowance[msg.sender][spender] = amount;
+        return abi.encode(!approveReturnsFalse);
+    }
 }
 
 contract SetFeeTokenUnitTest is HyperlaneBridgeAdapterUnitTestBase, HyperlaneBridgeAdapterStorageLayout {
     using TypeConverter for *;
 
-    MockFeeToken internal feeToken;
+    MockShieldedFeeToken internal feeToken;
     address internal igp = makeAddr("igp");
+
+    // Must match HyperlaneBridgeAdapter.SHIELDED_APPROVE_SELECTOR.
+    bytes4 internal constant SHIELDED_APPROVE_SELECTOR = bytes4(keccak256("approve(address,suint256)"));
 
     function setUp() public override {
         super.setUp();
 
-        feeToken = new MockFeeToken();
+        feeToken = new MockShieldedFeeToken();
     }
 
     function _enableFeeToken() internal {
@@ -38,6 +62,11 @@ contract SetFeeTokenUnitTest is HyperlaneBridgeAdapterUnitTestBase, HyperlaneBri
             HYPERLANE_BRIDGE_ADAPTER_STORAGE_LOCATION,
             keccak256(abi.encode(uint256(keccak256("M0.storage.HyperlaneBridgeAdapter")) - 1)) & ~bytes32(uint256(0xff))
         );
+    }
+
+    function test_shieldedApproveSelector_matchesSusdc() external pure {
+        // sUSDC (Seismic testnet) exposes approve(address,suint256); the standard 0x095ea7b3 is absent.
+        assertEq(SHIELDED_APPROVE_SELECTOR, bytes4(0x2e62b8c8));
     }
 
     /* ============ setFeeToken ============ */
@@ -111,8 +140,6 @@ contract SetFeeTokenUnitTest is HyperlaneBridgeAdapterUnitTestBase, HyperlaneBri
         bytes memory payload = "test payload";
         uint256 fee = 5e6;
 
-        feeToken.mint(address(adapter), 10e6);
-
         bytes memory expectedMetadata = StandardHookMetadata.formatWithFeeToken(0, gasLimit, refundAddress, address(feeToken));
         // variant(2) + msgValue(32) + gasLimit(32) + refundAddress(20) + feeToken(20)
         assertEq(expectedMetadata.length, 106);
@@ -120,6 +147,8 @@ contract SetFeeTokenUnitTest is HyperlaneBridgeAdapterUnitTestBase, HyperlaneBri
         vm.mockCall(address(mailbox), abi.encodeWithSelector(IMailbox.quoteDispatch.selector), abi.encode(fee));
         vm.mockCall(address(mailbox), abi.encodeWithSelector(IMailbox.dispatch.selector), abi.encode(bytes32("id")));
 
+        // The adapter must approve the IGP for the fee via the shielded approve(address,suint256) selector.
+        vm.expectCall(address(feeToken), abi.encodeWithSelector(SHIELDED_APPROVE_SELECTOR, igp, fee));
         // The dispatch must carry the fee token metadata and ZERO native value.
         vm.expectCall(
             address(mailbox),
@@ -132,6 +161,18 @@ contract SetFeeTokenUnitTest is HyperlaneBridgeAdapterUnitTestBase, HyperlaneBri
 
         // The IGP pulls the fee via transferFrom; the adapter approves exactly the quoted amount.
         assertEq(feeToken.allowance(address(adapter), igp), fee);
+    }
+
+    function test_sendMessage_feeTokenMode_revertsIfApproveFails() external {
+        _enableFeeToken();
+        feeToken.setApproveReturnsFalse(true);
+
+        vm.mockCall(address(mailbox), abi.encodeWithSelector(IMailbox.quoteDispatch.selector), abi.encode(uint256(5e6)));
+
+        vm.expectRevert(IHyperlaneBridgeAdapter.FeeTokenApproveFailed.selector);
+
+        vm.prank(address(portal));
+        adapter.sendMessage(SPOKE_CHAIN_ID, 250_000, makeAddr("refund").toBytes32(), "test payload", "");
     }
 
     function test_sendMessage_feeTokenMode_revertsIfNativeValueSent() external {

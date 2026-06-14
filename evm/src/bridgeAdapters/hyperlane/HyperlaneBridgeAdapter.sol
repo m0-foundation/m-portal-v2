@@ -2,13 +2,6 @@
 
 pragma solidity ^0.8.26;
 
-import {
-    IERC20
-} from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {
-    SafeERC20
-} from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
-
 import { BridgeAdapter } from "../BridgeAdapter.sol";
 import { IBridgeAdapter } from "../../interfaces/IBridgeAdapter.sol";
 import { IMailbox } from "./interfaces/IMailbox.sol";
@@ -42,7 +35,13 @@ abstract contract HyperlaneBridgeAdapterStorageLayout {
 /// @notice Sends and receives messages to and from remote chains using Hyperlane protocol
 contract HyperlaneBridgeAdapter is BridgeAdapter, HyperlaneBridgeAdapterStorageLayout, IHyperlaneBridgeAdapter {
     using TypeConverter for *;
-    using SafeERC20 for IERC20;
+
+    /// @dev Selector of the Seismic SRC20 shielded approve, `approve(address,suint256)` (== 0x2e62b8c8).
+    ///      Fee tokens on value-restricted chains (e.g. Seismic sUSDC) are shielded SRC20s whose amount
+    ///      argument is a shielded `suint256`, so they do NOT implement the standard `approve(address,uint256)`.
+    ///      The selector is derived from the signature string so this contract compiles under both stock
+    ///      solc and Seismic's ssolc (which alone understands the `suint256` type).
+    bytes4 private constant SHIELDED_APPROVE_SELECTOR = bytes4(keccak256("approve(address,suint256)"));
 
     /// @inheritdoc IHyperlaneBridgeAdapter
     address public immutable mailbox;
@@ -137,7 +136,7 @@ contract HyperlaneBridgeAdapter is BridgeAdapter, HyperlaneBridgeAdapterStorageL
             bytes memory metadata = StandardHookMetadata.formatWithFeeToken(0, gasLimit, refundAddress.toAddress(), feeToken_);
             uint256 fee = IMailbox(mailbox).quoteDispatch(destinationDomain, destinationPeer, payload, metadata);
 
-            IERC20(feeToken_).forceApprove($.interchainGasPaymaster, fee);
+            _approveFeeToken(feeToken_, $.interchainGasPaymaster, fee);
 
             IMailbox(mailbox).dispatch(destinationDomain, destinationPeer, payload, metadata);
         }
@@ -163,6 +162,19 @@ contract HyperlaneBridgeAdapter is BridgeAdapter, HyperlaneBridgeAdapterStorageL
         uint32 destinationDomain = _getHyperlaneDomainOrRevert(destinationChainId);
 
         return IMailbox(mailbox).quoteDispatch(destinationDomain, destinationPeer, payload, metadata);
+    }
+
+    /// @notice Approves `spender` to pull `amount` of the shielded SRC20 fee token.
+    /// @dev    Calls the SRC20 shielded `approve(address,suint256)` via low-level call (see
+    ///         SHIELDED_APPROVE_SELECTOR) rather than the standard `IERC20.approve`, which the fee token
+    ///         does not implement. The fee-token approve and the IGP's transferFrom occur in the same
+    ///         dispatch transaction, so the allowance is always 0 at entry and a single approve suffices.
+    /// @param  feeToken_ The shielded SRC20 fee token.
+    /// @param  spender   The IGP authorized to pull the fee.
+    /// @param  amount    The fee amount to approve.
+    function _approveFeeToken(address feeToken_, address spender, uint256 amount) private {
+        (bool success, bytes memory result) = feeToken_.call(abi.encodeWithSelector(SHIELDED_APPROVE_SELECTOR, spender, amount));
+        if (!success || (result.length != 0 && !abi.decode(result, (bool)))) revert FeeTokenApproveFailed();
     }
 
     /// @notice Returns Hyperlane domain by chain Id

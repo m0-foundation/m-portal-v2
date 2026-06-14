@@ -34,6 +34,9 @@ interface IHyperlaneBridgeAdapter is IBridgeAdapter, IMessageRecipient {
     /// @notice Thrown when native value is sent while dispatch fees are paid in the fee token.
     error UnexpectedNativeValue();
 
+    /// @notice Thrown when the fee token approval to the Interchain Gas Paymaster fails.
+    error FeeTokenApproveFailed();
+
     ///////////////////////////////////////////////////////////////////////////
     //                          PRIVILEGED FUNCTIONS                         //
     ///////////////////////////////////////////////////////////////////////////
