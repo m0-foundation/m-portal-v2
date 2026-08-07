@@ -2,7 +2,6 @@
 
 pragma solidity 0.8.34;
 
-import { IndexingMath } from "../lib/common/src/libs/IndexingMath.sol";
 import { IERC20 } from "../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {
     SafeERC20
@@ -496,21 +495,9 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         // The actual amount of $M tokens that Portal received from the SwapFacility.
         actualAmount = _mBalanceOf(address(this)) - mBalanceBefore;
 
-        // NOTE: The actual amount received can be less than the specified amount due to:
-        //       - rounding down when transferring between $M earners and non-earners in Wrapped $M V1;
-        //       - fee on unwrap in the source $M extension token.
-        if (specifiedAmount > actualAmount) {
-            unchecked {
-                // Revert if the difference between the specified transfer amount and
-                // the actual amount exceeds the maximum acceptable rounding error.
-                if (specifiedAmount - actualAmount > _getMaxRoundingError()) {
-                    revert InsufficientAmountReceived(specifiedAmount, actualAmount);
-                }
-                // Otherwise, the specified amount will be transferred, and the deficit caused
-                // by rounding down will be covered from the yield earned by HubPortal.
-                // SpokePortal must be funded with $M to cover such deficits.
-            }
-        }
+        // NOTE: The actual amount received can be less than the specified amount
+        //       due to a fee on unwrap in the source $M extension token.
+        if (actualAmount < specifiedAmount) revert InsufficientAmountReceived(specifiedAmount, actualAmount);
     }
 
     /// @dev Creates token transfer payload.
@@ -857,12 +844,6 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
 
     /// @dev Returns the current M token index used by the Portal.
     function _currentIndex() internal view virtual returns (uint128) { }
-
-    /// @dev Returns the maximum rounding error that can occur when transferring and unwrapping $M extensions.
-    ///      This applies only to Wrapped $M V1 and should be removed once Wrapped $M is upgraded.
-    function _getMaxRoundingError() private view returns (uint256) {
-        return _currentIndex() / IndexingMath.EXP_SCALED_ONE + 1;
-    }
 
     /// @dev Returns the M Token balance of `account`.
     function _mBalanceOf(address account) internal view returns (uint256) {
