@@ -18,8 +18,6 @@ contract SendTokenForkTest is SpokePortalForkTestBase {
     bytes32 internal recipient = TOKEN_HOLDER.toBytes32();
     uint256 internal amount = 1e6;
 
-    uint256 internal constant MAX_ROUNDING_ERROR = 2;
-
     function test_sendToken_M() external {
         uint256 mTotalSupplyBefore = IERC20(M_TOKEN).totalSupply();
         uint256 userMBalanceBefore = IERC20(M_TOKEN).balanceOf(TOKEN_HOLDER);
@@ -41,9 +39,6 @@ contract SendTokenForkTest is SpokePortalForkTestBase {
     }
 
     function test_sendToken_wM() external {
-        // Ensure SpokePortal has some $M to cover rounding errors when unwrapping Wrapped $M V1
-        assertGt(IERC20(M_TOKEN).balanceOf(address(spokePortal)), MAX_ROUNDING_ERROR);
-
         uint256 mTotalSupplyBefore = IERC20(M_TOKEN).totalSupply();
         uint256 userWrappedMBalanceBefore = IERC20(WRAPPED_M_TOKEN).balanceOf(TOKEN_HOLDER);
         uint256 fee = spokePortal.quote(ETHEREUM_CHAIN_ID, PayloadType.TokenTransfer);
@@ -58,8 +53,10 @@ contract SendTokenForkTest is SpokePortalForkTestBase {
         uint256 mTotalSupplyAfter = IERC20(M_TOKEN).totalSupply();
         uint256 userWrappedMBalanceAfter = IERC20(WRAPPED_M_TOKEN).balanceOf(TOKEN_HOLDER);
 
-        // $M is burnt on SpokePortal when sent to another chain
-        assertApproxEqAbs(mTotalSupplyAfter, mTotalSupplyBefore - amount, MAX_ROUNDING_ERROR);
+        // $M is burnt on SpokePortal when sent to another chain.
+        // Total supply may deviate by 1 wei due to principal rounding in $M earner accounting
+        // when $M is transferred out of the earning Wrapped $M contract.
+        assertApproxEqAbs(mTotalSupplyAfter, mTotalSupplyBefore - amount, 1);
         assertEq(userWrappedMBalanceAfter, userWrappedMBalanceBefore - amount);
     }
 }

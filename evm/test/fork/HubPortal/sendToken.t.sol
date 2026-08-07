@@ -18,8 +18,6 @@ contract SendTokenForkTest is HubPortalForkTestBase {
     bytes32 internal recipient = TOKEN_HOLDER.toBytes32();
     uint256 internal amount = 1e6;
 
-    uint256 internal constant MAX_ROUNDING_ERROR = 2;
-
     function test_sendToken_M() external {
         uint256 portalMBalanceBefore = IERC20(M_TOKEN).balanceOf(address(hubPortal));
         uint256 userMBalanceBefore = IERC20(M_TOKEN).balanceOf(TOKEN_HOLDER);
@@ -52,7 +50,7 @@ contract SendTokenForkTest is HubPortalForkTestBase {
         uint256 portalMBalanceAfter = IERC20(M_TOKEN).balanceOf(address(hubPortal));
         uint256 userWrappedMBalanceAfter = IERC20(WRAPPED_M_TOKEN).balanceOf(TOKEN_HOLDER);
 
-        assertApproxEqAbs(portalMBalanceAfter, portalMBalanceBefore + amount, MAX_ROUNDING_ERROR);
+        assertEq(portalMBalanceAfter, portalMBalanceBefore + amount);
         assertEq(userWrappedMBalanceAfter, userWrappedMBalanceBefore - amount);
     }
 
