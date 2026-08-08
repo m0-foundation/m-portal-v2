@@ -395,6 +395,60 @@ interface IPortal {
         bytes calldata bridgeAdapterArgs
     ) external payable returns (bytes32 messageId);
 
+    /// @notice Transfers $M Token or $M Extension to the destination chain using the default bridge adapter,
+    ///         approving the token transfer via an EIP-2612 permit signature.
+    /// @dev    If wrapping on the destination fails, the recipient will receive $M token.
+    ///         Permit failures are swallowed so a front-run permit cannot block the transfer.
+    /// @param  amount             The amount of tokens to transfer.
+    /// @param  sourceToken        The address of the token ($M or $M Extension) on the source chain.
+    /// @param  destinationChainId The ID of the destination chain.
+    /// @param  destinationToken   The address of the token ($M or $M Extension) on the destination chain.
+    /// @param  recipient          The account to receive tokens.
+    /// @param  refundAddress      The address to receive excess native gas on the source chain.
+    /// @param  bridgeAdapterArgs  The optional bridge adapter arguments, could be empty.
+    /// @param  deadline           The last timestamp where the signature is still valid.
+    /// @param  signature          The permit signature: a 65-byte ECDSA signature, or an ERC-1271 contract signature.
+    /// @return messageId          The unique identifier of the message sent.
+    function sendTokenWithPermit(
+        uint256 amount,
+        address sourceToken,
+        uint32 destinationChainId,
+        bytes32 destinationToken,
+        bytes32 recipient,
+        bytes32 refundAddress,
+        bytes calldata bridgeAdapterArgs,
+        uint256 deadline,
+        bytes calldata signature
+    ) external payable returns (bytes32 messageId);
+
+    /// @notice Transfers $M Token or $M Extension to the destination chain using the specified bridge adapter,
+    ///         approving the token transfer via an EIP-2612 permit signature.
+    /// @dev    If wrapping on the destination fails, the recipient will receive $M token.
+    ///         Permit failures are swallowed so a front-run permit cannot block the transfer.
+    /// @param  amount             The amount of tokens to transfer.
+    /// @param  sourceToken        The address of the token ($M or $M Extension) on the source chain.
+    /// @param  destinationChainId The ID of the destination chain.
+    /// @param  destinationToken   The address of the token ($M or $M Extension) on the destination chain.
+    /// @param  recipient          The account to receive tokens.
+    /// @param  refundAddress      The address to receive excess native gas on the source chain.
+    /// @param  bridgeAdapter      The address of the bridge adapter to use.
+    /// @param  bridgeAdapterArgs  The optional bridge adapter arguments, could be empty.
+    /// @param  deadline           The last timestamp where the signature is still valid.
+    /// @param  signature          The permit signature: a 65-byte ECDSA signature, or an ERC-1271 contract signature.
+    /// @return messageId          The unique identifier of the message sent.
+    function sendTokenWithPermit(
+        uint256 amount,
+        address sourceToken,
+        uint32 destinationChainId,
+        bytes32 destinationToken,
+        bytes32 recipient,
+        bytes32 refundAddress,
+        address bridgeAdapter,
+        bytes calldata bridgeAdapterArgs,
+        uint256 deadline,
+        bytes calldata signature
+    ) external payable returns (bytes32 messageId);
+
     /// @notice Sends the fill report to the destination chain using the default bridge adapter.
     /// @param  destinationChainId The ID of the destination chain.
     /// @param  report             The OrderBook fill report to send.

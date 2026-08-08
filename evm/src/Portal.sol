@@ -11,6 +11,8 @@ import {
 } from "../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
 import { UUPSUpgradeable } from "../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 
+import { IERC20Extended } from "../lib/common/src/interfaces/IERC20Extended.sol";
+
 import { IBridgeAdapter } from "./interfaces/IBridgeAdapter.sol";
 import { IPortal } from "./interfaces/IPortal.sol";
 import { ISwapFacilityLike } from "./interfaces/ISwapFacilityLike.sol";
@@ -156,6 +158,48 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         return _sendToken(
             amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter, bridgeAdapterArgs
         );
+    }
+
+    /// @inheritdoc IPortal
+    function sendTokenWithPermit(
+        uint256 amount,
+        address sourceToken,
+        uint32 destinationChainId,
+        bytes32 destinationToken,
+        bytes32 recipient,
+        bytes32 refundAddress,
+        bytes calldata bridgeAdapterArgs,
+        uint256 deadline,
+        bytes calldata signature
+    ) external payable whenSendNotPaused whenNotLocked returns (bytes32 messageId) {
+        _permit(sourceToken, amount, deadline, signature);
+
+        address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
+        return
+            _sendToken(
+                amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter, bridgeAdapterArgs
+            );
+    }
+
+    /// @inheritdoc IPortal
+    function sendTokenWithPermit(
+        uint256 amount,
+        address sourceToken,
+        uint32 destinationChainId,
+        bytes32 destinationToken,
+        bytes32 recipient,
+        bytes32 refundAddress,
+        address bridgeAdapter,
+        bytes calldata bridgeAdapterArgs,
+        uint256 deadline,
+        bytes calldata signature
+    ) external payable whenSendNotPaused whenNotLocked returns (bytes32 messageId) {
+        _permit(sourceToken, amount, deadline, signature);
+
+        return
+            _sendToken(
+                amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter, bridgeAdapterArgs
+            );
     }
 
     /// @inheritdoc IPortal
@@ -464,6 +508,18 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         emit TokenSent(
             sourceToken, destinationChainId, destinationToken, msg.sender, recipient, transferAmount, index, bridgeAdapter, messageId
         );
+    }
+
+    /// @dev Attempts to approve the transfer of `sourceToken` from the sender to the Portal
+    ///      via an EIP-2612 permit signature.
+    ///      Permit failures are swallowed so a front-run permit cannot block the transfer:
+    ///      if the allowance is already set, the subsequent transfer succeeds regardless.
+    /// @param sourceToken The address of the source token.
+    /// @param amount      The amount of the allowance being approved.
+    /// @param deadline    The last timestamp where the signature is still valid.
+    /// @param signature   The permit signature: a 65-byte ECDSA signature, or an ERC-1271 contract signature.
+    function _permit(address sourceToken, uint256 amount, uint256 deadline, bytes calldata signature) private {
+        try IERC20Extended(sourceToken).permit(msg.sender, address(this), amount, deadline, signature) { } catch { }
     }
 
     /// @dev Transfers the specified amount of `sourceToken` from the sender to the Portal
