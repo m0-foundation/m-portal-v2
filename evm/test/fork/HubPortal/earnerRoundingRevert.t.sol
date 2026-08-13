@@ -12,6 +12,7 @@ import { console } from "../../../lib/forge-std/src/console.sol";
 
 import { HubPortal } from "../../../src/HubPortal.sol";
 import { IPortal } from "../../../src/interfaces/IPortal.sol";
+import { ISwapFacilityLike } from "../../../src/interfaces/ISwapFacilityLike.sol";
 import { TypeConverter } from "../../../src/libraries/TypeConverter.sol";
 import { PayloadType } from "../../../src/libraries/PayloadEncoder.sol";
 
@@ -35,8 +36,10 @@ import { HubPortalForkTestBase } from "./HubPortalForkTestBase.sol";
 ///      branch's `Portal.sol`.
 ///
 ///      These tests are written as the regression tests the fix should satisfy: they sweep
-///      consecutive amounts and assert every send succeeds. On this branch they FAIL (6 of 30
-///      amounts revert at the pinned block); once a rounding tolerance is restored they pass.
+///      consecutive amounts and assert every send succeeds. On this branch they FAIL (most
+///      amounts in the sweep revert at the pinned block, since after a failed send the Portal's
+///      principal fraction is unchanged and failures run in consecutive streaks); once a
+///      rounding tolerance is restored they pass.
 ///      Run with:
 ///          forge test --match-path test/fork/HubPortal/earnerRoundingRevert.t.sol -vv
 contract EarnerRoundingRevertForkTest is HubPortalForkTestBase {
@@ -45,8 +48,11 @@ contract EarnerRoundingRevertForkTest is HubPortalForkTestBase {
     bytes32 internal refundAddress = TOKEN_HOLDER.toBytes32();
     bytes32 internal recipient = TOKEN_HOLDER.toBytes32();
 
-    uint256 internal constant SWEEP_START = 1000000;
-    uint256 internal constant SWEEP_END = 1000099;
+    uint256 internal constant SWEEP_START = 1_000_000;
+    uint256 internal constant SWEEP_END = 1_000_099;
+
+    // Enough to cover every send in the sweep succeeding (~1e8), with margin.
+    uint256 internal constant FUNDING = 200e6;
 
     /// @dev Upgrades the live proxy to the implementation compiled from this branch's source,
     ///      mirroring what `_upgradeToPortalV2` did before the fork test bases were re-pointed
@@ -57,17 +63,35 @@ contract EarnerRoundingRevertForkTest is HubPortalForkTestBase {
         UUPSUpgradeable(PORTAL).upgradeToAndCall(implementation, "");
     }
 
+    /// @dev Funds TOKEN_HOLDER with enough $M, wM and mUSD to afford every send in the sweep,
+    ///      by pranking the HubPortal: it holds the hub-locked $M and is already an approved
+    ///      SwapFacility swapper for both extensions on-chain.
+    function _fundTokenHolder() internal {
+        vm.startPrank(PORTAL);
+
+        IERC20(M_TOKEN).transfer(TOKEN_HOLDER, FUNDING);
+
+        IERC20(M_TOKEN).approve(SWAP_FACILITY, 2 * FUNDING);
+        ISwapFacilityLike(SWAP_FACILITY).swapInM(WRAPPED_M_TOKEN, FUNDING, TOKEN_HOLDER);
+        ISwapFacilityLike(SWAP_FACILITY).swapInM(MUSD, FUNDING, TOKEN_HOLDER);
+
+        vm.stopPrank();
+    }
+
     function test_sendToken_M_allAmountsBridgeable() external {
+        _fundTokenHolder();
         _upgradeToLocalImplementation();
         _sweep(M_TOKEN, M_TOKEN.toBytes32());
     }
 
     function test_sendToken_wM_allAmountsBridgeable() external {
+        _fundTokenHolder();
         _upgradeToLocalImplementation();
         _sweep(WRAPPED_M_TOKEN, M_TOKEN.toBytes32());
     }
 
     function test_sendToken_mUSD_allAmountsBridgeable() external {
+        _fundTokenHolder();
         _upgradeToLocalImplementation();
         _sweep(MUSD, MUSD.toBytes32());
     }
