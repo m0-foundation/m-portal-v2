@@ -45,8 +45,8 @@ contract EarnerRoundingRevertForkTest is HubPortalForkTestBase {
     bytes32 internal refundAddress = TOKEN_HOLDER.toBytes32();
     bytes32 internal recipient = TOKEN_HOLDER.toBytes32();
 
-    uint256 internal constant SWEEP_START = 1;
-    uint256 internal constant SWEEP_END = 30;
+    uint256 internal constant SWEEP_START = 1000000;
+    uint256 internal constant SWEEP_END = 1000099;
 
     /// @dev Upgrades the live proxy to the implementation compiled from this branch's source,
     ///      mirroring what `_upgradeToPortalV2` did before the fork test bases were re-pointed
