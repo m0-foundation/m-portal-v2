@@ -8,6 +8,7 @@ import { TypeConverter } from "../../../src/libraries/TypeConverter.sol";
 import { PayloadEncoder } from "../../../src/libraries/PayloadEncoder.sol";
 
 import { MockBridgeAdapter } from "../../mocks/MockBridgeAdapter.sol";
+import { MockFeeOnUnwrapExtension } from "../../mocks/MockFeeOnUnwrapExtension.sol";
 import { SpokePortalUnitTestBase } from "./SpokePortalUnitTestBase.sol";
 
 contract SendTokenUnitTest is SpokePortalUnitTestBase {
@@ -191,6 +192,29 @@ contract SendTokenUnitTest is SpokePortalUnitTestBase {
 
         vm.expectRevert(abi.encodeWithSelector(IPortal.UnsupportedBridgeAdapter.selector, SPOKE_CHAIN_ID, address(0)));
         spokePortal.sendToken(amount, address(mToken), SPOKE_CHAIN_ID, hubMToken, recipient, refundAddress, bridgeAdapterArgs);
+        vm.stopPrank();
+    }
+
+    function test_sendToken_revertsForAnyUnwrapShortfall() external {
+        // SpokePortal is not an $M earner, so no rounding tolerance applies:
+        // receiving even 1 wei less than the specified amount reverts
+        uint256 sendAmount = 10_000;
+        uint256 shortfall = 1;
+        uint256 feeRate = shortfall * 10_000 / sendAmount;
+        // Ensure the basis-point fee rate reproduces exactly the intended shortfall for this amount
+        assertEq(sendAmount * feeRate / 10_000, shortfall, "shortfall not representable as a fee rate for this amount");
+        MockFeeOnUnwrapExtension feeOnUnwrapToken = new MockFeeOnUnwrapExtension(address(mToken), feeRate, makeAddr("feeRecipient"));
+        mToken.mint(address(feeOnUnwrapToken), 100e6);
+        feeOnUnwrapToken.mint(user, 100e6);
+
+        vm.prank(operator);
+        spokePortal.setSupportedBridgingPath(address(feeOnUnwrapToken), HUB_CHAIN_ID, hubMToken, true);
+
+        vm.startPrank(user);
+        feeOnUnwrapToken.approve(address(spokePortal), sendAmount);
+
+        vm.expectRevert(abi.encodeWithSelector(IPortal.InsufficientAmountReceived.selector, sendAmount, sendAmount - shortfall));
+        spokePortal.sendToken(sendAmount, address(feeOnUnwrapToken), HUB_CHAIN_ID, hubMToken, recipient, refundAddress, bridgeAdapterArgs);
         vm.stopPrank();
     }
 

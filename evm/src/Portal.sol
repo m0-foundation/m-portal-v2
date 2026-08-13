@@ -468,7 +468,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
 
     /// @dev Transfers the specified amount of `sourceToken` from the sender to the Portal
     ///      If the source token is not $M token, it unwraps it to $M token.
-    ///      Reverts if the actual amount received is less than the specified amount.
+    ///      Reverts if the amount of $M received is insufficient (see `_revertIfInsufficientMReceived`).
     /// @param sourceToken     The address of the source token.
     /// @param specifiedAmount The amount specified by the sender to transfer.
     function _transferAndUnwrap(address sourceToken, uint256 specifiedAmount) internal {
@@ -495,9 +495,10 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         // The actual amount of $M tokens that Portal received from the SwapFacility.
         actualAmount = _mBalanceOf(address(this)) - mBalanceBefore;
 
-        // NOTE: The actual amount received can be less than the specified amount
-        //       due to a fee on unwrap in the source $M extension token.
-        if (actualAmount < specifiedAmount) revert InsufficientAmountReceived(specifiedAmount, actualAmount);
+        // NOTE: The actual amount received can be less than the specified amount due to:
+        //       - fee on unwrap in the source $M extension token;
+        //       - $M earner principal rounding down on HubPortal (see the HubPortal override).
+        _revertIfInsufficientMReceived(specifiedAmount, actualAmount);
     }
 
     /// @dev Creates token transfer payload.
@@ -844,6 +845,13 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
 
     /// @dev Returns the current M token index used by the Portal.
     function _currentIndex() internal view virtual returns (uint128) { }
+
+    /// @dev Reverts if the actual amount of $M received by the Portal is less than the specified amount.
+    ///      SpokePortal is not an $M earner and must receive the exact amount.
+    ///      HubPortal overrides this check to tolerate $M earner principal rounding.
+    function _revertIfInsufficientMReceived(uint256 specifiedAmount, uint256 actualAmount) internal view virtual {
+        if (actualAmount < specifiedAmount) revert InsufficientAmountReceived(specifiedAmount, actualAmount);
+    }
 
     /// @dev Returns the M Token balance of `account`.
     function _mBalanceOf(address account) internal view returns (uint256) {

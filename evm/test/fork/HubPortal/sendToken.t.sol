@@ -4,6 +4,7 @@ pragma solidity 0.8.34;
 import {
     IERC20
 } from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import { IndexingMath } from "../../../lib/common/src/libs/IndexingMath.sol";
 
 import { TypeConverter } from "../../../src/libraries/TypeConverter.sol";
 import { PayloadType } from "../../../src/libraries/PayloadEncoder.sol";
@@ -31,7 +32,9 @@ contract SendTokenForkTest is HubPortalForkTestBase {
         uint256 portalMBalanceAfter = IERC20(M_TOKEN).balanceOf(address(hubPortal));
         uint256 userMBalanceAfter = IERC20(M_TOKEN).balanceOf(TOKEN_HOLDER);
 
-        assertEq(portalMBalanceAfter, portalMBalanceBefore + amount);
+        // The direct $M path also credits the earning HubPortal via rounded-down principal,
+        // so the balance increase may fall short of the amount within the rounding tolerance
+        assertApproxEqAbs(portalMBalanceAfter, portalMBalanceBefore + amount, _roundingTolerance());
         assertEq(userMBalanceAfter, userMBalanceBefore - amount);
     }
 
@@ -50,7 +53,7 @@ contract SendTokenForkTest is HubPortalForkTestBase {
         uint256 portalMBalanceAfter = IERC20(M_TOKEN).balanceOf(address(hubPortal));
         uint256 userWrappedMBalanceAfter = IERC20(WRAPPED_M_TOKEN).balanceOf(TOKEN_HOLDER);
 
-        assertEq(portalMBalanceAfter, portalMBalanceBefore + amount);
+        assertApproxEqAbs(portalMBalanceAfter, portalMBalanceBefore + amount, _roundingTolerance());
         assertEq(userWrappedMBalanceAfter, userWrappedMBalanceBefore - amount);
     }
 
@@ -67,7 +70,13 @@ contract SendTokenForkTest is HubPortalForkTestBase {
         uint256 portalMBalanceAfter = IERC20(M_TOKEN).balanceOf(address(hubPortal));
         uint256 userWrappedMBalanceAfter = IERC20(MUSD).balanceOf(TOKEN_HOLDER);
 
-        assertEq(portalMBalanceAfter, portalMBalanceBefore + amount);
+        assertApproxEqAbs(portalMBalanceAfter, portalMBalanceBefore + amount, _roundingTolerance());
         assertEq(userWrappedMBalanceAfter, userWrappedMBalanceBefore - amount);
+    }
+
+    /// @dev Maximum deficit caused by $M earner principal rounding down when HubPortal
+    ///      receives $M from a non-earner, mirroring the tolerance in HubPortal.
+    function _roundingTolerance() internal view returns (uint256) {
+        return hubPortal.currentIndex() / IndexingMath.EXP_SCALED_ONE + 1;
     }
 }

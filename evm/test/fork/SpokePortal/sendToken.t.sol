@@ -4,6 +4,7 @@ pragma solidity 0.8.34;
 import {
     IERC20
 } from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import { IndexingMath } from "../../../lib/common/src/libs/IndexingMath.sol";
 
 import { TypeConverter } from "../../../src/libraries/TypeConverter.sol";
 import { PayloadType } from "../../../src/libraries/PayloadEncoder.sol";
@@ -54,9 +55,15 @@ contract SendTokenForkTest is SpokePortalForkTestBase {
         uint256 userWrappedMBalanceAfter = IERC20(WRAPPED_M_TOKEN).balanceOf(TOKEN_HOLDER);
 
         // $M is burnt on SpokePortal when sent to another chain.
-        // Total supply may deviate by 1 wei due to principal rounding in $M earner accounting
-        // when $M is transferred out of the earning Wrapped $M contract.
-        assertApproxEqAbs(mTotalSupplyAfter, mTotalSupplyBefore - amount, 1);
+        // Total supply may deviate by up to index / EXP_SCALED_ONE + 1 wei due to principal
+        // rounding in $M earner accounting when $M is transferred out of the earning Wrapped $M contract.
+        assertApproxEqAbs(mTotalSupplyAfter, mTotalSupplyBefore - amount, _roundingTolerance());
         assertEq(userWrappedMBalanceAfter, userWrappedMBalanceBefore - amount);
+    }
+
+    /// @dev Maximum total supply deviation caused by $M earner principal rounding when $M
+    ///      is transferred out of the earning Wrapped $M contract.
+    function _roundingTolerance() internal view returns (uint256) {
+        return spokePortal.currentIndex() / IndexingMath.EXP_SCALED_ONE + 1;
     }
 }
