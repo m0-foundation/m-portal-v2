@@ -2,7 +2,6 @@
 
 pragma solidity 0.8.34;
 
-import { IndexingMath } from "../lib/common/src/libs/IndexingMath.sol";
 import { IERC20 } from "../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {
     SafeERC20
@@ -469,7 +468,7 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
 
     /// @dev Transfers the specified amount of `sourceToken` from the sender to the Portal
     ///      If the source token is not $M token, it unwraps it to $M token.
-    ///      Reverts if the actual amount received is less than the specified amount.
+    ///      Reverts if the amount of $M received is insufficient (see `_revertIfInsufficientMReceived`).
     /// @param sourceToken     The address of the source token.
     /// @param specifiedAmount The amount specified by the sender to transfer.
     function _transferAndUnwrap(address sourceToken, uint256 specifiedAmount) internal {
@@ -497,20 +496,9 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         actualAmount = _mBalanceOf(address(this)) - mBalanceBefore;
 
         // NOTE: The actual amount received can be less than the specified amount due to:
-        //       - rounding down when transferring between $M earners and non-earners in Wrapped $M V1;
-        //       - fee on unwrap in the source $M extension token.
-        if (specifiedAmount > actualAmount) {
-            unchecked {
-                // Revert if the difference between the specified transfer amount and
-                // the actual amount exceeds the maximum acceptable rounding error.
-                if (specifiedAmount - actualAmount > _getMaxRoundingError()) {
-                    revert InsufficientAmountReceived(specifiedAmount, actualAmount);
-                }
-                // Otherwise, the specified amount will be transferred, and the deficit caused
-                // by rounding down will be covered from the yield earned by HubPortal.
-                // SpokePortal must be funded with $M to cover such deficits.
-            }
-        }
+        //       - fee on unwrap in the source $M extension token;
+        //       - $M earner principal rounding down on HubPortal (see the HubPortal override).
+        _revertIfInsufficientMReceived(specifiedAmount, actualAmount);
     }
 
     /// @dev Creates token transfer payload.
@@ -858,10 +846,11 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     /// @dev Returns the current M token index used by the Portal.
     function _currentIndex() internal view virtual returns (uint128) { }
 
-    /// @dev Returns the maximum rounding error that can occur when transferring and unwrapping $M extensions.
-    ///      This applies only to Wrapped $M V1 and should be removed once Wrapped $M is upgraded.
-    function _getMaxRoundingError() private view returns (uint256) {
-        return _currentIndex() / IndexingMath.EXP_SCALED_ONE + 1;
+    /// @dev Reverts if the actual amount of $M received by the Portal is less than the specified amount.
+    ///      SpokePortal is not an $M earner and must receive the exact amount.
+    ///      HubPortal overrides this check to tolerate $M earner principal rounding.
+    function _revertIfInsufficientMReceived(uint256 specifiedAmount, uint256 actualAmount) internal view virtual {
+        if (actualAmount < specifiedAmount) revert InsufficientAmountReceived(specifiedAmount, actualAmount);
     }
 
     /// @dev Returns the M Token balance of `account`.

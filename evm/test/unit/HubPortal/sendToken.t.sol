@@ -247,6 +247,99 @@ contract SendTokenUnitTest is HubPortalUnitTestBase {
         vm.stopPrank();
     }
 
+    function test_sendToken_toleratesShortfallWithinMaxRoundingError() external {
+        // With earning disabled, _currentIndex() == EXP_SCALED_ONE (1e12),
+        // so the max acceptable rounding error is 1e12 / 1e12 + 1 = 2 wei
+        uint256 sendAmount = 10_000;
+        uint256 shortfall = 2;
+        MockFeeOnUnwrapExtension feeOnUnwrapToken = _deployFeeOnUnwrapToken(sendAmount, shortfall);
+
+        uint256 portalMBalanceBefore = mToken.balanceOf(address(hubPortal));
+        bytes32 messageId = _getMessageId();
+        uint128 index = 1e12;
+
+        vm.startPrank(user);
+        feeOnUnwrapToken.approve(address(hubPortal), sendAmount);
+
+        // The full specified amount is bridged despite the shortfall
+        vm.expectEmit();
+        emit IPortal.TokenSent(
+            address(feeOnUnwrapToken), SPOKE_CHAIN_ID, spokeMToken, user, recipient, sendAmount, index, address(bridgeAdapter), messageId
+        );
+
+        hubPortal.sendToken(sendAmount, address(feeOnUnwrapToken), SPOKE_CHAIN_ID, spokeMToken, recipient, refundAddress, bridgeAdapterArgs);
+        vm.stopPrank();
+
+        // The deficit caused by the shortfall remains on the Portal, to be covered by earned yield
+        assertEq(mToken.balanceOf(address(hubPortal)), portalMBalanceBefore + sendAmount - shortfall);
+    }
+
+    function test_sendToken_revertsIfShortfallExceedsMaxRoundingError() external {
+        // With earning disabled, _currentIndex() == EXP_SCALED_ONE (1e12),
+        // so a 3 wei shortfall exceeds the max acceptable rounding error of 2 wei
+        uint256 sendAmount = 10_000;
+        uint256 shortfall = 3;
+        MockFeeOnUnwrapExtension feeOnUnwrapToken = _deployFeeOnUnwrapToken(sendAmount, shortfall);
+
+        vm.startPrank(user);
+        feeOnUnwrapToken.approve(address(hubPortal), sendAmount);
+
+        vm.expectRevert(abi.encodeWithSelector(IPortal.InsufficientAmountReceived.selector, sendAmount, sendAmount - shortfall));
+        hubPortal.sendToken(sendAmount, address(feeOnUnwrapToken), SPOKE_CHAIN_ID, spokeMToken, recipient, refundAddress, bridgeAdapterArgs);
+        vm.stopPrank();
+    }
+
+    function test_sendToken_maxRoundingErrorScalesWithIndex() external {
+        // At index 2e12, the max acceptable rounding error is 2e12 / 1e12 + 1 = 3 wei
+        _enableEarningWithIndex(2e12);
+
+        uint256 sendAmount = 10_000;
+        uint256 shortfall = 3;
+        MockFeeOnUnwrapExtension feeOnUnwrapToken = _deployFeeOnUnwrapToken(sendAmount, shortfall);
+
+        uint256 portalMBalanceBefore = mToken.balanceOf(address(hubPortal));
+
+        vm.startPrank(user);
+        feeOnUnwrapToken.approve(address(hubPortal), sendAmount);
+
+        hubPortal.sendToken(sendAmount, address(feeOnUnwrapToken), SPOKE_CHAIN_ID, spokeMToken, recipient, refundAddress, bridgeAdapterArgs);
+        vm.stopPrank();
+
+        assertEq(mToken.balanceOf(address(hubPortal)), portalMBalanceBefore + sendAmount - shortfall);
+    }
+
+    function test_sendToken_revertsIfShortfallExceedsMaxRoundingErrorAtScaledIndex() external {
+        // At index 2e12, a 4 wei shortfall exceeds the max acceptable rounding error of 3 wei
+        _enableEarningWithIndex(2e12);
+
+        uint256 sendAmount = 10_000;
+        uint256 shortfall = 4;
+        MockFeeOnUnwrapExtension feeOnUnwrapToken = _deployFeeOnUnwrapToken(sendAmount, shortfall);
+
+        vm.startPrank(user);
+        feeOnUnwrapToken.approve(address(hubPortal), sendAmount);
+
+        vm.expectRevert(abi.encodeWithSelector(IPortal.InsufficientAmountReceived.selector, sendAmount, sendAmount - shortfall));
+        hubPortal.sendToken(sendAmount, address(feeOnUnwrapToken), SPOKE_CHAIN_ID, spokeMToken, recipient, refundAddress, bridgeAdapterArgs);
+        vm.stopPrank();
+    }
+
+    /// @dev Deploys a fee-on-unwrap extension whose fee equals `shortfall` wei for a transfer of `sendAmount`,
+    ///      mints tokens to the user and supports the bridging path to the Spoke.
+    function _deployFeeOnUnwrapToken(uint256 sendAmount, uint256 shortfall) internal returns (MockFeeOnUnwrapExtension) {
+        uint256 feeRate = shortfall * 10_000 / sendAmount;
+        // Ensure the basis-point fee rate reproduces exactly the intended shortfall for this amount
+        assertEq(sendAmount * feeRate / 10_000, shortfall, "shortfall not representable as a fee rate for this amount");
+        MockFeeOnUnwrapExtension feeOnUnwrapToken = new MockFeeOnUnwrapExtension(address(mToken), feeRate, makeAddr("feeRecipient"));
+        mToken.mint(address(feeOnUnwrapToken), 100e6);
+        feeOnUnwrapToken.mint(user, 100e6);
+
+        vm.prank(operator);
+        hubPortal.setSupportedBridgingPath(address(feeOnUnwrapToken), SPOKE_CHAIN_ID, spokeMToken, true);
+
+        return feeOnUnwrapToken;
+    }
+
     function test_sendToken_revertsIfPayloadGasLimitNotSet() external {
         uint32 newChainId = 999;
         bytes32 newChainMToken = makeAddr("newChainMToken").toBytes32();

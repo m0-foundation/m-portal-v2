@@ -387,4 +387,24 @@ contract HubPortal is Portal, HubPortalStorageLayout, IHubPortal {
     function _isEarningEnabled() internal view returns (bool) {
         return wasEarningEnabled() && disableEarningIndex() == IndexingMath.EXP_SCALED_ONE;
     }
+
+    /// @dev Reverts if the difference between the specified and the actual amount of $M received
+    ///      exceeds the maximum acceptable rounding tolerance.
+    ///      When HubPortal ($M earner) receives $M from a non-earner (e.g. the SwapFacility),
+    ///      the receiver's principal is rounded down as `amount * EXP_SCALED_ONE / index`, so the
+    ///      resulting balance increase can be up to `index / EXP_SCALED_ONE + 1` wei less than the
+    ///      transferred amount. The accepted deficit is covered from the yield earned by HubPortal.
+    ///      NOTE: The tolerance assumes HubPortal remains an $M earner and the SwapFacility a non-earner.
+    ///      It is applied even if earning is ever disabled; this is accepted, as $M transfers are then
+    ///      exact and any absorbed shortfall is bounded by the same tolerance.
+    function _revertIfInsufficientMReceived(uint256 specifiedAmount, uint256 actualAmount) internal view override {
+        if (specifiedAmount > actualAmount) {
+            unchecked {
+                uint256 roundingTolerance = (_currentIndex() / IndexingMath.EXP_SCALED_ONE) + 1;
+                if (specifiedAmount - actualAmount > roundingTolerance) {
+                    revert InsufficientAmountReceived(specifiedAmount, actualAmount);
+                }
+            }
+        }
+    }
 }
