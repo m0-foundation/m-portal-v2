@@ -510,14 +510,17 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         );
     }
 
-    /// @dev Attempts to approve the transfer of `sourceToken` from the sender to the Portal
-    ///      via an EIP-2612 permit signature.
-    ///      Permit failures are swallowed so a front-run permit cannot block the transfer:
-    ///      if the allowance is already set, the subsequent transfer succeeds regardless.
+    /// @dev Attempts to approve the transfer of `sourceToken` from the sender to the Portal via a permit signature.
+    ///      If the permit fails (e.g. it was front-run), the failure is swallowed and the transfer
+    ///      proceeds using the existing allowance.
+    ///      The permit is executed via M0's non-standard `permit(address,address,uint256,uint256,bytes)` overload,
+    ///      not the canonical EIP-2612 `permit(address,address,uint256,uint256,uint8,bytes32,bytes32)`.
     /// @param sourceToken The address of the source token.
     /// @param amount      The amount of the allowance being approved.
     /// @param deadline    The last timestamp where the signature is still valid.
-    /// @param signature   The permit signature: a 65-byte ECDSA signature, or an ERC-1271 contract signature.
+    /// @param  signature          The signature of the EIP-2612 permit digest: either a 65-byte ECDSA signature
+    ///                            encoded as `abi.encodePacked(r, s, v)`, or an ERC-1271 contract signature
+    ///                            validated against the same digest.
     function _permit(address sourceToken, uint256 amount, uint256 deadline, bytes calldata signature) private {
         try IERC20Extended(sourceToken).permit(msg.sender, address(this), amount, deadline, signature) { } catch { }
     }
