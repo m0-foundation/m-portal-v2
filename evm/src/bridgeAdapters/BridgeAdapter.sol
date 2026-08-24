@@ -75,6 +75,11 @@ abstract contract BridgeAdapter is IBridgeAdapter, BridgeAdapterStorageLayout, A
     }
 
     /// @inheritdoc IBridgeAdapter
+    /// @dev Maintains the 1-1 chain ID mapping. Any chain that loses its existing pair as a side
+    ///      effect — the reassigned chain and the orphaned chain — also has its peer cleared, so
+    ///      a stale peer can never be combined with an updated bridge chain ID: sends to that
+    ///      chain revert until the operator re-asserts the peer via `setPeer`.
+    ///      A fresh assignment leaves the chain's peer untouched.
     function setBridgeChainId(uint32 chainId, uint256 bridgeChainId) external onlyRole(OPERATOR_ROLE) {
         _revertIfZeroChain(chainId);
         _revertIfZeroBridgeChain(bridgeChainId);
@@ -87,18 +92,35 @@ abstract contract BridgeAdapter is IBridgeAdapter, BridgeAdapterStorageLayout, A
         uint32 oldInternalChainId = $.bridgeToInternalChainId[bridgeChainId];
         if (oldInternalChainId != 0 && oldInternalChainId != chainId) {
             delete $.internalToBridgeChainId[oldInternalChainId];
+            emit BridgeChainIdRemoved(oldInternalChainId, bridgeChainId);
+            _removePeer(oldInternalChainId);
         }
 
         // Clean up old reverse mapping if this internal chain was mapped to a different bridge chain
         uint256 oldBridgeChainId = $.internalToBridgeChainId[chainId];
         if (oldBridgeChainId != 0 && oldBridgeChainId != bridgeChainId) {
             delete $.bridgeToInternalChainId[oldBridgeChainId];
+            emit BridgeChainIdRemoved(chainId, oldBridgeChainId);
+            _removePeer(chainId);
         }
 
         $.internalToBridgeChainId[chainId] = bridgeChainId;
         $.bridgeToInternalChainId[bridgeChainId] = chainId;
 
         emit BridgeChainIdSet(chainId, bridgeChainId);
+    }
+
+    /// @dev Clears the peer of a chain whose `(chainId, bridgeChainId)` pair was removed by
+    ///      `setBridgeChainId`, emitting `PeerSet` with a zero peer.
+    ///      Adapters that keep additional chain-coupled configuration must override this function
+    ///      to clear it, so no stale configuration survives a chain ID reassignment.
+    function _removePeer(uint32 chainId) internal virtual {
+        BridgeAdapterStorageStruct storage $ = _getBridgeAdapterStorageLocation();
+
+        if ($.remotePeer[chainId] == bytes32(0)) return;
+
+        delete $.remotePeer[chainId];
+        emit PeerSet(chainId, bytes32(0));
     }
 
     /// @dev Reverts if `msg.sender` is not authorized to upgrade the contract

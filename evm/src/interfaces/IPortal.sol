@@ -223,9 +223,6 @@ interface IPortal {
     /// @notice Thrown when the bridge adapter address is 0x0.
     error ZeroBridgeAdapter();
 
-    /// @notice Thrown when the payload gas limit is 0.
-    error ZeroPayloadGasLimit();
-
     /// @notice Thrown when `receiveMessage` function caller is not the bridge.
     error NotBridgeAdapter();
 
@@ -252,6 +249,14 @@ interface IPortal {
 
     /// @notice Thrown when a message with the given ID has already been processed.
     error MessageAlreadyProcessed(bytes32 messageId);
+
+    /// @notice Thrown on the destination when the target chain ID in the payload
+    ///         does not match the current chain ID.
+    error InvalidTargetChain(uint32 targetChainId);
+
+    /// @notice Thrown on the destination when the target bridge adapter in the payload
+    ///         does not match the bridge adapter delivering the message.
+    error InvalidTargetBridgeAdapter(bytes32 targetBridgeAdapter);
 
     /// @notice Thrown when the gas limit for the specified payload type is not configured.
     error PayloadGasLimitNotSet(uint32 destinationChainId, PayloadType payloadType);
@@ -337,9 +342,11 @@ interface IPortal {
 
     /// @notice Sets the gas limit required to process a message
     ///         with the specified payload type on the destination chain.
+    /// @dev    Passing `gasLimit = 0` clears the configured gas limit, which disables `quote` and
+    ///         sending the payload type to the destination chain until a non-zero gas limit is set again.
     /// @param  destinationChainId The ID of the destination chain.
     /// @param  payloadType        The payload type.
-    /// @param  gasLimit           The gas limit required to process the message.
+    /// @param  gasLimit           The gas limit required to process the message, or 0 to unset it.
     function setPayloadGasLimit(uint32 destinationChainId, PayloadType payloadType, uint256 gasLimit) external;
 
     /// @notice Sets the default bridge adapter for a destination chain.

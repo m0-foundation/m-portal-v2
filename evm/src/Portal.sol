@@ -248,6 +248,14 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     function receiveMessage(uint32 sourceChainId, bytes calldata payload) external whenReceiveNotPaused whenNotLocked {
         _revertIfUnsupportedBridgeAdapter(sourceChainId, msg.sender);
 
+        // NOTE: Defense-in-depth checks.
+        //       These checks are enforced at the application layer regardless of what the
+        //       underlying messaging protocol guarantees, so behavior is consistent across
+        //       adapters and resilient to changes of the messaging provider.
+        (uint32 targetChainId, bytes32 targetBridgeAdapter) = payload.decodeDestinationChainIdAndPeer();
+        if (targetChainId != currentChainId()) revert InvalidTargetChain(targetChainId);
+        if (targetBridgeAdapter != msg.sender.toBytes32()) revert InvalidTargetBridgeAdapter(targetBridgeAdapter);
+
         PayloadType payloadType = payload.decodePayloadType();
         bytes32 messageId = payload.decodeMessageId();
         PortalStorageStruct storage $ = _getPortalStorageLocation();
@@ -338,7 +346,6 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     /// @inheritdoc IPortal
     function setPayloadGasLimit(uint32 destinationChainId, PayloadType payloadType, uint256 gasLimit) external onlyRole(OPERATOR_ROLE) {
         _revertIfInvalidDestinationChain(destinationChainId);
-        if (gasLimit == 0) revert ZeroPayloadGasLimit();
         ChainConfig storage remoteChainConfig = _getPortalStorageLocation().remoteChainConfig[destinationChainId];
 
         if (remoteChainConfig.payloadGasLimit[payloadType] == gasLimit) return;
