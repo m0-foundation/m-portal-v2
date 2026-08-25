@@ -20,6 +20,12 @@ interface IBridgeAdapter {
     /// @param  bridgeChainId The provider-specific chain ID.
     event BridgeChainIdSet(uint32 chainId, uint256 bridgeChainId);
 
+    /// @notice Emitted when a previously configured `(chainId, bridgeChainId)` pair is removed
+    ///         as a side effect of `setBridgeChainId` reassigning either side of the 1-1 mapping.
+    /// @param  chainId       The internal chain ID whose mapping was removed.
+    /// @param  bridgeChainId The provider-specific chain ID whose mapping was removed.
+    event BridgeChainIdRemoved(uint32 chainId, uint256 bridgeChainId);
+
     ///////////////////////////////////////////////////////////////////////////
     //                             CUSTOM ERRORS                             //
     ///////////////////////////////////////////////////////////////////////////
@@ -101,6 +107,9 @@ interface IBridgeAdapter {
     function setPeer(uint32 destinationChainId, bytes32 destinationPeer) external;
 
     /// @notice Sets the provider-specific chain ID.
+    /// @dev    Any chain whose existing pair is removed as a side effect of the 1-1 mapping
+    ///         update also has its peer cleared (emitting `PeerSet` with a zero peer) and must
+    ///         be reconfigured via `setPeer` before it can be used again.
     /// @param  chainId       The ID of the chain.
     /// @param  bridgeChainId The provider-specific chain ID.
     function setBridgeChainId(uint32 chainId, uint256 bridgeChainId) external;

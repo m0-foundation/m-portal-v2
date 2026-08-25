@@ -2,9 +2,6 @@
 pragma solidity 0.8.34;
 
 import {
-    IERC20
-} from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {
     ERC1967Proxy
 } from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
@@ -19,11 +16,12 @@ import { PortalForkTestBase } from "../PortalForkTestBase.sol";
 contract HubPortalForkTestBase is MigrateHubPortalBase, PortalForkTestBase {
     using TypeConverter for *;
 
-    // Must be a block where on-chain Portal owner == MIGRATOR (`PortalV1StorageCleaner.MIGRATOR`),
-    // since the cleaner hardcodes the migrator address.
-    uint256 constant ETHEREUM_FORK_BLOCK = 24_564_447;
+    // Must be a block after both HubPortal and Wrapped $M were upgraded to V2
+    uint256 constant ETHEREUM_FORK_BLOCK = 25_699_000;
 
-    address SWAP_FACILITY_ADMIN = 0xb7A9B5f301eF3bAD36C2b4964E82931Dd7fb989C;
+    // Live Portal V2 access control addresses
+    address public constant ADMIN = 0x48670B46380FE1645f0E3e821a25162dB2589D19;
+    address public constant OPERATOR = 0xF2f1ACbe0BA726fEE8d75f3E32900526874740BB;
 
     address public constant HYPERLANE_MAILBOX = 0xc005dc82818d67AF737725bD4bf75435d065D239;
     address public constant TOKEN_HOLDER = 0x77BAB32F75996de8075eBA62aEa7b1205cf7E004;
@@ -35,26 +33,17 @@ contract HubPortalForkTestBase is MigrateHubPortalBase, PortalForkTestBase {
     function setUp() external {
         vm.createSelectFork({ urlOrAlias: "ethereum", blockNumber: ETHEREUM_FORK_BLOCK });
 
-        vm.deal(OWNER_V1, 1 ether);
         vm.deal(TOKEN_HOLDER, 1 ether);
-        vm.deal(OPERATOR_V2, 1 ether);
+        vm.deal(OPERATOR, 1 ether);
 
-        // Migrate HubPortal
-        vm.startPrank(OWNER_V1);
-
-        _upgradeToStorageCleaner();
-        _clearStorage();
-        _upgradeToPortalV2();
-
-        vm.stopPrank();
-
+        // HubPortal is already migrated to V2 with earning enabled
+        // and permissioned to swap MUSD in SwapFacility
         hubPortal = HubPortal(PORTAL);
-        hubPortal.enableEarning();
 
-        vm.startPrank(OPERATOR_V2);
+        vm.startPrank(OPERATOR);
 
         // Deploy and register HyperlaneBridgeAdapter
-        bytes memory initializeData = abi.encodeCall(HyperlaneBridgeAdapter.initialize, (ADMIN_V2, OPERATOR_V2));
+        bytes memory initializeData = abi.encodeCall(HyperlaneBridgeAdapter.initialize, (ADMIN, OPERATOR));
         ERC1967Proxy proxy = new ERC1967Proxy(address(new HyperlaneBridgeAdapter(HYPERLANE_MAILBOX, PORTAL)), initializeData);
         bridgeAdapter = HyperlaneBridgeAdapter(address(proxy));
 
@@ -79,9 +68,5 @@ contract HubPortalForkTestBase is MigrateHubPortalBase, PortalForkTestBase {
         bridgeAdapter.setBridgeChainId(BNB_CHAIN_ID, BNB_HYPERLANE_DOMAIN);
 
         vm.stopPrank();
-
-        // Allow Portal to swap MUSD in SwapFacility
-        vm.prank(SWAP_FACILITY_ADMIN);
-        SWAP_FACILITY.call(abi.encodeWithSignature("setPermissionedMSwapper(address,address,bool)", MUSD, address(hubPortal), true));
     }
 }

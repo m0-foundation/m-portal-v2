@@ -2,7 +2,6 @@
 
 pragma solidity 0.8.34;
 
-import { IndexingMath } from "../lib/common/src/libs/IndexingMath.sol";
 import { IERC20 } from "../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {
     SafeERC20
@@ -11,6 +10,8 @@ import {
     AccessControlUpgradeable
 } from "../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
 import { UUPSUpgradeable } from "../lib/common/lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
+
+import { IERC20Extended } from "../lib/common/src/interfaces/IERC20Extended.sol";
 
 import { IBridgeAdapter } from "./interfaces/IBridgeAdapter.sol";
 import { IPortal } from "./interfaces/IPortal.sol";
@@ -160,6 +161,48 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     }
 
     /// @inheritdoc IPortal
+    function sendTokenWithPermit(
+        uint256 amount,
+        address sourceToken,
+        uint32 destinationChainId,
+        bytes32 destinationToken,
+        bytes32 recipient,
+        bytes32 refundAddress,
+        bytes calldata bridgeAdapterArgs,
+        uint256 deadline,
+        bytes calldata signature
+    ) external payable whenSendNotPaused whenNotLocked returns (bytes32 messageId) {
+        _permit(sourceToken, amount, deadline, signature);
+
+        address bridgeAdapter = defaultBridgeAdapter(destinationChainId);
+        return
+            _sendToken(
+                amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter, bridgeAdapterArgs
+            );
+    }
+
+    /// @inheritdoc IPortal
+    function sendTokenWithPermit(
+        uint256 amount,
+        address sourceToken,
+        uint32 destinationChainId,
+        bytes32 destinationToken,
+        bytes32 recipient,
+        bytes32 refundAddress,
+        address bridgeAdapter,
+        bytes calldata bridgeAdapterArgs,
+        uint256 deadline,
+        bytes calldata signature
+    ) external payable whenSendNotPaused whenNotLocked returns (bytes32 messageId) {
+        _permit(sourceToken, amount, deadline, signature);
+
+        return
+            _sendToken(
+                amount, sourceToken, destinationChainId, destinationToken, recipient, refundAddress, bridgeAdapter, bridgeAdapterArgs
+            );
+    }
+
+    /// @inheritdoc IPortal
     function sendFillReport(
         uint32 destinationChainId,
         IOrderBookLike.FillReport calldata report,
@@ -204,6 +247,14 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     /// @inheritdoc IPortal
     function receiveMessage(uint32 sourceChainId, bytes calldata payload) external whenReceiveNotPaused whenNotLocked {
         _revertIfUnsupportedBridgeAdapter(sourceChainId, msg.sender);
+
+        // NOTE: Defense-in-depth checks.
+        //       These checks are enforced at the application layer regardless of what the
+        //       underlying messaging protocol guarantees, so behavior is consistent across
+        //       adapters and resilient to changes of the messaging provider.
+        (uint32 targetChainId, bytes32 targetBridgeAdapter) = payload.decodeDestinationChainIdAndPeer();
+        if (targetChainId != currentChainId()) revert InvalidTargetChain(targetChainId);
+        if (targetBridgeAdapter != msg.sender.toBytes32()) revert InvalidTargetBridgeAdapter(targetBridgeAdapter);
 
         PayloadType payloadType = payload.decodePayloadType();
         bytes32 messageId = payload.decodeMessageId();
@@ -295,7 +346,6 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     /// @inheritdoc IPortal
     function setPayloadGasLimit(uint32 destinationChainId, PayloadType payloadType, uint256 gasLimit) external onlyRole(OPERATOR_ROLE) {
         _revertIfInvalidDestinationChain(destinationChainId);
-        if (gasLimit == 0) revert ZeroPayloadGasLimit();
         ChainConfig storage remoteChainConfig = _getPortalStorageLocation().remoteChainConfig[destinationChainId];
 
         if (remoteChainConfig.payloadGasLimit[payloadType] == gasLimit) return;
@@ -467,9 +517,24 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         );
     }
 
+    /// @dev Attempts to approve the transfer of `sourceToken` from the sender to the Portal via a permit signature.
+    ///      If the permit fails (e.g. it was front-run), the failure is swallowed and the transfer
+    ///      proceeds using the existing allowance.
+    ///      The permit is executed via M0's non-standard `permit(address,address,uint256,uint256,bytes)` overload,
+    ///      not the canonical EIP-2612 `permit(address,address,uint256,uint256,uint8,bytes32,bytes32)`.
+    /// @param sourceToken The address of the source token.
+    /// @param amount      The amount of the allowance being approved.
+    /// @param deadline    The last timestamp where the signature is still valid.
+    /// @param  signature          The signature of the EIP-2612 permit digest: either a 65-byte ECDSA signature
+    ///                            encoded as `abi.encodePacked(r, s, v)`, or an ERC-1271 contract signature
+    ///                            validated against the same digest.
+    function _permit(address sourceToken, uint256 amount, uint256 deadline, bytes calldata signature) private {
+        try IERC20Extended(sourceToken).permit(msg.sender, address(this), amount, deadline, signature) { } catch { }
+    }
+
     /// @dev Transfers the specified amount of `sourceToken` from the sender to the Portal
     ///      If the source token is not $M token, it unwraps it to $M token.
-    ///      Reverts if the actual amount received is less than the specified amount.
+    ///      Reverts if the amount of $M received is insufficient (see `_revertIfInsufficientMReceived`).
     /// @param sourceToken     The address of the source token.
     /// @param specifiedAmount The amount specified by the sender to transfer.
     function _transferAndUnwrap(address sourceToken, uint256 specifiedAmount) internal {
@@ -497,20 +562,9 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
         actualAmount = _mBalanceOf(address(this)) - mBalanceBefore;
 
         // NOTE: The actual amount received can be less than the specified amount due to:
-        //       - rounding down when transferring between $M earners and non-earners in Wrapped $M V1;
-        //       - fee on unwrap in the source $M extension token.
-        if (specifiedAmount > actualAmount) {
-            unchecked {
-                // Revert if the difference between the specified transfer amount and
-                // the actual amount exceeds the maximum acceptable rounding error.
-                if (specifiedAmount - actualAmount > _getMaxRoundingError()) {
-                    revert InsufficientAmountReceived(specifiedAmount, actualAmount);
-                }
-                // Otherwise, the specified amount will be transferred, and the deficit caused
-                // by rounding down will be covered from the yield earned by HubPortal.
-                // SpokePortal must be funded with $M to cover such deficits.
-            }
-        }
+        //       - fee on unwrap in the source $M extension token;
+        //       - $M earner principal rounding down on HubPortal (see the HubPortal override).
+        _revertIfInsufficientMReceived(specifiedAmount, actualAmount);
     }
 
     /// @dev Creates token transfer payload.
@@ -858,10 +912,11 @@ abstract contract Portal is PortalStorageLayout, AccessControlUpgradeable, Reent
     /// @dev Returns the current M token index used by the Portal.
     function _currentIndex() internal view virtual returns (uint128) { }
 
-    /// @dev Returns the maximum rounding error that can occur when transferring and unwrapping $M extensions.
-    ///      This applies only to Wrapped $M V1 and should be removed once Wrapped $M is upgraded.
-    function _getMaxRoundingError() private view returns (uint256) {
-        return _currentIndex() / IndexingMath.EXP_SCALED_ONE + 1;
+    /// @dev Reverts if the actual amount of $M received by the Portal is less than the specified amount.
+    ///      SpokePortal is not an $M earner and must receive the exact amount.
+    ///      HubPortal overrides this check to tolerate $M earner principal rounding.
+    function _revertIfInsufficientMReceived(uint256 specifiedAmount, uint256 actualAmount) internal view virtual {
+        if (actualAmount < specifiedAmount) revert InsufficientAmountReceived(specifiedAmount, actualAmount);
     }
 
     /// @dev Returns the M Token balance of `account`.

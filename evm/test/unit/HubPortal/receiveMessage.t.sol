@@ -50,7 +50,7 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
         hubPortal.enableCrossSpokeTokenTransfer(SPOKE_CHAIN_ID);
 
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
-            SPOKE_CHAIN_ID,
+            HUB_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
             index,
@@ -75,7 +75,7 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
         hubPortal.enableCrossSpokeTokenTransfer(SPOKE_CHAIN_ID);
 
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
-            SPOKE_CHAIN_ID,
+            HUB_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
             index,
@@ -102,7 +102,7 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
         bytes32 tokenIn = address(mToken).toBytes32();
 
         bytes memory payload = PayloadEncoder.encodeFillReport(
-            SPOKE_CHAIN_ID,
+            HUB_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
             index,
@@ -146,7 +146,7 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
         uint128 amountInToRefund = 1000e6;
 
         bytes memory payload = PayloadEncoder.encodeCancelReport(
-            SPOKE_CHAIN_ID, address(bridgeAdapter).toBytes32(), messageId, index, orderId, originSender, tokenIn, amountInToRefund
+            HUB_CHAIN_ID, address(bridgeAdapter).toBytes32(), messageId, index, orderId, originSender, tokenIn, amountInToRefund
         );
 
         vm.expectCall(
@@ -182,7 +182,7 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
         hubPortal.setSupportedBridgingPath(address(mToken), SPOKE_CHAIN_ID, invalidWrappedToken.toBytes32(), true);
 
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
-            SPOKE_CHAIN_ID,
+            HUB_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
             index,
@@ -209,7 +209,7 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
     function test_receiveMessage_revertsIfUnsupportedBridgeAdapter() external {
         address unsupportedAdapter = makeAddr("unsupported");
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
-            SPOKE_CHAIN_ID,
+            HUB_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
             index,
@@ -230,7 +230,7 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
         hubPortal.pauseReceive();
 
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
-            SPOKE_CHAIN_ID,
+            HUB_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
             index,
@@ -252,7 +252,7 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
         hubPortal.enableCrossSpokeTokenTransfer(SPOKE_CHAIN_ID);
 
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
-            SPOKE_CHAIN_ID,
+            HUB_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
             index,
@@ -284,7 +284,7 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
 
         // Now receive tokens back FROM the spoke (decreases principal)
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
-            SPOKE_CHAIN_ID,
+            HUB_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
             testIndex,
@@ -307,7 +307,7 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
 
         // Receive the exact same amount back
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
-            SPOKE_CHAIN_ID,
+            HUB_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
             testIndex,
@@ -334,7 +334,7 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
 
         // Receive only 1x amount back
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
-            SPOKE_CHAIN_ID,
+            HUB_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
             testIndex,
@@ -361,7 +361,7 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
         // Principal tracking is disabled for connected spokes, so this should not revert
         // even though there is no principal to decrease
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
-            SPOKE_CHAIN_ID,
+            HUB_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
             index,
@@ -385,7 +385,7 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
 
         // Try to receive 10e6 back (more than was bridged)
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
-            SPOKE_CHAIN_ID,
+            HUB_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
             testIndex,
@@ -406,7 +406,7 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
 
         // Try to receive tokens when nothing was bridged
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
-            SPOKE_CHAIN_ID,
+            HUB_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
             testIndex,
@@ -442,7 +442,7 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
         uint256 receiveAmount = (uint256(principalAfterSend) * receiveIndex) / 1e12;
 
         bytes memory payload = PayloadEncoder.encodeTokenTransfer(
-            SPOKE_CHAIN_ID,
+            HUB_CHAIN_ID,
             address(bridgeAdapter).toBytes32(),
             messageId,
             receiveIndex,
@@ -457,5 +457,43 @@ contract ReceiveMessageUnitTest is HubPortalUnitTestBase {
 
         // Principal should be 0 (fully unlocked)
         assertEq(hubPortal.bridgedPrincipal(SPOKE_CHAIN_ID), 0);
+    }
+
+    function test_receiveMessage_revertsIfInvalidTargetChain() external {
+        // Encode a payload whose destination chain ID does not match the current chain.
+        uint32 invalidTargetChainId = 999;
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            invalidTargetChainId,
+            address(bridgeAdapter).toBytes32(),
+            messageId,
+            index,
+            amount,
+            address(mToken).toBytes32(),
+            sender,
+            recipient.toBytes32()
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(IPortal.InvalidTargetChain.selector, invalidTargetChainId));
+        vm.prank(address(bridgeAdapter));
+        hubPortal.receiveMessage(SPOKE_CHAIN_ID, payload);
+    }
+
+    function test_receiveMessage_revertsIfInvalidTargetBridgeAdapter() external {
+        // Encode a payload whose destination bridge adapter does not match msg.sender.
+        address wrongBridgeAdapter = makeAddr("wrongBridgeAdapter");
+        bytes memory payload = PayloadEncoder.encodeTokenTransfer(
+            HUB_CHAIN_ID,
+            wrongBridgeAdapter.toBytes32(),
+            messageId,
+            index,
+            amount,
+            address(mToken).toBytes32(),
+            sender,
+            recipient.toBytes32()
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(IPortal.InvalidTargetBridgeAdapter.selector, wrongBridgeAdapter.toBytes32()));
+        vm.prank(address(bridgeAdapter));
+        hubPortal.receiveMessage(SPOKE_CHAIN_ID, payload);
     }
 }

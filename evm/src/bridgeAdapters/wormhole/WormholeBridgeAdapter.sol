@@ -183,5 +183,29 @@ contract WormholeBridgeAdapter is WormholeBridgeAdapterStorageLayout, BridgeAdap
         $.remoteMsgValue[chainId] = msgValue;
         emit MsgValueSet(chainId, msgValue);
     }
+
+    ///////////////////////////////////////////////////////////////////////////
+    //                       INTERNAL FUNCTIONS                              //
+    ///////////////////////////////////////////////////////////////////////////
+
+    /// @dev In addition to the base peer, clears the Wormhole-specific chain-coupled configuration
+    ///      of a chain whose `(chainId, bridgeChainId)` pair was removed by `setBridgeChainId`:
+    ///      the sender peer used for incoming VAA authentication and the msg value included
+    ///      in relay instructions. Both must be re-asserted by the operator after reassignment.
+    function _removePeer(uint32 chainId) internal override {
+        super._removePeer(chainId);
+
+        WormholeBridgeAdapterStorageStruct storage $ = _getWormholeBridgeAdapterStorageLocation();
+
+        if ($.remoteSenderPeer[chainId] != bytes32(0)) {
+            delete $.remoteSenderPeer[chainId];
+            emit SenderPeerSet(chainId, bytes32(0));
+        }
+
+        if ($.remoteMsgValue[chainId] != 0) {
+            delete $.remoteMsgValue[chainId];
+            emit MsgValueSet(chainId, 0);
+        }
+    }
 }
 

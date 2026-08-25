@@ -4,6 +4,7 @@ pragma solidity 0.8.34;
 import {
     IERC20
 } from "../../../lib/common/lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import { IndexingMath } from "../../../lib/common/src/libs/IndexingMath.sol";
 
 import { TypeConverter } from "../../../src/libraries/TypeConverter.sol";
 import { PayloadType } from "../../../src/libraries/PayloadEncoder.sol";
@@ -17,8 +18,6 @@ contract SendTokenForkTest is SpokePortalForkTestBase {
     bytes internal bridgeAdapterArgs = "";
     bytes32 internal recipient = TOKEN_HOLDER.toBytes32();
     uint256 internal amount = 1e6;
-
-    uint256 internal constant MAX_ROUNDING_ERROR = 2;
 
     function test_sendToken_M() external {
         uint256 mTotalSupplyBefore = IERC20(M_TOKEN).totalSupply();
@@ -41,9 +40,6 @@ contract SendTokenForkTest is SpokePortalForkTestBase {
     }
 
     function test_sendToken_wM() external {
-        // Ensure SpokePortal has some $M to cover rounding errors when unwrapping Wrapped $M V1
-        assertGt(IERC20(M_TOKEN).balanceOf(address(spokePortal)), MAX_ROUNDING_ERROR);
-
         uint256 mTotalSupplyBefore = IERC20(M_TOKEN).totalSupply();
         uint256 userWrappedMBalanceBefore = IERC20(WRAPPED_M_TOKEN).balanceOf(TOKEN_HOLDER);
         uint256 fee = spokePortal.quote(ETHEREUM_CHAIN_ID, PayloadType.TokenTransfer);
@@ -58,8 +54,16 @@ contract SendTokenForkTest is SpokePortalForkTestBase {
         uint256 mTotalSupplyAfter = IERC20(M_TOKEN).totalSupply();
         uint256 userWrappedMBalanceAfter = IERC20(WRAPPED_M_TOKEN).balanceOf(TOKEN_HOLDER);
 
-        // $M is burnt on SpokePortal when sent to another chain
-        assertApproxEqAbs(mTotalSupplyAfter, mTotalSupplyBefore - amount, MAX_ROUNDING_ERROR);
+        // $M is burnt on SpokePortal when sent to another chain.
+        // Total supply may deviate by up to index / EXP_SCALED_ONE + 1 wei due to principal
+        // rounding in $M earner accounting when $M is transferred out of the earning Wrapped $M contract.
+        assertApproxEqAbs(mTotalSupplyAfter, mTotalSupplyBefore - amount, _roundingTolerance());
         assertEq(userWrappedMBalanceAfter, userWrappedMBalanceBefore - amount);
+    }
+
+    /// @dev Maximum total supply deviation caused by $M earner principal rounding when $M
+    ///      is transferred out of the earning Wrapped $M contract.
+    function _roundingTolerance() internal view returns (uint256) {
+        return spokePortal.currentIndex() / IndexingMath.EXP_SCALED_ONE + 1;
     }
 }
