@@ -138,4 +138,23 @@ library StandardHookMetadata {
     function overrideRefundAddress(address _refundAddress) internal pure returns (bytes memory) {
         return formatMetadata(uint256(0), uint256(0), _refundAddress, "");
     }
+
+    /**
+     * @notice Formats metadata with fee token for token-based gas payments.
+     * @dev    When the fee token at [86:106] is a non-zero address, the IGP charges the dispatch fee
+     *         in that ERC20, pulled from the message sender via transferFrom, instead of native value.
+     * @param _msgValue msg.value for the message.
+     * @param _gasLimit Gas limit for the message.
+     * @param _refundAddress Refund address for the message (unused for ERC20 fees, required by the format).
+     * @param _feeToken Fee token address for gas payment.
+     * @return ABI encoded hook metadata with fee token at [86:106].
+     */
+    function formatWithFeeToken(
+        uint256 _msgValue,
+        uint256 _gasLimit,
+        address _refundAddress,
+        address _feeToken
+    ) internal pure returns (bytes memory) {
+        return abi.encodePacked(VARIANT, _msgValue, _gasLimit, _refundAddress, _feeToken);
+    }
 }

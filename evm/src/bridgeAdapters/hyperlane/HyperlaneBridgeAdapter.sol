@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity 0.8.34;
+pragma solidity ^0.8.26;
 
 import { BridgeAdapter } from "../BridgeAdapter.sol";
 import { IBridgeAdapter } from "../../interfaces/IBridgeAdapter.sol";
@@ -11,11 +11,37 @@ import { StandardHookMetadata } from "./libraries/StandardHookMetadata.sol";
 import { IPortal } from "../../interfaces/IPortal.sol";
 import { TypeConverter } from "../../libraries/TypeConverter.sol";
 
+abstract contract HyperlaneBridgeAdapterStorageLayout {
+    /// @custom:storage-location erc7201:M0.storage.HyperlaneBridgeAdapter
+    struct HyperlaneBridgeAdapterStorageStruct {
+        /// @notice ERC20 used to pay dispatch fees; 0x0 means fees are paid in native value.
+        address feeToken;
+        /// @notice IGP approved to pull `feeToken` payments at dispatch time.
+        address interchainGasPaymaster;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("M0.storage.HyperlaneBridgeAdapter")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 constant HYPERLANE_BRIDGE_ADAPTER_STORAGE_LOCATION = 0x158a023759c3908307e29f8c383800a2a933ca03be7b8c6947e01b3ed187ec00;
+
+    function _getHyperlaneBridgeAdapterStorageLocation() internal pure returns (HyperlaneBridgeAdapterStorageStruct storage $) {
+        assembly {
+            $.slot := HYPERLANE_BRIDGE_ADAPTER_STORAGE_LOCATION
+        }
+    }
+}
+
 /// @title  HyperLane Bridge Adapter
 /// @author M0 Labs
 /// @notice Sends and receives messages to and from remote chains using Hyperlane protocol
-contract HyperlaneBridgeAdapter is BridgeAdapter, IHyperlaneBridgeAdapter {
+contract HyperlaneBridgeAdapter is BridgeAdapter, HyperlaneBridgeAdapterStorageLayout, IHyperlaneBridgeAdapter {
     using TypeConverter for *;
+
+    /// @dev Selector of the Seismic SRC20 shielded approve, `approve(address,suint256)` (== 0x2e62b8c8).
+    ///      Fee tokens on value-restricted chains (e.g. Seismic sUSDC) are shielded SRC20s whose amount
+    ///      argument is a shielded `suint256`, so they do NOT implement the standard `approve(address,uint256)`.
+    ///      The selector is derived from the signature string so this contract compiles under both stock
+    ///      solc and Seismic's ssolc (which alone understands the `suint256` type).
+    bytes4 private constant SHIELDED_APPROVE_SELECTOR = bytes4(keccak256("approve(address,suint256)"));
 
     /// @inheritdoc IHyperlaneBridgeAdapter
     address public immutable mailbox;
@@ -32,13 +58,46 @@ contract HyperlaneBridgeAdapter is BridgeAdapter, IHyperlaneBridgeAdapter {
         _initialize(admin, operator);
     }
 
+    /// @inheritdoc IHyperlaneBridgeAdapter
+    function setFeeToken(address feeToken_, address interchainGasPaymaster_) external onlyRole(OPERATOR_ROLE) {
+        if (feeToken_ == address(0)) {
+            interchainGasPaymaster_ = address(0);
+        } else if (interchainGasPaymaster_ == address(0)) {
+            revert ZeroInterchainGasPaymaster();
+        }
+
+        HyperlaneBridgeAdapterStorageStruct storage $ = _getHyperlaneBridgeAdapterStorageLocation();
+
+        $.feeToken = feeToken_;
+        $.interchainGasPaymaster = interchainGasPaymaster_;
+
+        emit FeeTokenSet(feeToken_, interchainGasPaymaster_);
+    }
+
     /// @inheritdoc IBridgeAdapter
     function quote(uint32 destinationChainId, uint256 gasLimit, bytes memory payload) external view returns (uint256 fee) {
-        bytes memory metadata = StandardHookMetadata.overrideGasLimit(gasLimit);
-        bytes32 destinationPeer = _getPeerOrRevert(destinationChainId);
-        uint32 destinationDomain = _getHyperlaneDomainOrRevert(destinationChainId);
+        // In fee token mode the adapter pays the dispatch fee in the fee token, so callers attach no native value.
+        if (_getHyperlaneBridgeAdapterStorageLocation().feeToken != address(0)) return 0;
 
-        return IMailbox(mailbox).quoteDispatch(destinationDomain, destinationPeer, payload, metadata);
+        return _quoteDispatch(destinationChainId, StandardHookMetadata.overrideGasLimit(gasLimit), payload);
+    }
+
+    /// @inheritdoc IHyperlaneBridgeAdapter
+    function quoteFeeToken(uint32 destinationChainId, uint256 gasLimit, bytes memory payload) external view returns (uint256) {
+        address feeToken_ = _getHyperlaneBridgeAdapterStorageLocation().feeToken;
+        if (feeToken_ == address(0)) return 0;
+
+        return _quoteDispatch(destinationChainId, StandardHookMetadata.formatWithFeeToken(0, gasLimit, msg.sender, feeToken_), payload);
+    }
+
+    /// @inheritdoc IHyperlaneBridgeAdapter
+    function feeToken() external view returns (address) {
+        return _getHyperlaneBridgeAdapterStorageLocation().feeToken;
+    }
+
+    /// @inheritdoc IHyperlaneBridgeAdapter
+    function interchainGasPaymaster() external view returns (address) {
+        return _getHyperlaneBridgeAdapterStorageLocation().interchainGasPaymaster;
     }
 
     /// @dev Returns zero address, so Mailbox will use the default ISM
@@ -56,13 +115,31 @@ contract HyperlaneBridgeAdapter is BridgeAdapter, IHyperlaneBridgeAdapter {
     ) external payable {
         _revertIfNotPortal();
 
-        bytes memory metadata = StandardHookMetadata.formatMetadata(0, gasLimit, refundAddress.toAddress(), "");
         bytes32 destinationPeer = _getPeerOrRevert(destinationChainId);
         uint32 destinationDomain = _getHyperlaneDomainOrRevert(destinationChainId);
 
-        // NOTE: The transaction reverts if msg.value isn't enough to cover the fee.
-        //       If msg.value is greater than the required fee, the excess is sent to the refund address.
-        IMailbox(mailbox).dispatch{ value: msg.value }(destinationDomain, destinationPeer, payload, metadata);
+        HyperlaneBridgeAdapterStorageStruct storage $ = _getHyperlaneBridgeAdapterStorageLocation();
+        address feeToken_ = $.feeToken;
+
+        if (feeToken_ == address(0)) {
+            bytes memory metadata = StandardHookMetadata.formatMetadata(0, gasLimit, refundAddress.toAddress(), "");
+
+            // NOTE: The transaction reverts if msg.value isn't enough to cover the fee.
+            //       If msg.value is greater than the required fee, the excess is sent to the refund address.
+            IMailbox(mailbox).dispatch{ value: msg.value }(destinationDomain, destinationPeer, payload, metadata);
+        } else {
+            // Fee token mode (e.g. Seismic, where value-bearing transactions are not mined):
+            // the adapter holds the fee token and the IGP pulls the quoted fee via transferFrom.
+            // The IGP reverts if native value is sent alongside an ERC20 fee.
+            if (msg.value != 0) revert UnexpectedNativeValue();
+
+            bytes memory metadata = StandardHookMetadata.formatWithFeeToken(0, gasLimit, refundAddress.toAddress(), feeToken_);
+            uint256 fee = IMailbox(mailbox).quoteDispatch(destinationDomain, destinationPeer, payload, metadata);
+
+            _approveFeeToken(feeToken_, $.interchainGasPaymaster, fee);
+
+            IMailbox(mailbox).dispatch(destinationDomain, destinationPeer, payload, metadata);
+        }
     }
 
     /// @inheritdoc IMessageRecipient
@@ -73,6 +150,31 @@ contract HyperlaneBridgeAdapter is BridgeAdapter, IHyperlaneBridgeAdapter {
         if (sender != _getPeerOrRevert(sourceChainId)) revert UnsupportedSender(sender);
 
         IPortal(portal).receiveMessage(sourceChainId, payload);
+    }
+
+    /// @notice Resolves the destination route and quotes the Hyperlane dispatch fee for the given metadata.
+    /// @param  destinationChainId The M0 internal chain ID of the destination.
+    /// @param  metadata           The standard hook metadata (native or fee-token variant).
+    /// @param  payload            The message payload.
+    /// @return The dispatch fee, denominated in native value or in the fee token per the metadata.
+    function _quoteDispatch(uint32 destinationChainId, bytes memory metadata, bytes memory payload) private view returns (uint256) {
+        bytes32 destinationPeer = _getPeerOrRevert(destinationChainId);
+        uint32 destinationDomain = _getHyperlaneDomainOrRevert(destinationChainId);
+
+        return IMailbox(mailbox).quoteDispatch(destinationDomain, destinationPeer, payload, metadata);
+    }
+
+    /// @notice Approves `spender` to pull `amount` of the shielded SRC20 fee token.
+    /// @dev    Calls the SRC20 shielded `approve(address,suint256)` via low-level call (see
+    ///         SHIELDED_APPROVE_SELECTOR) rather than the standard `IERC20.approve`, which the fee token
+    ///         does not implement. The fee-token approve and the IGP's transferFrom occur in the same
+    ///         dispatch transaction, so the allowance is always 0 at entry and a single approve suffices.
+    /// @param  feeToken_ The shielded SRC20 fee token.
+    /// @param  spender   The IGP authorized to pull the fee.
+    /// @param  amount    The fee amount to approve.
+    function _approveFeeToken(address feeToken_, address spender, uint256 amount) private {
+        (bool success, bytes memory result) = feeToken_.call(abi.encodeWithSelector(SHIELDED_APPROVE_SELECTOR, spender, amount));
+        if (!success || (result.length != 0 && !abi.decode(result, (bool)))) revert FeeTokenApproveFailed();
     }
 
     /// @notice Returns Hyperlane domain by chain Id
